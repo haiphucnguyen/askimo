@@ -127,7 +127,10 @@ class MermaidSvgService {
                 .replace("\\t", "\t")
                 .replace("\\r", "\r")
 
-            Files.writeString(inputFile, normalizedDiagram, StandardOpenOption.CREATE)
+            // Auto-fix common AI-generated syntax issues before sending to mmdc
+            val sanitizedDiagram = sanitizeDiagram(normalizedDiagram)
+
+            Files.writeString(inputFile, sanitizedDiagram, StandardOpenOption.CREATE)
 
             val process = ProcessBuilderExt(
                 "mmdc",
@@ -135,7 +138,7 @@ class MermaidSvgService {
                 "-o", outputFile.toString(),
                 "-t", theme,
                 "-b", backgroundColor,
-                "-s", "2",
+                "-s", "3", // scale 3 → crisp on HiDPI / 4K displays
             ).redirectErrorStream(true)
                 .start()
 
@@ -144,8 +147,14 @@ class MermaidSvgService {
             val exitCode = process.waitFor(30, TimeUnit.SECONDS)
 
             if (!exitCode || process.exitValue() != 0) {
-                log.error("Mermaid CLI failed with exit code: {}, diagram{}, output: {}", process.exitValue(), diagram, output)
-                throw IOException("Failed to convert Mermaid diagram: CLI returned exit code ${process.exitValue()}")
+                // Strip the JS stack trace — keep only the meaningful parse error lines
+                val parseError = output.lines()
+                    .takeWhile { !it.trimStart().startsWith("at ") && !it.trimStart().startsWith("Parser3.parseError") }
+                    .joinToString("\n")
+                    .trim()
+                    .ifEmpty { output.lines().take(4).joinToString("\n").trim() }
+                log.error("Mermaid CLI failed.\ndiagram:\n{}\nerror:\n{}", diagram, output)
+                throw IOException(parseError)
             }
 
             if (!Files.exists(outputFile)) {
@@ -153,11 +162,33 @@ class MermaidSvgService {
             }
 
             val pngData = Files.readAllBytes(outputFile)
+
+            // mmdc sometimes exits 0 but renders a PNG of the error message instead of the diagram.
+            // Detect this by scanning the raw PNG bytes for known error text — scale-independent.
+            val pngText = String(pngData, Charsets.ISO_8859_1)
+            val isErrorImage = pngText.contains("Parse error") ||
+                pngText.contains("Syntax error") ||
+                pngText.contains("Generating single mermaid chart") ||
+                pngText.contains("UnknownDiagramError") ||
+                pngText.contains("No diagram type detected") ||
+                pngText.contains("Error:")
+            if (isErrorImage) {
+                log.error("Mermaid CLI produced an error image ({} bytes) — diagram has silent syntax errors.", pngData.size)
+                val embeddedError = output.lines()
+                    .takeWhile { !it.trimStart().startsWith("at ") }
+                    .joinToString(" ")
+                    .trim()
+                    .ifEmpty { "Diagram has runtime syntax errors. Check node format and arrow syntax." }
+                throw IOException(embeddedError)
+            }
+
             log.debug("Successfully converted diagram to PNG (size: {} bytes) with theme: {}", pngData.size, theme)
 
             pngData
         } catch (e: MermaidCliNotAvailableException) {
             throw e
+        } catch (e: IOException) {
+            throw e // already has the clean parse error message
         } catch (e: Exception) {
             log.error("Failed to convert Mermaid diagram to PNG", e)
             throw IOException("Failed to convert Mermaid diagram: ${e.message}", e)
@@ -170,5 +201,76 @@ class MermaidSvgService {
                 log.warn("Failed to clean up temp files", e)
             }
         }
+    }
+
+    /**
+     * Auto-fixes common AI-generated Mermaid syntax errors before rendering.
+     * Handles: unquoted node/edge labels with special chars, style directives,
+     * single-% comments, and inline trailing comments.
+     */
+    internal fun sanitizeDiagram(diagram: String): String {
+        val lines = diagram.lines()
+        val result = mutableListOf<String>()
+
+        // Regex to find edge labels |text| where text has special chars and is NOT already quoted
+        val unquotedEdgeLabel = Regex("""\|([^|"'][^|]*[(:\/&][^|]*)\|""")
+
+        // Drop style/classDef/class directives
+        val styleDirective = Regex("""^\s*(style|classDef|class)\s+""")
+
+        for (line in lines) {
+            if (styleDirective.containsMatchIn(line)) {
+                log.debug("Sanitizer: removed style directive: {}", line.trim())
+                continue
+            }
+
+            var fixed = line
+
+            // Fix single-% comments → %% (must be own-line comment starting with single %)
+            if (Regex("""^\s*%(?!%)""").containsMatchIn(fixed)) {
+                fixed = fixed.replaceFirst(Regex("""^(\s*)%(?!%)"""), "$1%%")
+                log.debug("Sanitizer: fixed single-% comment: {}", fixed.trim())
+            }
+
+            // Strip inline trailing %% comments after a statement on the same line
+            // e.g.  C --> F; %% Pass context  →  C --> F;
+            // Pure %% comment lines (nothing before %%) are preserved intact.
+            if (!fixed.trimStart().startsWith("%%") && Regex("""\S.*%%""").containsMatchIn(fixed)) {
+                val stripped = fixed.replace(Regex("""\s*%%.*$"""), "").trimEnd()
+                if (stripped != fixed) {
+                    log.debug("Sanitizer: stripped inline comment from: {}", line.trim())
+                    fixed = stripped
+                }
+            }
+
+            // Fix unquoted edge labels: |text with (parens) or colons|  →  |"text with (parens) or colons"|
+            fixed = unquotedEdgeLabel.replace(fixed) { mr ->
+                val label = mr.groupValues[1].trim()
+                """|"$label"|"""
+            }
+
+            // Fix unquoted [ ] node labels with special chars → ["label"]
+            // Skips cylinder [( )] — those must stay plain text
+            fixed = Regex("""(\w+)\[([^"\[\](][^\[\]]*[(:\/&][^\[\]]*)\]""").replace(fixed) { mr ->
+                val id = mr.groupValues[1]
+                val label = mr.groupValues[2].trim()
+                """$id["$label"]"""
+            }
+
+            // Fix unquoted { } node labels with special chars → {"label"}
+            fixed = Regex("""(\w+)\{([^"{}][^{}]*[(:\/&][^{}]*)\}""").replace(fixed) { mr ->
+                val id = mr.groupValues[1]
+                val label = mr.groupValues[2].trim()
+                """$id{"$label"}"""
+            }
+
+            result.add(fixed)
+        }
+
+        val sanitized = result.joinToString("\n")
+        if (sanitized != diagram) {
+            log.debug("Sanitizer modified diagram:\nBEFORE:\n{}\nAFTER:\n{}", diagram, sanitized)
+        }
+        return sanitized
     }
 }

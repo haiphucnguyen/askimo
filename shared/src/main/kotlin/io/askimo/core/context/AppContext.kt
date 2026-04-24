@@ -191,7 +191,7 @@ class AppContext private constructor(
      */
     fun getModelFactory(provider: ModelProvider): ChatModelFactory<*>? = ProviderRegistry.getFactory(provider)
 
-    fun createPlanChatModel(): ChatModel {
+    fun createChatModel(): ChatModel {
         val provider = params.currentProvider
         val factory = getModelFactory(provider)
             ?: error("No model factory registered for $provider")

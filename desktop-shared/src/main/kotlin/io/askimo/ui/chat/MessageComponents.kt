@@ -605,6 +605,7 @@ private fun aiMessageBubble(
                                         viewportTopY = viewportTopY,
                                         isStreaming = isStreaming,
                                         onRunRequest = { cmd, lang -> pendingRunRequest = Pair(cmd, lang) },
+                                        messageId = message.id,
                                     )
                                 }
                             }
