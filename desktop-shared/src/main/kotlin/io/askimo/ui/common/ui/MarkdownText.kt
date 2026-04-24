@@ -813,6 +813,7 @@ private fun imageDownloadButton(
     if (isVisible) {
         Box(
             modifier = modifier
+                .clip(MaterialTheme.shapes.small)
                 .background(
                     color = Color.Black.copy(alpha = 0.45f),
                     shape = MaterialTheme.shapes.small,
