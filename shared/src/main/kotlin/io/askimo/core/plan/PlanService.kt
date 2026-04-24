@@ -110,7 +110,7 @@ class PlanService(
         planExecutionRepository.updateStatus(execution.id, PlanExecutionStatus.RUNNING)
         log.info("Starting plan '{}' (execution={})", plan.id, execution.id)
 
-        val chatModel = runCatching { appContext.createPlanChatModel() }.getOrElse { e ->
+        val chatModel = runCatching { appContext.createChatModel() }.getOrElse { e ->
             val msg = "Failed to create chat model for plan '${plan.id}': ${e.message}"
             log.error(msg, e)
             planExecutionRepository.updateStatus(execution.id, PlanExecutionStatus.FAILED, msg)
@@ -162,7 +162,7 @@ class PlanService(
         val priorOutput = execution.output?.takeIf { it.isNotBlank() }
             ?: return Result.failure(IllegalStateException("No prior output to follow up on"))
 
-        val chatModel = runCatching { appContext.createPlanChatModel() }.getOrElse { e ->
+        val chatModel = runCatching { appContext.createChatModel() }.getOrElse { e ->
             val msg = "Failed to create chat model for follow-up on execution '$executionId': ${e.message}"
             log.error(msg, e)
             return Result.failure(IllegalStateException(msg, e))
@@ -212,7 +212,7 @@ class PlanService(
      * @throws Exception if the model call fails or returns blank output.
      */
     fun generateYamlFromPrompt(description: String): String {
-        val chatModel = runCatching { appContext.createPlanChatModel() }.getOrElse { e ->
+        val chatModel = runCatching { appContext.createChatModel() }.getOrElse { e ->
             throw IllegalStateException("Failed to create chat model: ${e.message}", e)
         }
 

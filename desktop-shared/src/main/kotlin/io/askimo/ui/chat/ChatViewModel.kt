@@ -16,6 +16,7 @@ import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.error.SendMessageErrorEvent
+import io.askimo.core.event.internal.DiagramFixedEvent
 import io.askimo.core.event.internal.ProjectRefreshEvent
 import io.askimo.core.event.internal.SessionTitleUpdatedEvent
 import io.askimo.core.logging.logger
@@ -168,6 +169,7 @@ class ChatViewModel(
     init {
         observeProjectEvents()
         observeSessionTitleEvents()
+        observeDiagramFixedEvents()
     }
 
     /**
@@ -183,6 +185,26 @@ class ChatViewModel(
                     if (event.sessionId == currentSessionId.value) {
                         log.debug("Session title updated to: ${event.newTitle}")
                         sessionTitle = event.newTitle
+                    }
+                }
+        }
+    }
+
+    /**
+     * Observe DiagramFixedEvent and update the message content in DB + in-memory state
+     * so the fixed diagram is persisted and shown on next load.
+     */
+    private fun observeDiagramFixedEvents() {
+        scope.launch {
+            EventBus.internalEvents
+                .filterIsInstance<DiagramFixedEvent>()
+                .collect { event ->
+                    val messageId = event.messageId
+                    val existing = messages.find { it.id == messageId } ?: return@collect
+                    val updatedContent = existing.content.replace(event.originalDiagram, event.fixedDiagram)
+                    if (updatedContent != existing.content) {
+                        log.debug("Persisting AI-fixed diagram for message {}", messageId)
+                        updateAIMessage(messageId, updatedContent)
                     }
                 }
         }

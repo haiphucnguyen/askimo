@@ -130,6 +130,7 @@ fun markdownText(
     viewportTopY: Float? = null,
     isStreaming: Boolean = false,
     onRunRequest: ((code: String, language: String) -> Unit)? = null,
+    messageId: String? = null,
 ) {
     val parser = Parser.builder()
         .extensions(listOf(TablesExtension.create(), AutolinkExtension.create()))
@@ -137,7 +138,7 @@ fun markdownText(
     val document = parser.parse(preprocessMarkdown(markdown))
 
     Column(modifier = modifier) {
-        renderNode(document, viewportTopY, isStreaming, onRunRequest)
+        renderNode(document, viewportTopY, isStreaming, onRunRequest, messageId)
     }
 }
 
@@ -166,7 +167,7 @@ private fun preprocessMarkdown(markdown: String): String {
 }
 
 @Composable
-private fun renderNode(node: Node, viewportTopY: Float? = null, isStreaming: Boolean = false, onRunRequest: ((String, String) -> Unit)? = null) {
+private fun renderNode(node: Node, viewportTopY: Float? = null, isStreaming: Boolean = false, onRunRequest: ((String, String) -> Unit)? = null, messageId: String? = null) {
     var child = node.firstChild
     while (child != null) {
         when (child) {
@@ -190,6 +191,7 @@ private fun renderNode(node: Node, viewportTopY: Float? = null, isStreaming: Boo
                 viewportTopY,
                 isStreaming,
                 onRunRequest,
+                messageId,
             )
 
             is BlockQuote -> renderBlockQuote(
@@ -209,7 +211,7 @@ private fun renderNode(node: Node, viewportTopY: Float? = null, isStreaming: Boo
                 }
             }
 
-            else -> renderNode(child, viewportTopY, isStreaming, onRunRequest)
+            else -> renderNode(child, viewportTopY, isStreaming, onRunRequest, messageId)
         }
         child = child.next
     }
@@ -579,7 +581,7 @@ private fun renderListItem(
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = null, isStreaming: Boolean = false, onRunRequest: ((String, String) -> Unit)? = null) {
+private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = null, isStreaming: Boolean = false, onRunRequest: ((String, String) -> Unit)? = null, messageId: String? = null) {
     val language = codeBlock.info?.trim()?.takeIf { it.isNotBlank() }
     val code = codeBlock.literal
     // Resolved once per code block; null means the Run button should not be shown
@@ -636,6 +638,7 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
             mermaidChart(
                 data = chartData,
                 modifier = Modifier.padding(16.dp),
+                messageId = messageId,
             )
         }
         return
@@ -643,20 +646,12 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
 
     // Render as regular code block
     val backgroundColor = AppComponents.codeBlockBackground()
-    val isDark = AppComponents.isCodeBlockDark()
     val clipboardManager = LocalClipboardManager.current
     val density = LocalDensity.current
     var isHovered by remember { mutableStateOf(false) }
     var showCopyFeedback by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     var codeBlockPositionInRoot by remember { mutableStateOf<Offset?>(null) }
-
-    val theme = if (isDark) CodeHighlighter.darkTheme() else CodeHighlighter.lightTheme()
-    val highlightedCode = CodeHighlighter.highlight(
-        code = code,
-        language = language,
-        theme = theme,
-    )
 
     // Calculate button offset - simple logic
     val copyButtonTopOffset = if (viewportTopY != null && codeBlockPositionInRoot != null) {

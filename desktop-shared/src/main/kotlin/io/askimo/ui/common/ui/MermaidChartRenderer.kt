@@ -63,6 +63,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberWindowState
+import io.askimo.core.context.AppContext
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.DiagramFixedEvent
 import io.askimo.core.logging.currentFileLogger
 import io.askimo.tools.chart.MermaidChartData
 import io.askimo.ui.common.i18n.stringResource
@@ -70,14 +73,17 @@ import io.askimo.ui.common.ui.util.FileDialogUtils
 import io.askimo.ui.service.MermaidCliNotAvailableException
 import io.askimo.ui.service.MermaidSvgService
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import org.slf4j.Logger
 import java.awt.Desktop
 import java.io.File
 import java.net.URI
+import kotlin.time.Duration.Companion.milliseconds
 import org.jetbrains.skia.Image as SkiaImage
 
 private val log = currentFileLogger()
@@ -138,12 +144,6 @@ private object DiagramCache {
             log.warn("Failed to write cache file: {}", e.message)
         }
     }
-
-    fun clearMemoryCache() {
-        val size = memoryCache.size
-        memoryCache.clear()
-        log.debug("🗑️ Cleared memory cache ({} entries)", size)
-    }
 }
 
 /**
@@ -156,6 +156,7 @@ private object DiagramCache {
 fun mermaidChart(
     data: MermaidChartData,
     modifier: Modifier = Modifier,
+    messageId: String? = null,
 ) {
     val mermaidService = remember { MermaidSvgService() }
     var imageData by remember { mutableStateOf<ByteArray?>(null) }
@@ -165,6 +166,9 @@ fun mermaidChart(
     var zoomLevel by remember { mutableStateOf(0.5f) }
     var showFullScreenDialog by remember { mutableStateOf(false) }
     var sanitizedDiagramCode by remember { mutableStateOf("") }
+    var retryCount by remember(data.diagram) { mutableStateOf(0) }
+    // Holds an AI-fixed diagram to use on retry; null means use the original
+    var fixedDiagram by remember(data.diagram) { mutableStateOf<String?>(null) }
 
     // Detect if we're in dark mode based on background luminance
     val isDarkMode = MaterialTheme.colorScheme.background.luminance() < 0.5f
@@ -178,13 +182,13 @@ fun mermaidChart(
         "#%02x%02x%02x".format(red, green, blue)
     }
 
-    // Load diagram - check cache first, then CLI availability if needed
-    LaunchedEffect(data.diagram, isDarkMode, backgroundColor) {
+    // Re-run when diagram changes or when a fixed diagram arrives from AI retry
+    LaunchedEffect(data.diagram, isDarkMode, backgroundColor, fixedDiagram) {
         isLoading = true
         error = null
+        var pendingFixedDiagram: String? = null
 
         val theme = if (data.theme.isNotEmpty() && data.theme.lowercase() != "default") {
-            // User specified a theme, use it
             data.theme.lowercase()
         } else if (isDarkMode) {
             "dark"
@@ -192,18 +196,14 @@ fun mermaidChart(
             "default"
         }
 
-        // Check cache first - fastest path
-        val sanitizedDiagram = sanitizeMermaidDiagram(data.diagram)
-        sanitizedDiagramCode = sanitizedDiagram
-        log.debug("Sanitized diagram:\n{}", sanitizedDiagram)
-        val cacheKey = DiagramCache.getCacheKey(sanitizedDiagram, theme, backgroundColor)
+        val diagramSource = fixedDiagram ?: data.diagram
+        val cacheKey = DiagramCache.getCacheKey(diagramSource, theme, backgroundColor)
         val cachedImage = DiagramCache.get(cacheKey)
 
         if (cachedImage != null) {
             log.debug("✅ Loaded diagram from cache ({} bytes)", cachedImage.size)
             imageData = cachedImage
             error = null
-            isLoading = false
             isMermaidCliAvailable = true
         } else {
             log.debug("Cache miss, checking Mermaid CLI availability...")
@@ -217,23 +217,108 @@ fun mermaidChart(
             if (isMermaidCliAvailable == true) {
                 log.debug("Converting diagram to PNG...")
                 try {
-                    val rendered = mermaidService.convertToPng(sanitizedDiagram, theme, backgroundColor)
+                    val rendered = mermaidService.convertToPng(diagramSource, theme, backgroundColor)
                     imageData = rendered
                     error = null
 
                     // Store in cache for next time
                     DiagramCache.put(cacheKey, rendered)
                     log.debug("✅ Successfully rendered and cached diagram ({} bytes)", rendered.size)
+
+                    // If this was an AI-fixed diagram, notify so the message can be persisted
+                    if (fixedDiagram != null && messageId != null) {
+                        EventBus.post(
+                            DiagramFixedEvent(
+                                messageId = messageId,
+                                originalDiagram = data.diagram,
+                                fixedDiagram = fixedDiagram!!,
+                            ),
+                        )
+                        log.debug("Posted DiagramFixedEvent for message {}", messageId)
+                    }
                 } catch (_: MermaidCliNotAvailableException) {
                     log.warn("Mermaid CLI became unavailable during conversion")
                     error = "mermaid_cli_not_available"
                     isMermaidCliAvailable = false
                 } catch (e: Exception) {
-                    log.error("Failed to convert diagram", e)
-                    error = "Failed to render diagram: ${e.message}"
+                    val parseError = e.message ?: "Unknown render error"
+                    log.error("Failed to convert diagram (attempt ${retryCount + 1}/1): {}", parseError)
+
+                    // Only attempt AI fix on the original diagram, not on already-fixed diagrams
+                    if (retryCount < 1 && fixedDiagram == null) {
+                        retryCount++
+                        log.debug("Asking AI to fix diagram (retry $retryCount/1)...")
+                        try {
+                            val fixPrompt = """
+                                The following Mermaid diagram failed to render with this error:
+
+                                ERROR:
+                                $parseError
+
+                                ORIGINAL DIAGRAM:
+                                ${data.diagram}
+
+                                Rules you MUST follow when fixing:
+                                1. Emoji characters inside node labels are NOT supported — remove all emojis
+                                2. Edge/link labels (inside `|...|`) with parentheses, colons, or slashes MUST be quoted:
+                                   BAD:  -->|1. User Input (Query)| B
+                                   GOOD: -->|"1. User Input (Query)"| B
+                                3. subgraph titles MUST use ONLY the `id["Title"]` form — no unquoted text before the bracket:
+                                   BAD:  subgraph Core Logic / Business Services["Core Logic"]
+                                   GOOD: subgraph CoreLogic["Core Logic / Business Services"]
+                                4. Node labels with colons, parentheses, or ampersands MUST be double-quoted:
+                                   BAD:  B{Presentation Layer: Desktop UI}
+                                   GOOD: B{"Presentation Layer: Desktop UI"}
+                                5. Cylinder/database nodes `[(Label)]` — label MUST be plain text, NOT a quoted string:
+                                   BAD:  F1[( "AI Provider API: OpenAI" )]
+                                   GOOD: F1[(AI Provider API OpenAI)]
+                                6. Do NOT use `style`, `classDef`, or `class` styling directives — remove them entirely
+                                7. Comments MUST use `%%` (double percent) on their OWN line — never after a statement, never single `%`:
+                                   BAD:  % Data/Flow Connections  or  A --> B; %% comment
+                                   GOOD: %% Data/Flow Connections  (on its own line)
+                                8. subgraph IDs MUST be unique and MUST NOT match any node ID, AND no edge inside a subgraph may use the subgraph's own ID as source or target — all cause cycle errors:
+                                   BAD:  subgraph D["Core Service Layer"] ... D --> R1  (D is both subgraph ID and edge source)
+                                   BAD:  E_Models["label"] ... subgraph E_Models ... E_Models --> F1
+                                   GOOD: subgraph ServiceLayer["Core Service Layer"] ... SvcNode --> R1  (ServiceLayer never used as node/edge endpoint)
+                                9. An edge can only carry ONE label — never chain two label syntaxes on the same edge:
+                                   BAD:  A -- "label1" --> |"label2"| B
+                                   GOOD: A -->|"label1"| B   or   A -- "label1" --> B
+                                10. Do NOT change the diagram type unless it is itself invalid
+
+                                Please fix the diagram syntax and return ONLY the corrected Mermaid diagram code, with no explanation, no markdown fences, and no extra text.
+                            """.trimIndent()
+                            val aiFixed: String = withContext(Dispatchers.IO) {
+                                withTimeout(30_000L.milliseconds) {
+                                    val model = AppContext.getInstance().createChatModel()
+                                    model.chat(fixPrompt)
+                                }
+                            }
+                            // Strip any accidental code fences the AI may add
+                            val cleaned = aiFixed
+                                .replace(Regex("""^```(?:mermaid)?\s*\n?"""), "")
+                                .replace(Regex("""\n?```\s*$"""), "")
+                                .trim()
+                            log.debug("AI returned fixed diagram:\n{}", cleaned)
+                            pendingFixedDiagram = cleaned
+                        } catch (_: TimeoutCancellationException) {
+                            log.warn("AI fix timed out after 30s")
+                            error = parseError
+                        } catch (aiEx: Exception) {
+                            log.error("AI fix attempt failed", aiEx)
+                            error = parseError
+                        }
+                    } else {
+                        log.warn("Diagram render failed after AI fix attempt, showing error")
+                        error = parseError
+                    }
                 }
             }
+        }
 
+        // Always runs — keep spinner visible only when a retry is pending
+        if (pendingFixedDiagram != null) {
+            fixedDiagram = pendingFixedDiagram // triggers LaunchedEffect re-run; isLoading stays true
+        } else {
             isLoading = false
         }
     }
@@ -826,391 +911,4 @@ private fun fullScreenDiagramDialog(
             }
         }
     }
-}
-
-/**
- * Sanitizes Mermaid diagram syntax to fix common issues that AI might generate.
- * This is defensive programming - we fix common mistakes rather than showing errors.
- */
-internal fun sanitizeMermaidDiagram(diagram: String): String {
-    // ========================================
-    // STEP 1: Initial Normalization
-    // ========================================
-
-    // First, normalize escape sequences (handles diagrams from JSON with literal \n)
-    var sanitized = diagram
-        .replace("\\n", "\n")
-        .replace("\\t", "\t")
-        .replace("\\r", "\r")
-        .trim()
-
-    // Remove code fence markers if they were accidentally included
-    sanitized = sanitized.replace(Regex("""^```mermaid\s*\n?"""), "")
-    sanitized = sanitized.replace(Regex("""\n?```\s*$"""), "")
-    sanitized = sanitized.trim()
-
-    // ========================================
-    // STEP 2: Validation - Detect Invalid Multi-Diagram
-    // ========================================
-
-    val diagramTypes = listOf(
-        "flowchart", "sequenceDiagram", "classDiagram", "stateDiagram",
-        "erDiagram", "gantt", "xychart-beta", "journey", "pie", "gitGraph",
-    )
-
-    val hasMultipleDiagramTypes = diagramTypes.count { type ->
-        sanitized.contains(Regex("""\b$type\b"""))
-    } > 1
-
-    if (hasMultipleDiagramTypes) {
-        return """flowchart TD
-    A["Invalid Diagram: Multiple diagram types detected"]
-    B["This diagram contains nested or multiple diagram types"]
-    C["Please use only one diagram type per code block"]
-    A --> B
-    B --> C
-    style A fill:#ffcccc,stroke:#cc0000,stroke-width:2px
-    style B fill:#fff4cc,stroke:#cc9900,stroke-width:2px
-    style C fill:#ccf4ff,stroke:#0099cc,stroke-width:2px"""
-    }
-
-    // ========================================
-    // STEP 3: Flowchart/Graph Fixes
-    // ========================================
-
-    // Fix subgraph/node name conflicts
-    val subgraphNames = mutableSetOf<String>()
-    val subgraphRegex = Regex("""subgraph\s+(\w+)(?:\[.*?\])?""")
-    subgraphRegex.findAll(sanitized).forEach { match ->
-        subgraphNames.add(match.groupValues[1])
-    }
-
-    if (subgraphNames.isNotEmpty()) {
-        val nodeRegex = Regex("""(\b(?:${subgraphNames.joinToString("|")})\b)(\[.+?\])""")
-        sanitized = nodeRegex.replace(sanitized) { match ->
-            val nodeName = match.groupValues[1]
-            val nodeLabel = match.groupValues[2]
-            "${nodeName}_Node$nodeLabel"
-        }
-
-        subgraphNames.forEach { name ->
-            sanitized = sanitized.replace(
-                Regex("""(?<!subgraph\s)\b($name)\b(?!\[)(?=\s*(?:-->|---|-\.-|==>|~~>|\|))"""),
-            ) { "${it.value}_Node" }
-
-            sanitized = sanitized.replace(
-                Regex("""((?:-->|---|-\.-|==>|~~>|\|)\s+)($name)\b(?!\[)"""),
-            ) { "${it.groupValues[1]}${it.groupValues[2]}_Node" }
-        }
-    }
-
-    // Remove incomplete style statements
-    sanitized = sanitized.lines()
-        .filter { line ->
-            val trimmed = line.trim()
-            if (trimmed.startsWith("style ")) {
-                !trimmed.matches(Regex("""style\s+\w+\s+.*\d$""")) ||
-                    trimmed.matches(Regex("""style\s+\w+\s+.*\d+px\s*$"""))
-            } else {
-                true
-            }
-        }
-        .joinToString("\n")
-
-    // Fix node labels with special characters
-    sanitized = sanitized.replace(
-        Regex("""(\w+)\[([^\]"]+[()'"&<>]+[^\]"]*)\]"""),
-    ) { matchResult ->
-        val nodeId = matchResult.groupValues[1]
-        val label = matchResult.groupValues[2]
-        val escapedLabel = label.replace("\"", "#quot;")
-        "$nodeId[\"$escapedLabel\"]"
-    }
-
-    // ========================================
-    // STEP 4: XYChart-Beta Fixes (ALL TOGETHER)
-    // ========================================
-
-    if (sanitized.contains("xychart-beta")) {
-        // Fix title without quotes
-        sanitized = sanitized.replace(
-            Regex("""(?m)^\s*title\s+(?!")(.+?)$"""),
-        ) { matchResult ->
-            val titleText = matchResult.groupValues[1].trim()
-            if (titleText.startsWith("\"") && titleText.endsWith("\"")) {
-                matchResult.value
-            } else {
-                "    title \"$titleText\""
-            }
-        }
-
-        // Fix incorrect axis keywords: xaxis → x-axis, yaxis → y-axis
-        sanitized = sanitized.replace(Regex("""(?m)^\s*xaxis\s+"""), "    x-axis ")
-        sanitized = sanitized.replace(Regex("""(?m)^\s*yaxis\s+"""), "    y-axis ")
-
-        // Fix y-axis label without quotes
-        sanitized = sanitized.replace(
-            Regex("""(?m)^\s*y-axis\s+(?!")([A-Za-z]\S*(?:\s+\S+)*)\s+(\d+\s*-->)"""),
-        ) { matchResult ->
-            val label = matchResult.groupValues[1].trim()
-            val range = matchResult.groupValues[2]
-            if (label.startsWith("\"") && label.endsWith("\"")) {
-                matchResult.value
-            } else {
-                "    y-axis \"$label\" $range"
-            }
-        }
-
-        // Replace invalid 'values' line with proper x-axis data format
-        sanitized = sanitized.replace(
-            Regex("""(?m)^\s*values\s+(.+?)$"""),
-        ) { matchResult ->
-            val values = matchResult.groupValues[1].trim()
-            "    x-axis [$values]"
-        }
-
-        // Replace invalid 'data' keyword section with proper line format
-        if (sanitized.contains(Regex("""(?m)^\s*data\s*$"""))) {
-            val dataSection = Regex("""(?m)^\s*data\s*$\n((?:\s+"[^"]+"\s+\d+\s+\d+\n?)+)""").find(sanitized)
-            if (dataSection != null) {
-                val dataLines = dataSection.groupValues[1].trim().lines()
-                val lineStatements = dataLines.map { line ->
-                    val match = Regex("""\s*"([^"]+)"\s+(\d+)\s+(\d+)""").find(line)
-                    if (match != null) {
-                        val label = match.groupValues[1]
-                        val x = match.groupValues[2]
-                        val y = match.groupValues[3]
-                        "    line [$x, $y] : \"$label\""
-                    } else {
-                        null
-                    }
-                }.filterNotNull()
-
-                sanitized = sanitized.replace(
-                    Regex("""(?m)^\s*data\s*$\n(?:\s+"[^"]+"\s+\d+\s+\d+\n?)+"""),
-                    lineStatements.joinToString("\n") + "\n",
-                )
-            }
-        }
-
-        // Replace simple 'data' line with proper 'line' format
-        sanitized = sanitized.replace(
-            Regex("""(?m)^\s*data\s+(.+?)$"""),
-        ) { matchResult ->
-            val values = matchResult.groupValues[1].trim()
-            "    line [$values]"
-        }
-    }
-
-    // ========================================
-    // STEP 5: ER Diagram Fixes
-    // ========================================
-
-    if (sanitized.contains(Regex("""^erDiagram\b""", RegexOption.MULTILINE))) {
-        // Fix attribute syntax: convert "* id : integer" to "int id PK"
-        // and "name : string" to "string name"
-        val lines = sanitized.lines().toMutableList()
-        var inEntity = false
-        var entityIndent = ""
-
-        for (i in lines.indices) {
-            val line = lines[i]
-            val trimmed = line.trim()
-
-            // Detect entity definition start (entity name followed by {)
-            if (trimmed.matches(Regex("""^\w+\s*\{"""))) {
-                inEntity = true
-                entityIndent = line.takeWhile { it.isWhitespace() }
-                continue
-            }
-
-            // Detect entity definition end
-            if (inEntity && trimmed == "}") {
-                inEntity = false
-                continue
-            }
-
-            // Fix attribute lines inside entity
-            if (inEntity && trimmed.isNotEmpty()) {
-                // Pattern: "* attribute : type" or "attribute : type"
-                val attrMatch = Regex("""^(\*?)\s*(\w+)\s*:\s*(\w+)\s*(.*)$""").find(trimmed)
-                if (attrMatch != null) {
-                    val isPK = attrMatch.groupValues[1] == "*"
-                    val attrName = attrMatch.groupValues[2]
-                    val attrType = attrMatch.groupValues[3]
-                    val rest = attrMatch.groupValues[4].trim()
-
-                    // Convert type names to Mermaid-compatible format
-                    val mermaidType = when (attrType.lowercase()) {
-                        "integer", "int" -> "int"
-                        "string", "varchar", "text" -> "string"
-                        "decimal", "float", "double", "number" -> "decimal"
-                        "date", "datetime", "timestamp" -> "date"
-                        "boolean", "bool" -> "boolean"
-                        else -> attrType
-                    }
-
-                    // Build the corrected attribute line
-                    val pkMarker = if (isPK) " PK" else ""
-                    val fkMarker = if (rest.contains("FK", ignoreCase = true)) " FK" else ""
-                    lines[i] = "$entityIndent    $mermaidType $attrName$pkMarker$fkMarker"
-                }
-            }
-        }
-
-        sanitized = lines.joinToString("\n")
-    }
-
-    // ========================================
-    // STEP 6: Journey/Pie/Gantt Title Fixes
-    // ========================================
-
-    if (sanitized.contains(Regex("""^(journey|pie|gantt)\b""", RegexOption.MULTILINE))) {
-        // Remove quotes from titles - these diagram types don't use quoted titles
-        sanitized = sanitized.replace(
-            Regex("""(?m)^\s*title\s+"([^"]+)"\s*$"""),
-        ) { matchResult ->
-            val titleText = matchResult.groupValues[1].trim()
-            "    title $titleText"
-        }
-    }
-
-    // ========================================
-    // STEP 7: Pie Chart Fixes
-    // ========================================
-
-    if (sanitized.contains(Regex("""^pie\b""", RegexOption.MULTILINE))) {
-        // Ensure proper spacing in data format
-        sanitized = sanitized.replace(
-            Regex("""(?m)^\s*"([^"]+)"\s*:\s*(\d+)\s*$"""),
-        ) { matchResult ->
-            val label = matchResult.groupValues[1]
-            val value = matchResult.groupValues[2]
-            "    \"$label\" : $value"
-        }
-    }
-
-    // ========================================
-    // STEP 8: RequirementDiagram Fixes
-    // ========================================
-
-    if (sanitized.contains(Regex("""^requirementDiagram\b""", RegexOption.MULTILINE))) {
-        // Remove title - not supported
-        sanitized = sanitized.replace(Regex("""(?m)^\s*title\s+.+?$\n?"""), "")
-
-        // Convert simple syntax to proper structure with braces
-        sanitized = sanitized.replace(
-            Regex("""(?m)^\s*requirement\s+(\w+)\s*$"""),
-        ) { match ->
-            val name = match.groupValues[1]
-            "    requirement $name {\n    }"
-        }
-
-        sanitized = sanitized.replace(
-            Regex("""(?m)^\s*element\s+(\w+)\s*$"""),
-        ) { match ->
-            val name = match.groupValues[1]
-            "    element $name {\n    }"
-        }
-
-        // Handle angle bracket syntax
-        sanitized = sanitized.replace(
-            Regex("""requirement\s+(\w+)\s*<[^>]+>"""),
-        ) { match ->
-            val name = match.groupValues[1]
-            "requirement $name {\n    }"
-        }
-
-        sanitized = sanitized.replace(
-            Regex("""element\s+(\w+)\s*<[^>]+>"""),
-        ) { match ->
-            val name = match.groupValues[1]
-            "element $name {\n    }"
-        }
-    }
-
-    // ========================================
-    // STEP 9: Treemap Fixes
-    // ========================================
-
-    if (sanitized.contains(Regex("""^treemap\b""", RegexOption.MULTILINE))) {
-        // Fix missing closing quotes
-        sanitized = sanitized.replace(
-            Regex("""(?m)^\s*"([^"]+:\s*\d+)\s*$"""),
-        ) { match ->
-            val content = match.groupValues[1]
-            val indent = match.value.takeWhile { it.isWhitespace() }
-            "$indent\"$content\""
-        }
-
-        // Scale up small values to improve readability
-        val values = mutableListOf<Int>()
-        Regex(""""[^"]+:\s*(\d+)"""").findAll(sanitized).forEach { match ->
-            values.add(match.groupValues[1].toInt())
-        }
-
-        if (values.isNotEmpty() && values.maxOrNull()!! < 1000) {
-            val scaleFactor = 10
-            sanitized = sanitized.replace(
-                Regex(""""([^"]+):\s*(\d+)""""),
-            ) { match ->
-                val label = match.groupValues[1]
-                val value = match.groupValues[2].toInt()
-                "\"$label: ${value * scaleFactor}\""
-            }
-        }
-    }
-
-    // ========================================
-    // STEP 10: Architecture-Beta Fixes
-    // ========================================
-
-    if (sanitized.contains(Regex("""^architecture-beta\b""", RegexOption.MULTILINE))) {
-        // Add default icon if missing
-        sanitized = sanitized.replace(
-            Regex("""(?m)^\s*service\s+([a-zA-Z0-9_-]+)\[([^\]]+)\]\s*$"""),
-        ) { match ->
-            val serviceName = match.groupValues[1]
-            val label = match.groupValues[2]
-            val indent = match.value.takeWhile { it.isWhitespace() }
-            "$indent service $serviceName(server)[$label]"
-        }
-
-        // Add position indicators to connections
-        sanitized = sanitized.replace(
-            Regex("""(?m)^\s*([a-zA-Z0-9_-]+)\s+-->\s+([a-zA-Z0-9_-]+)\s*$"""),
-        ) { match ->
-            val source = match.groupValues[1]
-            val target = match.groupValues[2]
-            val indent = match.value.takeWhile { it.isWhitespace() }
-            "$indent$source:R --> L:$target"
-        }
-    }
-
-    // ========================================
-    // STEP 11: Sankey Diagram Fixes
-    // ========================================
-
-    if (sanitized.contains(Regex("""^sankeyDiagram\b""", RegexOption.MULTILINE))) {
-        // Fix keyword
-        sanitized = sanitized.replace("sankeyDiagram", "sankey-beta")
-
-        // Fix data format from nested arrays
-        sanitized = sanitized.replace(
-            Regex("""data\s+\[\[(.*?)\]\]""", RegexOption.DOT_MATCHES_ALL),
-        ) { matchResult ->
-            val dataContent = matchResult.groupValues[1]
-            val entries = Regex("""\[\\?"([^"\\]+)\\?",\s*\\?"([^"\\]+)\\?",\s*(\d+)\]""")
-                .findAll(dataContent)
-                .map { "${it.groupValues[1]},${it.groupValues[2]},${it.groupValues[3]}" }
-                .joinToString("\n    ")
-            if (entries.isNotEmpty()) {
-                entries
-            } else {
-                matchResult.value
-            }
-        }
-    }
-
-    return sanitized
 }
