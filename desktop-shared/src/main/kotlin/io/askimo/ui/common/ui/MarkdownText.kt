@@ -172,62 +172,68 @@ private fun preprocessMarkdown(markdown: String): String {
 }
 
 /**
- * During streaming the AI response arrives token by token. An unclosed fenced code block
- * (opening ``` present but closing ``` not yet received) causes the commonmark parser to
- * treat all subsequent text — including more markdown — as raw paragraph text, which looks
- * terrible while the response is still arriving.
+ * During streaming, an unclosed fenced code block causes the commonmark parser to swallow all
+ * subsequent text as raw paragraph content. This function detects the last unclosed fence and
+ * closes it with a `|streaming` sentinel appended to the info string. [renderCodeBlock] then
+ * renders a live code-viewer for such blocks instead of waiting for the full message.
  *
- * This function detects the last unclosed fence and appends a synthetic closing fence with a
- * `|streaming` tag appended to the info string.  [renderCodeBlock] checks for this sentinel
- * and renders a "Generating…" placeholder instead of the partial content, exactly the same
- * pattern used for mermaid charts.
+ * Follows CommonMark §4.5:
+ * - An opener is a line with ≤3 leading spaces + 3+ fence chars + optional info string.
+ * - A closer must use the same fence character, length ≥ opener, and NO info string.
+ * - Lines inside an open block that look like fences are raw code content — never openers.
  *
- * The sentinel is stripped from [language] before any syntax highlighting or run-button logic
- * so it is completely transparent to the rest of the renderer.
+ * Special streaming case: if the last line of the partial response is an incomplete opener
+ * (e.g. the AI just emitted "```js" but the newline hasn't arrived yet) we treat it the same
+ * as a complete opener so users see a live block immediately.
  */
 private fun closeUnclosedFences(markdown: String): String {
+    // Matches a complete fence line: ≤3 leading spaces, 3+ fence chars, optional info
+    val fenceLineRegex = Regex("""^ {0,3}(`{3,}|~{3,})(.*)$""")
+    // Matches an *incomplete* last line that is the start of a fence (no trailing newline yet)
+    // e.g. "```", "```js", "```json" — but NOT a fence closer (no info on closers)
+    val incompleteFenceRegex = Regex("""^ {0,3}(`{3,}|~{3,})(\S*)$""")
+
+    data class OpenFence(val char: Char, val len: Int, val info: String, val lineIndex: Int)
+
+    var open: OpenFence? = null
     val lines = markdown.lines()
-    val fenceRegex = Regex("""^(`{3,}|~{3,})(\S*).*$""")
 
-    // Track open/close state — a fence opens when we see ``` and closes on the next
-    // line that starts with the same or longer fence character sequence.
-    var openFenceChar: Char? = null
-    var openFenceLen = 0
-    var openFenceInfo = ""
-    var openFenceLineIndex = -1
-
+    // Process all lines except potentially the last one (which may be incomplete)
+    val lastIndex = lines.lastIndex
     for ((index, line) in lines.withIndex()) {
-        val match = fenceRegex.matchEntire(line.trim()) ?: continue
-        val marker = match.groupValues[1]
-        val info = match.groupValues[2]
+        val isLastLine = index == lastIndex
 
-        if (openFenceChar == null) {
-            // Opening fence
-            openFenceChar = marker[0]
-            openFenceLen = marker.length
-            openFenceInfo = info
-            openFenceLineIndex = index
-        } else if (marker[0] == openFenceChar && marker.length >= openFenceLen && info.isEmpty()) {
-            // Closing fence — block is complete
-            openFenceChar = null
-            openFenceLen = 0
-            openFenceInfo = ""
-            openFenceLineIndex = -1
+        val match = fenceLineRegex.matchEntire(line) ?: run {
+            // If this is the last line and looks like an incomplete opening fence, treat it as an opener
+            if (isLastLine && open == null) {
+                val incompleteMatch = incompleteFenceRegex.matchEntire(line)
+                if (incompleteMatch != null) {
+                    val marker = incompleteMatch.groupValues[1]
+                    val info = incompleteMatch.groupValues[2].trim()
+                    open = OpenFence(marker[0], marker.length, info, index)
+                }
+            }
+            continue
         }
-        // Otherwise it's a fence marker inside the block — ignore it
+
+        val marker = match.groupValues[1]
+        val rest = match.groupValues[2].trim()
+
+        if (open == null) {
+            open = OpenFence(marker[0], marker.length, rest, index)
+        } else if (marker[0] == open.char && marker.length >= open.len && rest.isEmpty()) {
+            open = null // properly closed
+        }
+        // else: fence-like line inside a block = code content, skip
     }
 
-    // If a fence is still open the block has not been closed yet
-    if (openFenceChar != null) {
-        val fenceMarker = openFenceChar.toString().repeat(openFenceLen)
-        // Replace the original opening line to embed the sentinel in the info string,
-        // then close the block so commonmark produces a proper FencedCodeBlock node.
-        val updatedLines = lines.toMutableList()
-        updatedLines[openFenceLineIndex] = "$fenceMarker$openFenceInfo|streaming"
-        return updatedLines.joinToString("\n") + "\n$fenceMarker\n"
-    }
+    if (open == null) return markdown
 
-    return markdown
+    val fenceMarker = open.char.toString().repeat(open.len)
+    val updatedLines = lines.toMutableList()
+    val infoStr = if (open.info.isNotEmpty()) open.info else ""
+    updatedLines[open.lineIndex] = "$fenceMarker$infoStr|streaming"
+    return updatedLines.joinToString("\n") + "\n$fenceMarker\n"
 }
 
 @Composable
@@ -654,7 +660,7 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
     val language = cleanInfo.takeIf { it.isNotBlank() }
     val code = codeBlock.literal
 
-    // Show a placeholder while the code block is still being received
+    // Show partial code while the code block is still being received
     if (blockIsStreaming) {
         Box(
             modifier = Modifier
@@ -667,22 +673,29 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
                 )
                 .clip(MaterialTheme.shapes.small)
                 .background(AppComponents.codeBlockBackground()),
-            contentAlignment = Alignment.CenterStart,
         ) {
+            codeViewerBlock(
+                code = code,
+                language = language,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            // Streaming indicator pinned to top-right
             Row(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 4.dp, end = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CircularProgressIndicator(
-                    modifier = Modifier.size(14.dp),
-                    strokeWidth = 2.dp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                    modifier = Modifier.size(10.dp),
+                    strokeWidth = 1.5.dp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
                 )
-                Spacer(modifier = Modifier.width(10.dp))
+                Spacer(modifier = Modifier.width(5.dp))
                 Text(
-                    text = if (language != null) "Generating $language…" else "Generating code…",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = if (language != null) language else "code",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 )
             }
         }
