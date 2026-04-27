@@ -135,7 +135,12 @@ fun markdownText(
     val parser = Parser.builder()
         .extensions(listOf(TablesExtension.create(), AutolinkExtension.create()))
         .build()
-    val document = parser.parse(preprocessMarkdown(markdown))
+    val preparedMarkdown = if (isStreaming) {
+        closeUnclosedFences(preprocessMarkdown(markdown))
+    } else {
+        preprocessMarkdown(markdown)
+    }
+    val document = parser.parse(preparedMarkdown)
 
     Column(modifier = modifier) {
         renderNode(document, viewportTopY, isStreaming, onRunRequest, messageId)
@@ -164,6 +169,65 @@ private fun preprocessMarkdown(markdown: String): String {
     }
 
     return processed
+}
+
+/**
+ * During streaming the AI response arrives token by token. An unclosed fenced code block
+ * (opening ``` present but closing ``` not yet received) causes the commonmark parser to
+ * treat all subsequent text — including more markdown — as raw paragraph text, which looks
+ * terrible while the response is still arriving.
+ *
+ * This function detects the last unclosed fence and appends a synthetic closing fence with a
+ * `|streaming` tag appended to the info string.  [renderCodeBlock] checks for this sentinel
+ * and renders a "Generating…" placeholder instead of the partial content, exactly the same
+ * pattern used for mermaid charts.
+ *
+ * The sentinel is stripped from [language] before any syntax highlighting or run-button logic
+ * so it is completely transparent to the rest of the renderer.
+ */
+private fun closeUnclosedFences(markdown: String): String {
+    val lines = markdown.lines()
+    val fenceRegex = Regex("""^(`{3,}|~{3,})(\S*).*$""")
+
+    // Track open/close state — a fence opens when we see ``` and closes on the next
+    // line that starts with the same or longer fence character sequence.
+    var openFenceChar: Char? = null
+    var openFenceLen = 0
+    var openFenceInfo = ""
+    var openFenceLineIndex = -1
+
+    for ((index, line) in lines.withIndex()) {
+        val match = fenceRegex.matchEntire(line.trim()) ?: continue
+        val marker = match.groupValues[1]
+        val info = match.groupValues[2]
+
+        if (openFenceChar == null) {
+            // Opening fence
+            openFenceChar = marker[0]
+            openFenceLen = marker.length
+            openFenceInfo = info
+            openFenceLineIndex = index
+        } else if (marker[0] == openFenceChar && marker.length >= openFenceLen && info.isEmpty()) {
+            // Closing fence — block is complete
+            openFenceChar = null
+            openFenceLen = 0
+            openFenceInfo = ""
+            openFenceLineIndex = -1
+        }
+        // Otherwise it's a fence marker inside the block — ignore it
+    }
+
+    // If a fence is still open the block has not been closed yet
+    if (openFenceChar != null) {
+        val fenceMarker = openFenceChar.toString().repeat(openFenceLen)
+        // Replace the original opening line to embed the sentinel in the info string,
+        // then close the block so commonmark produces a proper FencedCodeBlock node.
+        val updatedLines = lines.toMutableList()
+        updatedLines[openFenceLineIndex] = "$fenceMarker$openFenceInfo|streaming"
+        return updatedLines.joinToString("\n") + "\n$fenceMarker\n"
+    }
+
+    return markdown
 }
 
 @Composable
@@ -582,8 +646,48 @@ private fun renderListItem(
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = null, isStreaming: Boolean = false, onRunRequest: ((String, String) -> Unit)? = null, messageId: String? = null) {
-    val language = codeBlock.info?.trim()?.takeIf { it.isNotBlank() }
+    val rawInfo = codeBlock.info?.trim() ?: ""
+    // Detect the sentinel injected by closeUnclosedFences() — this block is still being streamed
+    val blockIsStreaming = rawInfo.endsWith("|streaming")
+    // Strip the sentinel before any downstream use
+    val cleanInfo = if (blockIsStreaming) rawInfo.removeSuffix("|streaming") else rawInfo
+    val language = cleanInfo.takeIf { it.isNotBlank() }
     val code = codeBlock.literal
+
+    // Show a placeholder while the code block is still being received
+    if (blockIsStreaming) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+                .border(
+                    width = 1.dp,
+                    color = AppComponents.codeBlockBorderColor(),
+                    shape = MaterialTheme.shapes.small,
+                )
+                .clip(MaterialTheme.shapes.small)
+                .background(AppComponents.codeBlockBackground()),
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(14.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = if (language != null) "Generating $language…" else "Generating code…",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        return
+    }
     // Resolved once per code block; null means the Run button should not be shown
     // (either unsupported language or executable not found on PATH)
     val runnableLanguage = remember(language) { RunnableLanguage.resolve(language) }
