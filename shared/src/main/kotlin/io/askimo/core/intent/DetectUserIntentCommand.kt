@@ -60,13 +60,31 @@ object DetectUserIntentCommand {
             }
             .map { (tool, _) -> tool }
 
+        // ── Confidence (early estimate, before fallback decision) ─────────
+        val topVectorScore = vectorMatches
+            .filter { (tool, _) -> tool.specification.name() !in keywordToolNames }
+            .maxOfOrNull { (_, score) -> score } ?: 0.0
+
+        val earlyConfidence = when {
+            keywordTools.isNotEmpty() && vectorOnlyTools.isNotEmpty() -> 90
+            keywordTools.isNotEmpty() -> 85
+            topVectorScore >= 0.80 -> 70
+            vectorOnlyTools.isNotEmpty() -> 55
+            else -> 0
+        }
+
         // ── Layer 3: MCP fallback ─────────────────────────────────────────
-        // If neither keyword nor vector detection produced any matches, but MCP tools are
-        // available, include all of them as candidates and let the LLM decide which (if any)
-        // to invoke. This mirrors how ChatGPT/Claude behave: they always send the full tool
-        // list to the model and rely on the model's function-calling logic.
-        val fallbackMcpTools = if (keywordTools.isEmpty() && vectorOnlyTools.isEmpty() && mcpTools.isNotEmpty()) {
-            log.debug("No intent signal detected — falling back to all {} MCP tools", mcpTools.size)
+        // When confidence is low (< 50) — meaning neither the keyword classifier nor the
+        // vector index produced a reliable signal — include all MCP tools and let the LLM
+        // decide which (if any) to invoke. This mirrors how ChatGPT/Claude behave natively
+        // and prevents false negatives where weak/partial detection returns the wrong subset
+        // instead of falling through to the full tool list.
+        val fallbackMcpTools = if (earlyConfidence < 50 && mcpTools.isNotEmpty()) {
+            log.debug(
+                "Low confidence ({}) — falling back to all {} MCP tools",
+                earlyConfidence,
+                mcpTools.size,
+            )
             mcpTools.filter { (it.strategy and ToolStrategy.INTENT_BASED) != 0 }
         } else {
             emptyList()
@@ -75,11 +93,7 @@ object DetectUserIntentCommand {
         val allMatched = (keywordTools + vectorOnlyTools + fallbackMcpTools)
             .distinctBy { it.specification.name() }
 
-        // ── Confidence ────────────────────────────────────────────────────
-        val topVectorScore = vectorMatches
-            .filter { (tool, _) -> tool.specification.name() !in keywordToolNames }
-            .maxOfOrNull { (_, score) -> score } ?: 0.0
-
+        // ── Confidence (final) ────────────────────────────────────────────
         val confidence = when {
             keywordTools.isNotEmpty() && vectorOnlyTools.isNotEmpty() -> 90
 
@@ -94,6 +108,7 @@ object DetectUserIntentCommand {
             // weak-to-moderate semantic signal
             fallbackMcpTools.isNotEmpty() -> 30
 
+            // low-confidence fallback
             else -> 0
         }
 
