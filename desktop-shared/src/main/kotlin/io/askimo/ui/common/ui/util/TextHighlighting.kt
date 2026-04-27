@@ -9,6 +9,14 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
+import org.commonmark.node.AbstractVisitor
+import org.commonmark.node.Code
+import org.commonmark.node.FencedCodeBlock
+import org.commonmark.node.HardLineBreak
+import org.commonmark.node.IndentedCodeBlock
+import org.commonmark.node.SoftLineBreak
+import org.commonmark.node.Text
+import org.commonmark.parser.Parser
 
 /**
  * Highlights all occurrences of a search query in text.
@@ -20,6 +28,41 @@ import androidx.compose.ui.text.withStyle
  * @param activeHighlightColor The color to use for the active result (only used if isActiveResult is true)
  * @return AnnotatedString with highlighted matches
  */
+fun markdownToPlainText(markdown: String): String {
+    val parser = Parser.builder().build()
+    val document = parser.parse(markdown)
+    val sb = StringBuilder()
+    document.accept(
+        object : AbstractVisitor() {
+            override fun visit(text: Text) {
+                sb.append(text.literal)
+                visitChildren(text)
+            }
+
+            override fun visit(code: Code) {
+                sb.append(code.literal)
+            }
+
+            override fun visit(fencedCodeBlock: FencedCodeBlock) {
+                sb.append(fencedCodeBlock.literal)
+            }
+
+            override fun visit(indentedCodeBlock: IndentedCodeBlock) {
+                sb.append(indentedCodeBlock.literal)
+            }
+
+            override fun visit(softLineBreak: SoftLineBreak) {
+                sb.append(' ')
+            }
+
+            override fun visit(hardLineBreak: HardLineBreak) {
+                sb.append('\n')
+            }
+        },
+    )
+    return sb.toString().trim()
+}
+
 fun highlightSearchText(
     text: String,
     query: String,

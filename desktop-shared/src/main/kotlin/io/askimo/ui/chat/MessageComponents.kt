@@ -73,6 +73,7 @@ import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.ui.markdownText
 import io.askimo.ui.common.ui.themedTooltip
 import io.askimo.ui.common.ui.util.highlightSearchText
+import io.askimo.ui.common.ui.util.markdownToPlainText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
@@ -589,7 +590,7 @@ private fun aiMessageBubble(
                                 if (searchQuery.isNotBlank()) {
                                     Text(
                                         text = highlightSearchText(
-                                            text = message.content,
+                                            text = markdownToPlainText(message.content),
                                             query = searchQuery,
                                             highlightColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
                                             isActiveResult = isActiveSearchResult,
