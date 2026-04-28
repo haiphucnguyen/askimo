@@ -926,11 +926,7 @@
   "name": "com.github.dockerjava.api.model.PeerNode",
   "allDeclaredFields": true,
   "queryAllDeclaredMethods": true,
-  "queryAllDeclaredConstructors": true,
-  "methods": [ {
-    "name": "<init>",
-    "parameterTypes": [ ]
-  } ]
+  "queryAllDeclaredConstructors": true
 }, {
   "name": "com.github.dockerjava.api.model.Ports",
   "allDeclaredFields": true,
@@ -4960,7 +4956,7 @@
     "parameterTypes": [ "dev.langchain4j.data.message.UserMessage", "dev.langchain4j.model.chat.request.ChatRequestParameters" ]
   } ]
 }, {
-  "name": "io.askimo.core.providers.ChatClient$MockitoMock$Rrc1q9Im",
+  "name": "io.askimo.core.providers.ChatClient$MockitoMock$SfxzjTeR",
   "queryAllDeclaredConstructors": true,
   "methods": [ {
     "name": "<init>",
@@ -6745,6 +6741,11 @@
     "name": "cellsBusy"
   } ]
 }, {
+  "name": "java.util.concurrent.atomic.Striped64$Cell",
+  "fields": [ {
+    "name": "value"
+  } ]
+}, {
   "name": "java.util.concurrent.locks.AbstractOwnableSynchronizer"
 }, {
   "name": "java.util.concurrent.locks.AbstractQueuedSynchronizer"
@@ -7437,7 +7438,7 @@
     "parameterTypes": [ ]
   } ]
 }, {
-  "name": "org.jline.reader.ParsedLine$MockitoMock$UmMdXeyf",
+  "name": "org.jline.reader.ParsedLine$MockitoMock$9dkxsF5P",
   "queryAllDeclaredConstructors": true,
   "methods": [ {
     "name": "<init>",
