@@ -159,9 +159,6 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
                     )
                     sendThinking(true)
                     returnThinking(true)
-                    temperature(1.0)
-                } else {
-                    temperature(AppConfig.chat.samplingTemperature)
                 }
             }
             .build()
@@ -188,7 +185,6 @@ class GeminiModelFactory : ChatModelFactory<GeminiSettings> {
             .apiKey(safeApiKey(settings.apiKey))
             .modelName(settings.defaultModel)
             .timeout(Duration.ofSeconds(AppConfig.models.timeouts.defaultModelTimeoutSeconds))
-            .temperature(AppConfig.chat.samplingTemperature)
             .build()
     }
 

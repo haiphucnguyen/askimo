@@ -253,7 +253,6 @@ data class ChatConfig(
     @field:JsonAlias("summarizationThreshold") val summarizationThreshold: Double = 0.75,
     @field:JsonAlias("enableAsyncSummarization") val enableAsyncSummarization: Boolean = true,
     @field:JsonAlias("summarizationTimeoutSeconds") val summarizationTimeoutSeconds: Long = 60,
-    val samplingTemperature: Double = 1.0,
     @field:JsonAlias("defaultResponseAILocale") val defaultResponseAILocale: String? = null,
 )
 
@@ -492,7 +491,6 @@ object AppConfig {
           summarization_timeout_seconds: ${'$'}{ASKIMO_CHAT_SUMMARIZATION_TIMEOUT:60}
           enable_async_summarization:    ${'$'}{ASKIMO_CHAT_ENABLE_ASYNC_SUMMARIZATION:true}
           default_response_ai_locale:    ${'$'}{ASKIMO_CHAT_DEFAULT_RESPONSE_LOCALE:}
-          sampling_temperature:          ${'$'}{ASKIMO_CHAT_SAMPLING_TEMPERATURE:1.0}
 
         rag:
           vector_search_max_results:      ${'$'}{ASKIMO_RAG_VECTOR_SEARCH_MAX_RESULTS:20}
@@ -939,7 +937,6 @@ object AppConfig {
                 summarizationTimeoutSeconds = envLong("ASKIMO_CHAT_SUMMARIZATION_TIMEOUT", 60L),
                 enableAsyncSummarization = System.getenv("ASKIMO_CHAT_ENABLE_ASYNC_SUMMARIZATION")?.toBoolean() ?: true,
                 defaultResponseAILocale = System.getenv("ASKIMO_CHAT_DEFAULT_RESPONSE_LOCALE")?.takeIf { it.isNotBlank() },
-                samplingTemperature = envDouble("ASKIMO_CHAT_SAMPLING_TEMPERATURE", 1.0),
             )
 
         val rag =
@@ -1170,8 +1167,6 @@ object AppConfig {
         "summarizationThreshold" -> config.copy(summarizationThreshold = (value as Number).toDouble())
 
         "enableAsyncSummarization" -> config.copy(enableAsyncSummarization = value as Boolean)
-
-        "samplingTemperature" -> config.copy(samplingTemperature = (value as Number).toDouble())
 
         "defaultResponseAILocale" -> {
             val newLocale = if (value is String && value.isBlank()) null else value as? String

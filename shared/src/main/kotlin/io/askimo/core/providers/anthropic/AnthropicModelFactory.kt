@@ -157,9 +157,6 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
                     maxTokens(thinkingConfig.thinkingMaxTokens)
                     sendThinking(true)
                     returnThinking(true)
-                    temperature(1.0)
-                } else {
-                    temperature(AppConfig.chat.samplingTemperature)
                 }
             }
             .build()
@@ -187,7 +184,6 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
             .modelName(settings.defaultModel)
             .baseUrl(settings.baseUrl)
             .timeout(Duration.ofSeconds(AppConfig.models.timeouts.defaultModelTimeoutSeconds))
-            .temperature(AppConfig.chat.samplingTemperature)
             .build()
     }
 

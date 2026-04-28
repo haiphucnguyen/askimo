@@ -166,7 +166,7 @@ class AppConfigTest {
     }
 
     @Test
-    fun `updateChatField should handle all fields including samplingTemperature`() {
+    fun `updateChatField should handle all fields`() {
         var config = ChatConfig()
 
         // Test top-level fields
@@ -179,15 +179,10 @@ class AppConfigTest {
         config = updateChatFieldHelper(config, "enableAsyncSummarization", false)
         assertFalse(config.enableAsyncSummarization)
 
-        // Test flat samplingTemperature field
-        config = updateChatFieldHelper(config, "samplingTemperature", 0.7)
-        assertEquals(0.7, config.samplingTemperature, 0.001)
-
         // Verify all fields are correct after multiple updates
         assertEquals(10000, config.maxTokens)
         assertEquals(0.8, config.summarizationThreshold, 0.001)
         assertFalse(config.enableAsyncSummarization)
-        assertEquals(0.7, config.samplingTemperature, 0.001)
     }
 
     @Test

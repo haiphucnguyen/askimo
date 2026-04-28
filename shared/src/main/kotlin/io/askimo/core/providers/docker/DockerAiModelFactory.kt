@@ -112,7 +112,6 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
             .baseUrl(settings.baseUrl)
             .modelName(settings.defaultModel)
             .timeout(Duration.ofSeconds(AppConfig.models.timeouts.defaultModelTimeoutSeconds))
-            .temperature(AppConfig.chat.samplingTemperature)
             .logger(log)
             .logRequests(log.isDebugEnabled)
             .logResponses(log.isTraceEnabled)
@@ -143,7 +142,6 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
             .apiKey("docker-ai")
             .modelName(settings.defaultModel)
             .timeout(Duration.ofSeconds(AppConfig.models.timeouts.defaultModelTimeoutSeconds))
-            .temperature(AppConfig.chat.samplingTemperature)
             .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.DOCKER.name.lowercase())))
             .build()
     }

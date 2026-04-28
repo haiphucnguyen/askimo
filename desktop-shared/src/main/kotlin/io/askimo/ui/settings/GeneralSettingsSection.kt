@@ -29,7 +29,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -83,9 +82,6 @@ fun generalSettingsSection() {
 
                 // Font Settings
                 fontSettingsCard()
-
-                // AI Sampling Settings
-                samplingSettingsCard()
             }
         }
 
@@ -500,82 +496,6 @@ private fun fontSettingsCard() {
                             )
                         }
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun samplingSettingsCard() {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = AppComponents.bannerCardColors(),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.large),
-            verticalArrangement = Arrangement.spacedBy(Spacing.medium),
-        ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = stringResource("settings.sampling.title"),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
-                Text(
-                    text = stringResource("settings.sampling.description"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
-                )
-            }
-
-            HorizontalDivider()
-
-            // Creativity Slider (Temperature 0.0 - 1.0)
-            var sliderValue by remember { mutableStateOf(AppConfig.chat.samplingTemperature.toFloat()) }
-
-            // Sync slider with AppConfig when AppConfig changes externally
-            sliderValue = AppConfig.chat.samplingTemperature.toFloat()
-
-            Column(verticalArrangement = Arrangement.spacedBy(Spacing.small)) {
-                Text(
-                    text = stringResource("settings.sampling.creativity"),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                )
-
-                Text(
-                    text = stringResource("settings.sampling.creativity.description"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f),
-                )
-
-                Slider(
-                    value = sliderValue,
-                    onValueChange = { newValue ->
-                        sliderValue = newValue
-                        AppConfig.updateField("chat.samplingTemperature", newValue.toDouble())
-                    },
-                    valueRange = 0f..1f,
-                )
-
-                // Slider labels
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = stringResource("settings.sampling.creativity.strict"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
-                    )
-                    Text(
-                        text = stringResource("settings.sampling.creativity.creative"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f),
-                    )
                 }
             }
         }

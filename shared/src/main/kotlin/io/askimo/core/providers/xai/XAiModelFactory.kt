@@ -87,7 +87,6 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
             .baseUrl(settings.baseUrl)
             .modelName(settings.defaultModel)
             .timeout(Duration.ofSeconds(AppConfig.models.timeouts.defaultModelTimeoutSeconds))
-            .temperature(AppConfig.chat.samplingTemperature)
             .logger(log)
             .logRequests(log.isDebugEnabled)
             .logResponses(log.isTraceEnabled)
@@ -118,7 +117,6 @@ class XAiModelFactory : ChatModelFactory<XAiSettings> {
             .apiKey(safeApiKey(settings.apiKey))
             .modelName(settings.defaultModel)
             .timeout(Duration.ofSeconds(AppConfig.models.timeouts.defaultModelTimeoutSeconds))
-            .temperature(AppConfig.chat.samplingTemperature)
             .listeners(listOf(TelemetryChatModelListener(telemetry, XAI.name.lowercase())))
             .build()
     }

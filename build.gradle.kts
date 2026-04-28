@@ -16,31 +16,28 @@ val ratchetRef = providers.gradleProperty("spotlessRatchetFrom").orElse("origin/
 
 spotless {
     ratchetFrom(ratchetRef)
-    format("json") {
+    json {
         target("**/*.json")
         targetExclude("**/build/**")
-        prettier().config(mapOf("parser" to "json"))
+        jackson()
         trimTrailingWhitespace()
         endWithNewline()
     }
     format("html") {
         target("**/*.html")
         targetExclude("**/build/**")
-        prettier().config(mapOf("parser" to "html"))
         trimTrailingWhitespace()
         endWithNewline()
     }
     format("javascript") {
         target("**/*.js")
         targetExclude("**/build/**")
-        prettier().config(mapOf("parser" to "babel"))
         trimTrailingWhitespace()
         endWithNewline()
     }
     format("css") {
         target("**/*.css")
         targetExclude("**/build/**")
-        prettier().config(mapOf("parser" to "css"))
         trimTrailingWhitespace()
         endWithNewline()
     }
