@@ -272,7 +272,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.pkg.outputs.files }}
-          generate_release_notes: true
+          generate_release_notes: false
+          append_body: false
           draft: true
           prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
         env:

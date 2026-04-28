@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -609,39 +610,46 @@ fun chatView(
                                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                     )
 
-                                    // Show available directives
+                                    // Show available directives in a scrollable section
                                     if (availableDirectives.isNotEmpty()) {
                                         HorizontalDivider()
 
-                                        availableDirectives.forEach { directive ->
-                                            themedTooltip(
-                                                text = "${directive.name}\n${directive.content}",
-                                                placement = TooltipPlacement.LEFT,
-                                            ) {
-                                                DropdownMenuItem(
-                                                    text = {
-                                                        Text(
-                                                            text = directive.name,
-                                                            style = MaterialTheme.typography.bodyMedium,
+                                        Box(
+                                            modifier = Modifier.heightIn(max = 300.dp),
+                                        ) {
+                                            val directivesScrollState = rememberScrollState()
+                                            Column(modifier = Modifier.verticalScroll(directivesScrollState)) {
+                                                availableDirectives.forEach { directive ->
+                                                    themedTooltip(
+                                                        text = "${directive.name}\n${directive.content}",
+                                                        placement = TooltipPlacement.LEFT,
+                                                    ) {
+                                                        DropdownMenuItem(
+                                                            text = {
+                                                                Text(
+                                                                    text = directive.name,
+                                                                    style = MaterialTheme.typography.bodyMedium,
+                                                                )
+                                                            },
+                                                            onClick = {
+                                                                actions.setDirective(directive.id)
+                                                                directiveDropdownExpanded = false
+                                                            },
+                                                            leadingIcon = if (selectedDirective == directive.id) {
+                                                                {
+                                                                    Icon(
+                                                                        Icons.Default.Check,
+                                                                        contentDescription = "Selected",
+                                                                        tint = MaterialTheme.colorScheme.onSurface,
+                                                                    )
+                                                                }
+                                                            } else {
+                                                                null
+                                                            },
+                                                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                                         )
-                                                    },
-                                                    onClick = {
-                                                        actions.setDirective(directive.id)
-                                                        directiveDropdownExpanded = false
-                                                    },
-                                                    leadingIcon = if (selectedDirective == directive.id) {
-                                                        {
-                                                            Icon(
-                                                                Icons.Default.Check,
-                                                                contentDescription = "Selected",
-                                                                tint = MaterialTheme.colorScheme.onSurface,
-                                                            )
-                                                        }
-                                                    } else {
-                                                        null
-                                                    },
-                                                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                                                )
+                                                    }
+                                                }
                                             }
                                         }
                                     }

@@ -468,6 +468,8 @@ jobs:
         with:
           files: |
             release/*
+          # Only upload files — do NOT touch the release body/notes.
+          # Notes are authored manually; contributors are appended by the contributors job.
           append_body: false
           fail_on_unmatched_files: true
           prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha') }}
@@ -497,6 +499,16 @@ jobs:
         run: |
           set -euo pipefail
           TAG="${{ github.ref_name }}"
+
+          # Fetch current release body first
+          CURRENT_BODY=$(gh release view "$TAG" --json body --jq '.body' 2>/dev/null || echo "")
+
+          # Skip entirely if contributors section already exists — preserves manual edits
+          # and prevents re-runs from wiping or duplicating the section.
+          if echo "$CURRENT_BODY" | grep -q "^## Contributors"; then
+            echo "ℹ️  Contributors section already present — skipping to preserve manual edits."
+            exit 0
+          fi
 
           # Find the previous tag (the one before this one)
           PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${TAG}$" | head -n1 || true)
@@ -531,13 +543,7 @@ jobs:
             SECTION+="- ${AUTHOR}"$'\n'
           done
 
-          # Fetch current release body
-          CURRENT_BODY=$(gh release view "$TAG" --json body --jq '.body' 2>/dev/null || echo "")
-
-          # Remove any previously appended Contributors section (idempotent re-runs)
-          STRIPPED=$(echo "$CURRENT_BODY" | sed '/^## Contributors/,$ d')
-
-          NEW_BODY="${STRIPPED}${SECTION}"
+          NEW_BODY="${CURRENT_BODY}${SECTION}"
 
           gh release edit "$TAG" --notes "$NEW_BODY"
           echo "✅ Contributors section appended to release $TAG"

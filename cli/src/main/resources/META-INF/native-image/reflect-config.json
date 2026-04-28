@@ -3456,7 +3456,9 @@
           "java.lang.String",
           "java.lang.String",
           "java.lang.String",
-          "java.lang.String"
+          "java.lang.String",
+          "int",
+          "int"
         ]
       },
       {
@@ -3468,12 +3470,16 @@
           "java.lang.String",
           "java.lang.String",
           "int",
+          "int",
+          "int",
           "kotlin.jvm.internal.DefaultConstructorMarker"
         ]
       },
       { "name": "getDefaultModel", "parameterTypes": [] },
       { "name": "getEmbeddingModel", "parameterTypes": [] },
       { "name": "getImageModel", "parameterTypes": [] },
+      { "name": "getThinkingBudgetTokens", "parameterTypes": [] },
+      { "name": "getThinkingMaxTokens", "parameterTypes": [] },
       { "name": "getUtilityModel", "parameterTypes": [] },
       { "name": "getVisionModel", "parameterTypes": [] }
     ]
@@ -4880,7 +4886,7 @@
     ]
   },
   {
-    "name": "io.askimo.core.providers.ChatClient$MockitoMock$iqUBbmqA",
+    "name": "io.askimo.core.providers.ChatClient$MockitoMock$uIPBq6lG",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },
@@ -6532,10 +6538,6 @@
     "fields": [{ "name": "base" }, { "name": "cellsBusy" }]
   },
   {
-    "name": "java.util.concurrent.atomic.Striped64$Cell",
-    "fields": [{ "name": "value" }]
-  },
-  {
     "name": "java.util.concurrent.locks.AbstractOwnableSynchronizer"
   },
   {
@@ -7276,7 +7278,7 @@
     ]
   },
   {
-    "name": "org.jline.reader.ParsedLine$MockitoMock$PNEHtWO3",
+    "name": "org.jline.reader.ParsedLine$MockitoMock$NDxkbwve",
     "queryAllDeclaredConstructors": true,
     "methods": [{ "name": "<init>", "parameterTypes": [] }]
   },

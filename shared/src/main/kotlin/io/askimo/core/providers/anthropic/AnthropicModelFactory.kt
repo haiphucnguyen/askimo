@@ -151,9 +151,10 @@ class AnthropicModelFactory : ChatModelFactory<AnthropicSettings> {
             .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.ANTHROPIC.name.lowercase())))
             .apply {
                 if (supportsThinking) {
+                    val thinkingConfig = AppConfig.models[ModelProvider.ANTHROPIC]
                     thinkingType("enabled")
-                    thinkingBudgetTokens(1024)
-                    maxTokens(2048)
+                    thinkingBudgetTokens(thinkingConfig.thinkingBudgetTokens)
+                    maxTokens(thinkingConfig.thinkingMaxTokens)
                     sendThinking(true)
                     returnThinking(true)
                     temperature(1.0)

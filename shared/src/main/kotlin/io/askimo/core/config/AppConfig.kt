@@ -282,6 +282,10 @@ data class ProviderModelConfig(
     @field:JsonAlias("embeddingModel") val embeddingModel: String = "",
     @field:JsonAlias("visionModel") val visionModel: String = "",
     @field:JsonAlias("imageModel") val imageModel: String = "",
+    // Anthropic extended thinking — only applied when the model supports thinking.
+    // Not exposed in the UI; advanced users can override in the config file.
+    @field:JsonAlias("thinkingBudgetTokens") val thinkingBudgetTokens: Int = 16000,
+    @field:JsonAlias("thinkingMaxTokens") val thinkingMaxTokens: Int = 32000,
 )
 
 /**
@@ -506,6 +510,11 @@ object AppConfig {
             embedding_model: ${'$'}{ASKIMO_ANTHROPIC_EMBEDDING_MODEL:}
             vision_model: ${'$'}{ASKIMO_ANTHROPIC_VISION_MODEL:claude-sonnet-4-6}
             image_model: ${'$'}{ASKIMO_ANTHROPIC_IMAGE_MODEL:claude-sonnet-4-6}
+            # Extended thinking settings — only applied when the selected model supports thinking.
+            # Increase thinking_budget_tokens for deeper reasoning (max varies by model, up to 64000 for claude-sonnet-4-6+).
+            # thinking_max_tokens must always be greater than thinking_budget_tokens.
+            thinking_budget_tokens: ${'$'}{ASKIMO_ANTHROPIC_THINKING_BUDGET_TOKENS:16000}
+            thinking_max_tokens: ${'$'}{ASKIMO_ANTHROPIC_THINKING_MAX_TOKENS:32000}
           gemini:
             utility_model: ${'$'}{ASKIMO_GEMINI_UTILITY_MODEL:}
             embedding_model: ${'$'}{ASKIMO_GEMINI_EMBEDDING_MODEL:gemini-embedding-001}
@@ -952,6 +961,8 @@ object AppConfig {
                 embeddingModel = env("ASKIMO_ANTHROPIC_EMBEDDING_MODEL", ""),
                 visionModel = env("ASKIMO_ANTHROPIC_VISION_MODEL", "claude-sonnet-4-6"),
                 imageModel = env("ASKIMO_ANTHROPIC_IMAGE_MODEL", "claude-sonnet-4-6"),
+                thinkingBudgetTokens = envInt("ASKIMO_ANTHROPIC_THINKING_BUDGET_TOKENS", 16000),
+                thinkingMaxTokens = envInt("ASKIMO_ANTHROPIC_THINKING_MAX_TOKENS", 32000),
             ),
             gemini = ProviderModelConfig(
                 utilityModel = env("ASKIMO_GEMINI_UTILITY_MODEL", "gemini-2.5-flash-lite"),
