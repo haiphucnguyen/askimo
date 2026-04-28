@@ -655,101 +655,131 @@ private fun diagramViewer(
         ) {
             // Fullscreen button (only in inline view)
             if (onFullScreen != null) {
-                IconButton(
-                    onClick = onFullScreen,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .pointerHoverIcon(PointerIcon.Hand),
+                themedTooltip(
+                    text = stringResource("mermaid.button.expand"),
+                    placement = TooltipPlacement.LEFT,
                 ) {
-                    Icon(Icons.Default.Fullscreen, stringResource("mermaid.button.expand"))
+                    IconButton(
+                        onClick = onFullScreen,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Icon(Icons.Default.Fullscreen, stringResource("mermaid.button.expand"))
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
             // Copy diagram code button
-            IconButton(
-                onClick = {
-                    clipboardManager.setText(AnnotatedString(sanitizedDiagram))
-                    showCopyFeedback = true
-                    coroutineScope.launch {
-                        delay(2000)
-                        showCopyFeedback = false
-                    }
-                },
-                modifier = Modifier
-                    .size(if (onFullScreen != null) 32.dp else 48.dp)
-                    .pointerHoverIcon(PointerIcon.Hand),
+            themedTooltip(
+                text = stringResource("mermaid.button.copy.code"),
+                placement = TooltipPlacement.LEFT,
             ) {
-                Icon(
-                    Icons.Default.ContentCopy,
-                    stringResource("mermaid.button.copy.code"),
-                    modifier = if (onFullScreen != null) Modifier else Modifier.size(32.dp),
-                )
+                IconButton(
+                    onClick = {
+                        clipboardManager.setText(AnnotatedString(sanitizedDiagram))
+                        showCopyFeedback = true
+                        coroutineScope.launch {
+                            delay(2000)
+                            showCopyFeedback = false
+                        }
+                    },
+                    modifier = Modifier
+                        .size(if (onFullScreen != null) 32.dp else 48.dp)
+                        .pointerHoverIcon(PointerIcon.Hand),
+                ) {
+                    Icon(
+                        Icons.Default.ContentCopy,
+                        stringResource("mermaid.button.copy.code"),
+                        modifier = if (onFullScreen != null) Modifier else Modifier.size(32.dp),
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(if (onFullScreen != null) 8.dp else 16.dp))
 
             // Download button
-            IconButton(
-                onClick = { downloadDiagramAsPng(imageData, log) },
-                modifier = Modifier
-                    .size(if (onFullScreen != null) 32.dp else 48.dp)
-                    .pointerHoverIcon(PointerIcon.Hand),
+            themedTooltip(
+                text = stringResource("mermaid.button.download"),
+                placement = TooltipPlacement.LEFT,
             ) {
-                Icon(
-                    Icons.Default.Download,
-                    stringResource("mermaid.button.download"),
-                    modifier = if (onFullScreen != null) Modifier else Modifier.size(32.dp),
-                )
+                IconButton(
+                    onClick = { downloadDiagramAsPng(imageData, log) },
+                    modifier = Modifier
+                        .size(if (onFullScreen != null) 32.dp else 48.dp)
+                        .pointerHoverIcon(PointerIcon.Hand),
+                ) {
+                    Icon(
+                        Icons.Default.Download,
+                        stringResource("mermaid.button.download"),
+                        modifier = if (onFullScreen != null) Modifier else Modifier.size(32.dp),
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(if (onFullScreen != null) 8.dp else 16.dp))
 
             // Zoom in
-            IconButton(
-                onClick = onZoomIn,
-                modifier = Modifier
-                    .size(if (onFullScreen != null) 32.dp else 48.dp)
-                    .pointerHoverIcon(PointerIcon.Hand),
+            themedTooltip(
+                text = stringResource("mermaid.button.zoom.in"),
+                placement = TooltipPlacement.LEFT,
             ) {
-                Icon(
-                    Icons.Default.Add,
-                    stringResource("mermaid.button.zoom.in"),
-                    modifier = if (onFullScreen != null) Modifier else Modifier.size(32.dp),
-                )
+                IconButton(
+                    onClick = onZoomIn,
+                    modifier = Modifier
+                        .size(if (onFullScreen != null) 32.dp else 48.dp)
+                        .pointerHoverIcon(PointerIcon.Hand),
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        stringResource("mermaid.button.zoom.in"),
+                        modifier = if (onFullScreen != null) Modifier else Modifier.size(32.dp),
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(if (onFullScreen != null) 8.dp else 16.dp))
 
             // Reset zoom
-            IconButton(
-                onClick = onResetZoom,
-                modifier = Modifier
-                    .size(if (onFullScreen != null) 32.dp else 48.dp)
-                    .pointerHoverIcon(PointerIcon.Hand),
+            themedTooltip(
+                text = stringResource("mermaid.button.reset.zoom"),
+                placement = TooltipPlacement.LEFT,
             ) {
-                Icon(
-                    Icons.Default.Refresh,
-                    stringResource("mermaid.button.reset.zoom"),
-                    modifier = if (onFullScreen != null) Modifier else Modifier.size(32.dp),
-                )
+                IconButton(
+                    onClick = onResetZoom,
+                    modifier = Modifier
+                        .size(if (onFullScreen != null) 32.dp else 48.dp)
+                        .pointerHoverIcon(PointerIcon.Hand),
+                ) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        stringResource("mermaid.button.reset.zoom"),
+                        modifier = if (onFullScreen != null) Modifier else Modifier.size(32.dp),
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(if (onFullScreen != null) 8.dp else 16.dp))
 
             // Zoom out
-            IconButton(
-                onClick = onZoomOut,
-                modifier = Modifier
-                    .size(if (onFullScreen != null) 32.dp else 48.dp)
-                    .pointerHoverIcon(PointerIcon.Hand),
+            themedTooltip(
+                text = stringResource("mermaid.button.zoom.out"),
+                placement = TooltipPlacement.LEFT,
             ) {
-                Icon(
-                    Icons.Default.Remove,
-                    stringResource("mermaid.button.zoom.out"),
-                    modifier = if (onFullScreen != null) Modifier else Modifier.size(32.dp),
-                )
+                IconButton(
+                    onClick = onZoomOut,
+                    modifier = Modifier
+                        .size(if (onFullScreen != null) 32.dp else 48.dp)
+                        .pointerHoverIcon(PointerIcon.Hand),
+                ) {
+                    Icon(
+                        Icons.Default.Remove,
+                        stringResource("mermaid.button.zoom.out"),
+                        modifier = if (onFullScreen != null) Modifier else Modifier.size(32.dp),
+                    )
+                }
             }
         }
     }
@@ -881,19 +911,24 @@ private fun fullScreenDiagramDialog(
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 // Close button
-                IconButton(
-                    onClick = onDismiss,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(16.dp)
-                        .size(48.dp)
-                        .pointerHoverIcon(PointerIcon.Hand),
+                themedTooltip(
+                    text = stringResource("mermaid.button.close"),
+                    placement = TooltipPlacement.LEFT,
                 ) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = stringResource("mermaid.button.close"),
-                        modifier = Modifier.size(32.dp),
-                    )
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(16.dp)
+                            .size(48.dp)
+                            .pointerHoverIcon(PointerIcon.Hand),
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = stringResource("mermaid.button.close"),
+                            modifier = Modifier.size(32.dp),
+                        )
+                    }
                 }
 
                 // Diagram with zoom controls

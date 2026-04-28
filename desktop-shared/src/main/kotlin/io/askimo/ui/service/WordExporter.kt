@@ -2,7 +2,7 @@
  *
  * Copyright (c) 2026 Hai Nguyen
  */
-package io.askimo.ui.plan
+package io.askimo.ui.service
 
 import io.askimo.core.logging.logger
 import org.apache.poi.xwpf.usermodel.ParagraphAlignment
@@ -11,14 +11,14 @@ import java.io.File
 import java.io.FileOutputStream
 
 /**
- * Renders a markdown string to a Word (.docx) file using Apache POI.
+ * Generic markdown-to-Word (.docx) renderer using Apache POI.
  *
  * Handles: headings (H1–H3), horizontal rules, bullet lists, blank lines,
  * and inline **bold** formatting.
  */
-internal object PlanWordExporter {
+internal object WordExporter {
 
-    private val log = logger<PlanWordExporter>()
+    private val log = logger<WordExporter>()
 
     fun export(markdown: String, copyright: String, targetFile: File) {
         targetFile.parentFile?.mkdirs()

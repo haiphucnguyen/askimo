@@ -72,10 +72,14 @@ import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.ui.markdownText
 import io.askimo.ui.common.ui.themedTooltip
+import io.askimo.ui.common.ui.util.FileDialogUtils
 import io.askimo.ui.common.ui.util.highlightSearchText
 import io.askimo.ui.common.ui.util.markdownToPlainText
+import io.askimo.ui.service.MessageExportService
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -523,6 +527,7 @@ private fun aiMessageBubble(
     var showCopyFeedback by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     var pendingRunRequest by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var isExporting by remember { mutableStateOf(false) }
     val isClickable = onMessageClick != null && message.id != null && message.timestamp != null
     val aiContentColor = if (isOutdatedMessage) {
         MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
@@ -729,6 +734,46 @@ private fun aiMessageBubble(
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
+                        }
+                    }
+
+                    // Export to PDF button
+                    val exportPdfDialogTitle = stringResource("message.ai.export.pdf.dialog.title")
+                    themedTooltip(text = stringResource("message.ai.export.pdf")) {
+                        IconButton(
+                            onClick = {
+                                coroutineScope.launch {
+                                    isExporting = true
+                                    withContext(Dispatchers.IO) {
+                                        val file = FileDialogUtils.pickSavePath(
+                                            suggestedName = "ai-response",
+                                            extension = "pdf",
+                                            title = exportPdfDialogTitle,
+                                        )
+                                        if (file != null) {
+                                            MessageExportService.export(
+                                                content = message.content,
+                                                targetFile = file,
+                                                format = MessageExportService.ExportFormat.PDF,
+                                            )
+                                        }
+                                    }
+                                    isExporting = false
+                                }
+                            },
+                            enabled = !isExporting,
+                            modifier = Modifier.size(32.dp).pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Download,
+                                contentDescription = stringResource("message.ai.export.pdf"),
+                                modifier = Modifier.size(16.dp),
+                                tint = if (isExporting) {
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                } else {
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                },
+                            )
                         }
                     }
                 }

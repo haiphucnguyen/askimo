@@ -8,6 +8,8 @@ import io.askimo.core.logging.logger
 import io.askimo.core.plan.PlanRunResult
 import io.askimo.core.plan.PlanStepEvent
 import io.askimo.core.plan.domain.PlanDef
+import io.askimo.ui.service.PdfExporter
+import io.askimo.ui.service.WordExporter
 import java.io.File
 import java.time.Year
 
@@ -15,7 +17,7 @@ import java.time.Year
  * Orchestrates plan export to PDF or Word (.docx).
  *
  * This object is the single public entry point for callers; format-specific
- * rendering is delegated to [PlanPdfExporter] (OpenPDF) and [PlanWordExporter]
+ * rendering is delegated to [PdfExporter] (OpenPDF) and [WordExporter]
  * (Apache POI) respectively.
  */
 object PlanExportService {
@@ -38,8 +40,8 @@ object PlanExportService {
     ) {
         val markdown = buildMarkdown(plan, inputValues, stepProgress, result, mode)
         when (format) {
-            ExportFormat.PDF -> PlanPdfExporter.export(markdown, COPYRIGHT, targetFile)
-            ExportFormat.WORD -> PlanWordExporter.export(markdown, COPYRIGHT, targetFile)
+            ExportFormat.PDF -> PdfExporter.export(markdown, COPYRIGHT, targetFile)
+            ExportFormat.WORD -> WordExporter.export(markdown, COPYRIGHT, targetFile)
         }
         log.info("Exported plan '{}' ({}, {}) to {}", plan.id, mode, format, targetFile.absolutePath)
     }

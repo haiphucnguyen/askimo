@@ -503,10 +503,17 @@ jobs:
           # Fetch current release body first
           CURRENT_BODY=$(gh release view "$TAG" --json body --jq '.body' 2>/dev/null || echo "")
 
-          # Skip entirely if contributors section already exists — preserves manual edits
-          # and prevents re-runs from wiping or duplicating the section.
+          # Skip if contributors section already exists (idempotent re-runs)
           if echo "$CURRENT_BODY" | grep -q "^## Contributors"; then
             echo "ℹ️  Contributors section already present — skipping to preserve manual edits."
+            exit 0
+          fi
+
+          # Skip if release notes are empty — don't add contributors to a blank body.
+          # Notes should be written manually first; contributors are appended after.
+          TRIMMED=$(echo "$CURRENT_BODY" | tr -d '[:space:]')
+          if [ -z "$TRIMMED" ]; then
+            echo "ℹ️  Release notes are empty — skipping contributors until notes are written."
             exit 0
           fi
 

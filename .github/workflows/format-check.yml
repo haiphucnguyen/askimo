@@ -31,3 +31,7 @@ jobs:
 
       - name: Check formatting
         run: ./gradlew --no-daemon spotlessCheck -PspotlessRatchetFrom=origin/${{ github.base_ref }}
+
+      - name: Check i18n keys
+        run: ./gradlew --no-daemon desktop:checkI18nKeys
+
