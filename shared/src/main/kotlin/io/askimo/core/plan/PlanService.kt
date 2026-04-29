@@ -259,7 +259,11 @@ class PlanService(
             # The map key IS the step id — do NOT add an "id:" field inside the step.
             stepId:             # e.g. "analyze-jd" — unique within the plan, used as output key
               system: string    # Optional. System prompt / persona for this step.
-              message: string   # REQUIRED. The user message sent to the AI.
+              message: string   # The user message sent to the AI. Required for AI steps; omit for ask steps.
+              ask: string       # Optional. Interactive question shown to the user at runtime.
+                                # When present this step PAUSES execution and waits for user input —
+                                # no AI call is made. The answer is stored in scope under the step's id.
+                                # Use type: ask in the workflow node (not type: step) for these steps.
               tools: []         # Optional. Step-level tool overrides.
 
             Template placeholders in system and message:
@@ -275,11 +279,17 @@ class PlanService(
             ────────────────────────────────────────
             ## WorkflowNode tree (value of `workflow:`)
 
-            Every node has a "type" discriminator. Four types:
+            Every node has a "type" discriminator. Five types:
 
             ### type: step
             type: step
-            stepId: string      # REQUIRED. Must match a key in `steps`.
+            stepId: string      # REQUIRED. Must match a key in `steps` that has a `message` field.
+
+            ### type: ask
+            type: ask
+            stepId: string      # REQUIRED. Must match a key in `steps` that has an `ask` field.
+                                # Execution pauses; the user's answer is stored in scope under stepId.
+                                # Use {{stepId}} in subsequent step messages to reference the answer.
 
             ### type: sequence
             type: sequence

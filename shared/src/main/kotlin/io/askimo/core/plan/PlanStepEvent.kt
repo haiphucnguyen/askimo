@@ -60,6 +60,31 @@ sealed class PlanStepEvent : Event {
     }
 
     /**
+     * Fired when execution reaches an interactive [WorkflowNode.Ask] step and pauses
+     * to wait for the user's answer.
+     *
+     * The executor blocks on [channel] until [PlanInputChannel.answer] is called with
+     * the user's response. The answer is then injected into the AgenticScope under
+     * [inputKey] as the output key so subsequent steps can reference it via `{{inputKey}}`.
+     *
+     * @param question  The question text declared in the YAML `ask:` field.
+     * @param inputKey  The scope key under which the answer will be stored (= step id).
+     * @param channel   The blocking channel — call [PlanInputChannel.answer] to resume execution.
+     */
+    data class WaitingForInput(
+        override val planId: String,
+        override val stepName: String,
+        override val executionId: String,
+        val question: String,
+        val inputKey: String,
+        val channel: PlanInputChannel,
+        override val timestamp: Instant = Instant.now(),
+    ) : PlanStepEvent() {
+        override val type = EventType.INTERNAL
+        override fun getDetails() = "[$planId] Step '$stepName' waiting for user input"
+    }
+
+    /**
      * Fired when an agent step throws an exception.
      *
      * @param error The exception that caused the step to fail.

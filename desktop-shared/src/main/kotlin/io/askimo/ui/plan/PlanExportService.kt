@@ -84,6 +84,7 @@ object PlanExportService {
                         is PlanStepEvent.Completed -> "[OK ${event.durationMs}ms]"
                         is PlanStepEvent.Failed -> "[FAILED ${event.durationMs}ms]"
                         is PlanStepEvent.Started -> "[running]"
+                        is PlanStepEvent.WaitingForInput -> "[waiting for input]"
                     }
                     append("### ${event.stepName}  $status\n\n")
                     when (event) {
@@ -97,6 +98,9 @@ object PlanExportService {
 
                         is PlanStepEvent.Failed ->
                             append("> Error: ${event.error.message ?: event.error.javaClass.simpleName}\n\n")
+
+                        is PlanStepEvent.WaitingForInput ->
+                            append("> Question: ${event.question}\n\n")
 
                         else -> Unit
                     }

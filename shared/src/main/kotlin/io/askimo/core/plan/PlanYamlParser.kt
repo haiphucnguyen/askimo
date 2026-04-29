@@ -162,12 +162,13 @@ object PlanYamlParser {
                 id = id,
                 system = s.system,
                 message = s.message,
+                ask = s.ask,
                 tools = s.tools,
             )
         }
 
         // If no workflow is declared, default to a sequence over all steps in declaration order
-        val workflow = raw.workflow ?: defaultWorkflow(steps.keys.toList())
+        val workflow = raw.workflow ?: defaultWorkflow(steps)
 
         return PlanDef(
             id = raw.id,
@@ -199,10 +200,15 @@ object PlanYamlParser {
         )
     }
 
-    /** Fallback: sequence over all steps in declaration order. */
-    private fun defaultWorkflow(stepIds: List<String>): WorkflowNode = when {
-        stepIds.size == 1 -> WorkflowNode.Step(stepIds.first())
-        else -> WorkflowNode.Sequence(stepIds.map { WorkflowNode.Step(it) })
+    /** Fallback: sequence over all steps in declaration order, using Ask nodes where appropriate. */
+    private fun defaultWorkflow(steps: Map<String, PlanStep>): WorkflowNode {
+        val nodes = steps.entries.map { (id, step) ->
+            if (step.ask != null) WorkflowNode.Ask(id) else WorkflowNode.Step(id)
+        }
+        return when {
+            nodes.size == 1 -> nodes.first()
+            else -> WorkflowNode.Sequence(nodes)
+        }
     }
 
     private fun validateWorkflowRefs(
@@ -221,6 +227,11 @@ object PlanYamlParser {
             is WorkflowNode.Parallel -> node.nodes.forEach { validateWorkflowRefs(it, knownStepIds, errors) }
 
             is WorkflowNode.Conditional -> validateWorkflowRefs(node.node, knownStepIds, errors)
+
+            is WorkflowNode.Ask ->
+                if (node.stepId !in knownStepIds) {
+                    errors += "Workflow references unknown ask step: '${node.stepId}'"
+                }
         }
     }
 }
@@ -271,6 +282,7 @@ private data class PlanStepYaml(
     val id: String = "",
     val system: String? = null,
     val message: String = "",
+    val ask: String? = null,
     val tools: List<String> = emptyList(),
 )
 

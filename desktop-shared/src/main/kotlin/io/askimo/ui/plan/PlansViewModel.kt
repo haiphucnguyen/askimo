@@ -136,6 +136,20 @@ class PlansViewModel(
     /** Tracks the executionId of the currently active run for event filtering. */
     private var activeExecutionId: String? = null
 
+    /**
+     * Non-null while the executor is paused waiting for the user to answer an interactive
+     * [io.askimo.core.plan.domain.WorkflowNode.Ask] step.
+     *
+     * The UI renders an inline question panel when this is set.
+     * Call [answerQuestion] to resume execution.
+     */
+    var pendingQuestion by mutableStateOf<PlanStepEvent.WaitingForInput?>(null)
+        private set
+
+    /** Current text typed into the interactive question answer field. */
+    var pendingAnswerText by mutableStateOf("")
+        private set
+
     var executions by mutableStateOf<List<PlanExecution>>(emptyList())
         private set
 
@@ -305,6 +319,10 @@ class PlansViewModel(
                         // (first Started event tells us the executionId)
                         if (execId == null || event.executionId == execId) {
                             if (execId == null) activeExecutionId = event.executionId
+                            // WaitingForInput pauses the executor — surface it for the UI
+                            if (event is PlanStepEvent.WaitingForInput) {
+                                pendingQuestion = event
+                            }
                             stepProgress = stepProgress + event
                         }
                     }
@@ -327,6 +345,8 @@ class PlansViewModel(
 
             progressJob.cancel()
             isRunning = false
+            pendingQuestion = null
+            pendingAnswerText = ""
 
             // The result is now persisted to history; the next visit to this plan
             // should start fresh so the user sees the updated execution list.
@@ -344,7 +364,37 @@ class PlansViewModel(
         pinnedResult = null
         followUpText = ""
         followUpError = null
+        pendingQuestion = null
+        pendingAnswerText = ""
         selectedPlan?.id?.let { planStateCache.remove(it) }
+    }
+
+    /** Updates the text the user is typing as an answer to the current [pendingQuestion]. */
+    fun updatePendingAnswer(text: String) {
+        pendingAnswerText = text
+    }
+
+    /**
+     * Submits the current [pendingAnswerText] as the answer to [pendingQuestion],
+     * which unblocks the [PlanExecutor] background thread and resumes plan execution.
+     */
+    fun answerQuestion() {
+        val event = pendingQuestion ?: return
+        val answer = pendingAnswerText.trim()
+        pendingQuestion = null
+        pendingAnswerText = ""
+        event.channel.answer(answer)
+    }
+
+    /**
+     * Dismisses the pending question without an answer (empty string is submitted),
+     * allowing the plan to continue with a blank value for that step.
+     */
+    fun skipQuestion() {
+        val event = pendingQuestion ?: return
+        pendingQuestion = null
+        pendingAnswerText = ""
+        event.channel.answer("")
     }
 
     /** Updates the follow-up input text. */

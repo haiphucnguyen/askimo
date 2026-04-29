@@ -17,6 +17,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
  * which maps each node to the corresponding `AgenticServices` builder:
  *
  * - [Step]        → a single `UntypedAgent` wrapping one [PlanStep]
+ * - [Ask]         → interactive pause: user is prompted for input, answer stored in scope
  * - [Sequence]    → `AgenticServices.sequenceBuilder()`
  * - [Parallel]    → `AgenticServices.parallelBuilder()`
  * - [Conditional] → `AgenticServices.conditionalBuilder()`
@@ -24,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(
     JsonSubTypes.Type(value = WorkflowNode.Step::class, name = "step"),
+    JsonSubTypes.Type(value = WorkflowNode.Ask::class, name = "ask"),
     JsonSubTypes.Type(value = WorkflowNode.Sequence::class, name = "sequence"),
     JsonSubTypes.Type(value = WorkflowNode.Parallel::class, name = "parallel"),
     JsonSubTypes.Type(value = WorkflowNode.Conditional::class, name = "conditional"),
@@ -36,6 +38,23 @@ sealed class WorkflowNode {
      * @param stepId Must match a key in `PlanDef.steps`.
      */
     data class Step(val stepId: String) : WorkflowNode()
+
+    /**
+     * Interactive leaf node — pauses execution and asks the user a question.
+     *
+     * The user's answer is injected into the AgenticScope under [stepId] so subsequent
+     * steps can reference it via `{{stepId}}` in their message templates.
+     *
+     * YAML example:
+     * ```yaml
+     * - type: ask
+     *   stepId: tone_preference
+     * ```
+     * (The question text lives in the corresponding [PlanStep.ask] field.)
+     *
+     * @param stepId Must match a key in `PlanDef.steps` that has a non-blank [PlanStep.ask].
+     */
+    data class Ask(val stepId: String) : WorkflowNode()
 
     /**
      * Executes child nodes one after another.

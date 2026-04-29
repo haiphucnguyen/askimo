@@ -29,6 +29,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -429,10 +430,6 @@ fun planDetailView(
 
                     if (viewModel.stepProgress.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(Spacing.large))
-                        // When a final result is available the last completed step's output
-                        // IS the result panel content — suppress it here to avoid showing
-                        // the same text twice. During a live run (runResult == null) the
-                        // output is shown normally so the user gets streaming feedback.
                         val lastCompletedStepName = if (viewModel.runResult != null) {
                             viewModel.stepProgress
                                 .filterIsInstance<PlanStepEvent.Completed>()
@@ -444,6 +441,19 @@ fun planDetailView(
                         agenticStepProgressPanel(
                             steps = viewModel.stepProgress,
                             suppressOutputForStepName = lastCompletedStepName,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
+                    // Inline question panel — shown when the executor pauses for user input
+                    viewModel.pendingQuestion?.let { pending ->
+                        Spacer(modifier = Modifier.height(Spacing.medium))
+                        interactiveQuestionPanel(
+                            question = pending.question,
+                            answerText = viewModel.pendingAnswerText,
+                            onAnswerChange = { viewModel.updatePendingAnswer(it) },
+                            onSubmit = { viewModel.answerQuestion() },
+                            onSkip = { viewModel.skipQuestion() },
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -676,6 +686,13 @@ private fun agenticStepRow(
                         color = MaterialTheme.colorScheme.secondary,
                     )
 
+                    is PlanStepEvent.WaitingForInput -> Icon(
+                        Icons.AutoMirrored.Filled.HelpOutline,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(14.dp),
+                    )
+
                     is PlanStepEvent.Completed -> Icon(
                         Icons.Default.CheckCircle,
                         contentDescription = null,
@@ -781,6 +798,15 @@ private fun agenticStepRow(
                         }
                     }
 
+                    is PlanStepEvent.WaitingForInput -> {
+                        Text(
+                            text = event.question,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
+
                     is PlanStepEvent.Failed -> {
                         SelectionContainer {
                             Text(
@@ -857,11 +883,106 @@ private fun agenticStepRow(
 }
 
 /**
+ * Inline panel rendered while the plan executor is paused waiting for the user to answer
+ * an interactive [io.askimo.core.plan.domain.WorkflowNode.Ask] step.
+ *
+ * Submitting calls [onSubmit] which delivers the answer to [PlansViewModel.answerQuestion],
+ * unblocking the executor and resuming plan execution.
+ */
+@Composable
+private fun interactiveQuestionPanel(
+    question: String,
+    answerText: String,
+    onAnswerChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    onSkip: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Column(modifier = Modifier.padding(Spacing.large)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(Spacing.small),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(bottom = Spacing.small),
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.HelpOutline,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.size(16.dp),
+                )
+                Text(
+                    text = stringResource("plans.interactive.question.label"),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                )
+            }
+            Text(
+                text = question,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                modifier = Modifier.padding(bottom = Spacing.medium),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.small),
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                OutlinedTextField(
+                    value = answerText,
+                    onValueChange = onAnswerChange,
+                    placeholder = { Text(stringResource("plans.interactive.answer.placeholder")) },
+                    modifier = Modifier.weight(1f),
+                    minLines = 1,
+                    maxLines = 5,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        imeAction = ImeAction.Send,
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onSend = { if (answerText.isNotBlank()) onSubmit() },
+                    ),
+                    colors = AppComponents.outlinedTextFieldColors(),
+                )
+                IconButton(
+                    onClick = onSubmit,
+                    enabled = answerText.isNotBlank(),
+                    colors = AppComponents.primaryIconButtonColors(),
+                    modifier = Modifier.size(48.dp).pointerHoverIcon(PointerIcon.Hand),
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Send,
+                        contentDescription = stringResource("plans.interactive.send"),
+                        tint = if (answerText.isNotBlank()) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        },
+                    )
+                }
+            }
+            TextButton(
+                onClick = onSkip,
+                modifier = Modifier.padding(top = 4.dp).pointerHoverIcon(PointerIcon.Hand),
+            ) {
+                Text(
+                    text = stringResource("plans.interactive.skip"),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
+                )
+            }
+        }
+    }
+}
+
+/**
  * Follow-up input panel — appears below the result so the user can ask the AI to
  * refine or extend the current output without re-running the full plan workflow.
- *
- * Submitting replaces [PlansViewModel.runResult] with the updated answer and
- * increments [PlanExecution.runCount] in the database.
  */
 @Composable
 private fun followUpPanel(
