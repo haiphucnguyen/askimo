@@ -10,10 +10,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import io.askimo.core.service.UpdateChecker
 import io.askimo.core.service.UpdateInfo
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
@@ -40,6 +47,13 @@ fun updateCheckDialog(
                 currentVersion = viewModel.getCurrentVersion(),
                 onDownload = {
                     viewModel.openDownloadPage()
+                    onDismiss()
+                },
+                onHowToUpdate = {
+                    viewModel.openHowToUpdatePage()
+                },
+                onSkipVersion = {
+                    viewModel.skipThisVersion()
                     onDismiss()
                 },
                 onLater = onDismiss,
@@ -62,13 +76,28 @@ fun updateCheckDialog(
     }
 }
 
+/** Urgency tier derived from [UpdateInfo.versionsBehind]. */
+private enum class UpdateUrgency { LOW, MEDIUM, HIGH }
+
+private fun urgencyFor(versionsBehind: Int): UpdateUrgency = when {
+    versionsBehind >= 5 -> UpdateUrgency.HIGH
+    versionsBehind >= 2 -> UpdateUrgency.MEDIUM
+    else -> UpdateUrgency.LOW
+}
+
 @Composable
 private fun newVersionDialog(
     releaseInfo: UpdateInfo,
     currentVersion: String,
     onDownload: () -> Unit,
+    onHowToUpdate: () -> Unit,
+    onSkipVersion: () -> Unit,
     onLater: () -> Unit,
 ) {
+    val urgency = urgencyFor(releaseInfo.versionsBehind)
+    val cap = UpdateChecker.MAX_VERSIONS_BEHIND_CAP
+    val behindLabel = if (releaseInfo.versionsBehind >= cap) "$cap+" else "${releaseInfo.versionsBehind}"
+
     AppComponents.alertDialog(
         onDismissRequest = onLater,
         title = {
@@ -84,13 +113,45 @@ private fun newVersionDialog(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                // Header message
-                Text(
-                    text = stringResource("update.dialog.new.version.available"),
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
+                // Urgency banner
+                val bannerColors = when (urgency) {
+                    UpdateUrgency.HIGH -> CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+
+                    UpdateUrgency.MEDIUM -> CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    )
+
+                    UpdateUrgency.LOW -> AppComponents.bannerCardColors()
+                }
+                val bannerIcon = if (urgency == UpdateUrgency.HIGH) Icons.Default.Warning else Icons.Default.Info
+                val bannerText = when (urgency) {
+                    UpdateUrgency.HIGH -> stringResource("update.urgency.high", behindLabel)
+                    UpdateUrgency.MEDIUM -> stringResource("update.urgency.medium", behindLabel)
+                    UpdateUrgency.LOW -> stringResource("update.dialog.new.version.available")
+                }
+
+                Card(modifier = Modifier.fillMaxWidth(), colors = bannerColors) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = bannerIcon,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Text(
+                            text = bannerText,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
 
                 // Version info card
                 Card(
@@ -170,17 +231,21 @@ private fun newVersionDialog(
             }
         },
         confirmButton = {
-            primaryButton(
-                onClick = onDownload,
-            ) {
+            primaryButton(onClick = onDownload) {
                 Text(stringResource("update.dialog.download"))
             }
         },
         dismissButton = {
-            secondaryButton(
-                onClick = onLater,
-            ) {
-                Text(stringResource("update.dialog.later"))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                secondaryButton(onClick = onHowToUpdate) {
+                    Text(stringResource("update.dialog.how.to.update"))
+                }
+                secondaryButton(onClick = onSkipVersion) {
+                    Text(stringResource("update.dialog.skip.version"))
+                }
+                secondaryButton(onClick = onLater) {
+                    Text(stringResource("update.dialog.later"))
+                }
             }
         },
     )

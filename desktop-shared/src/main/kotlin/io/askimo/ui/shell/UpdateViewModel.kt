@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.askimo.core.logging.logger
 import io.askimo.core.service.UpdateInfo
+import io.askimo.ui.common.preferences.ApplicationPreferences
 import io.askimo.ui.service.UpdateService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -88,6 +89,15 @@ class UpdateViewModel(
     }
 
     /**
+     * Dismiss the update dialog AND mark this version as skipped so the
+     * auto-popup never appears again for this specific release.
+     */
+    fun skipThisVersion() {
+        releaseInfo?.latestVersion?.let { ApplicationPreferences.setDismissedUpdateVersion(it) }
+        showUpdateDialog = false
+    }
+
+    /**
      * Show update dialog for existing release info without re-checking.
      * Used when user clicks Details button in notification.
      */
@@ -97,15 +107,15 @@ class UpdateViewModel(
         }
     }
 
+    fun openHowToUpdatePage() {
+        runCatching { Desktop.getDesktop().browse(URI("https://askimo.chat/docs/desktop/updating/")) }
+            .onFailure { log.error("Failed to open how-to-update page", it) }
+    }
+
     fun openDownloadPage() {
         releaseInfo?.let { info ->
-            try {
-                val desktop = Desktop.getDesktop()
-                desktop.browse(URI(info.downloadUrl))
-            } catch (e: Exception) {
-                log.error("Failed to open download page", e)
-                errorMessage = "Failed to open browser: ${e.message}"
-            }
+            runCatching { Desktop.getDesktop().browse(URI(info.downloadUrl)) }
+                .onFailure { log.error("Failed to open download page", it) }
         }
     }
 

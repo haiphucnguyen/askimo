@@ -503,54 +503,88 @@ jobs:
           # Fetch current release body first
           CURRENT_BODY=$(gh release view "$TAG" --json body --jq '.body' 2>/dev/null || echo "")
 
-          # Skip if contributors section already exists (idempotent re-runs)
-          if echo "$CURRENT_BODY" | grep -q "^## Contributors"; then
+          # Skip if OUR contributors section already exists (idempotent re-runs).
+          # GitHub's auto-generated section uses "<!-- Release notes generated"
+          # as a marker; ours does not — so we key on our unique thank-you line.
+          if echo "$CURRENT_BODY" | grep -qF "Thank you to everyone who contributed"; then
             echo "ℹ️  Contributors section already present — skipping to preserve manual edits."
             exit 0
           fi
 
           # Skip if release notes are empty — don't add contributors to a blank body.
-          # Notes should be written manually first; contributors are appended after.
           TRIMMED=$(echo "$CURRENT_BODY" | tr -d '[:space:]')
           if [ -z "$TRIMMED" ]; then
             echo "ℹ️  Release notes are empty — skipping contributors until notes are written."
             exit 0
           fi
 
-          # Find the previous tag (the one before this one)
+          # Find the previous tag
           PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${TAG}$" | head -n1 || true)
+          RANGE="${PREV_TAG:+${PREV_TAG}..}${TAG}"
+          echo "Contributors range: $RANGE"
 
-          if [ -n "$PREV_TAG" ]; then
-            RANGE="${PREV_TAG}..${TAG}"
-            echo "Contributors from $RANGE"
-          else
-            RANGE="${TAG}"
-            echo "No previous tag found — listing all contributors up to $TAG"
-          fi
-
-          # Collect unique authors: "Login (Name)" sorted, bots excluded
-          mapfile -t AUTHORS < <(
-            git log "$RANGE" --format='%aN|%aE' \
-              | sort -u \
+          # Collect unique commit SHAs (exclude bots and GitHub noreply addresses)
+          mapfile -t COMMITS < <(
+            git log "$RANGE" --format='%H|%aE' \
               | grep -viE '\[bot\]|noreply\.github\.com' \
-              | awk -F'|' '{print $1}' \
               | sort -u
           )
 
-          if [ ${#AUTHORS[@]} -eq 0 ]; then
-            echo "No human contributors found — skipping append."
+          # Resolve each commit to a GitHub login + avatar via the Commits API.
+          declare -A SEEN_LOGINS
+          declare -a CONTRIBUTOR_LINES
+
+          for ENTRY in "${COMMITS[@]}"; do
+            SHA="${ENTRY%%|*}"
+            JSON=$(gh api "/repos/${GITHUB_REPOSITORY}/commits/${SHA}" \
+              --jq '{login: .author.login, avatar: .author.avatar_url, name: .commit.author.name}' \
+              2>/dev/null || echo "{}")
+
+            LOGIN=$(echo "$JSON" | jq -r '.login // empty')
+            AVATAR=$(echo "$JSON" | jq -r '.avatar // empty')
+            NAME=$(echo "$JSON"   | jq -r '.name   // empty')
+
+            # Skip bots and unresolved entries
+            if [ -z "$LOGIN" ] || echo "$LOGIN" | grep -qiE '\[bot\]|bot$'; then
+              continue
+            fi
+
+            # Deduplicate
+            [ -n "${SEEN_LOGINS[$LOGIN]+x}" ] && continue
+            SEEN_LOGINS[$LOGIN]=1
+
+            if [ -n "$AVATAR" ]; then
+              LINE="- <img src=\"${AVATAR}&s=20\" width=\"20\" height=\"20\" style=\"border-radius:50%\"> [@${LOGIN}](https://github.com/${LOGIN})"
+            else
+              LINE="- [@${LOGIN}](https://github.com/${LOGIN})"
+            fi
+            [ -n "$NAME" ] && LINE="${LINE} — ${NAME}"
+            CONTRIBUTOR_LINES+=("$LINE")
+          done
+
+          if [ ${#CONTRIBUTOR_LINES[@]} -eq 0 ]; then
+            echo "No human contributors resolved — skipping append."
             exit 0
           fi
 
-          echo "Found ${#AUTHORS[@]} contributor(s): ${AUTHORS[*]}"
+          echo "Found ${#CONTRIBUTOR_LINES[@]} contributor(s)."
 
-          # Build markdown section
+          # Strip any existing GitHub-auto-generated "## Contributors" block from
+          # CURRENT_BODY so we replace it with our richer version (avatar + link).
+          # GitHub's block starts with "## Contributors" and ends at EOF or next "## ".
+          STRIPPED_BODY=$(echo "$CURRENT_BODY" | awk '
+            /^## Contributors/ { skip=1; next }
+            skip && /^## /     { skip=0 }
+            !skip              { print }
+          ')
+
+          # Build our contributors section
           SECTION=$'\n\n## Contributors\n\nThank you to everyone who contributed to this release! 🎉\n\n'
-          for AUTHOR in "${AUTHORS[@]}"; do
-            SECTION+="- ${AUTHOR}"$'\n'
+          for LINE in "${CONTRIBUTOR_LINES[@]}"; do
+            SECTION+="${LINE}"$'\n'
           done
 
-          NEW_BODY="${CURRENT_BODY}${SECTION}"
+          NEW_BODY="${STRIPPED_BODY}${SECTION}"
 
           gh release edit "$TAG" --notes "$NEW_BODY"
           echo "✅ Contributors section appended to release $TAG"

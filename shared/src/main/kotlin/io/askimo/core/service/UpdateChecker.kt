@@ -7,6 +7,7 @@ package io.askimo.core.service
 import io.askimo.core.VersionInfo
 import io.askimo.core.logging.logger
 import io.askimo.core.util.JsonUtils.json
+import kotlinx.serialization.builtins.ListSerializer
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -24,6 +25,9 @@ data class GitHubRelease(
 
 /**
  * Information about a software release.
+ *
+ * @param versionsBehind How many releases the current install lags behind the latest.
+ *        Capped at [UpdateChecker.MAX_VERSIONS_BEHIND_CAP]. 0 means up to date.
  */
 data class UpdateInfo(
     val currentVersion: String,
@@ -33,6 +37,7 @@ data class UpdateInfo(
     val downloadUrl: String,
     val releaseNotes: String,
     val isNewVersion: Boolean,
+    val versionsBehind: Int = 0,
 )
 
 /**
@@ -44,7 +49,13 @@ class UpdateChecker(
     private val userAgent: String = "Askimo/${VersionInfo.version}",
 ) {
     private val log = logger<UpdateChecker>()
-    private val githubApiUrl = "https://api.github.com/repos/$githubRepo/releases/latest"
+
+    /**
+     * Uses the list endpoint (newest-first) so we can count how many releases
+     * the user is behind in a single request.
+     */
+    private val githubReleasesUrl = "https://api.github.com/repos/$githubRepo/releases?per_page=100"
+
     private val httpClient = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(10))
         .build()
@@ -54,10 +65,10 @@ class UpdateChecker(
      * Returns null if the check fails or if there's an error.
      */
     fun checkForUpdates(): UpdateInfo? = try {
-        log.debug("Checking for updates from: $githubApiUrl")
+        log.debug("Checking for updates from: $githubReleasesUrl")
 
         val request = HttpRequest.newBuilder()
-            .uri(URI.create(githubApiUrl))
+            .uri(URI.create(githubReleasesUrl))
             .header("Accept", "application/vnd.github.v3+json")
             .header("User-Agent", userAgent)
             .GET()
@@ -77,22 +88,43 @@ class UpdateChecker(
     }
 
     private fun parseUpdateInfo(jsonResponse: String): UpdateInfo? = try {
-        val release = json.decodeFromString<GitHubRelease>(jsonResponse)
-        val latestVersion = release.tag_name.removePrefix("v")
+        val releases = json.decodeFromString(ListSerializer(GitHubRelease.serializer()), jsonResponse)
+        if (releases.isEmpty()) return null
+
+        // Releases are returned newest-first by the API
+        val latest = releases.first()
+        val latestVersion = latest.tag_name.removePrefix("v")
         val currentVersion = VersionInfo.version
 
         log.debug("Current version: $currentVersion, Latest version: $latestVersion")
 
         val isNewVersion = isNewerVersion(latestVersion, currentVersion)
 
+        // Count how many releases are newer than the current version (stop early at cap)
+        val versionsBehind = if (isNewVersion) {
+            var count = 0
+            for (release in releases) {
+                val v = release.tag_name.removePrefix("v")
+                if (v == currentVersion) break
+                count++
+                if (count >= MAX_VERSIONS_BEHIND_CAP) break
+            }
+            count
+        } else {
+            0
+        }
+
+        log.debug("Versions behind: $versionsBehind")
+
         UpdateInfo(
             currentVersion = currentVersion,
             latestVersion = latestVersion,
-            releaseName = release.name,
-            releaseDate = formatReleaseDate(release.published_at),
-            downloadUrl = release.html_url,
-            releaseNotes = release.body,
+            releaseName = latest.name,
+            releaseDate = formatReleaseDate(latest.published_at),
+            downloadUrl = latest.html_url,
+            releaseNotes = latest.body,
             isNewVersion = isNewVersion,
+            versionsBehind = versionsBehind,
         )
     } catch (e: Exception) {
         log.error("Error parsing release info", e)
@@ -127,5 +159,7 @@ class UpdateChecker(
 
     companion object {
         fun getCurrentVersion(): String = VersionInfo.version
+
+        const val MAX_VERSIONS_BEHIND_CAP = 10
     }
 }

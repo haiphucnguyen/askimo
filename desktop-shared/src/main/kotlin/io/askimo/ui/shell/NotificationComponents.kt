@@ -56,6 +56,7 @@ import io.askimo.core.event.system.ShellErrorEvent
 import io.askimo.core.event.system.UpdateAvailableEvent
 import io.askimo.core.util.TimeUtil.formatInstantDisplay
 import io.askimo.ui.common.i18n.stringResource
+import io.askimo.ui.common.preferences.ApplicationPreferences
 import io.askimo.ui.common.theme.AppComponents
 
 /**
@@ -91,12 +92,28 @@ fun notificationIcon(onShowUpdateDetails: () -> Unit) {
             if (events.size > 100) {
                 events.removeAt(100)
             }
+            // Auto-open the notification popup when a new version is detected,
+            // unless the user has already dismissed this exact version.
+            if (event is UpdateAvailableEvent &&
+                ApplicationPreferences.getDismissedUpdateVersion() != event.latestVersion
+            ) {
+                showEventPopup = true
+            }
         }
     }
 
     Box {
         IconButton(
-            onClick = { showEventPopup = !showEventPopup },
+            onClick = {
+                if (showEventPopup) {
+                    // Closing — persist dismissed version
+                    val latestUpdate = events.firstNotNullOfOrNull { it.event as? UpdateAvailableEvent }
+                    if (latestUpdate != null) {
+                        ApplicationPreferences.setDismissedUpdateVersion(latestUpdate.latestVersion)
+                    }
+                }
+                showEventPopup = !showEventPopup
+            },
             modifier = Modifier
                 .size(32.dp)
                 .pointerHoverIcon(PointerIcon.Hand),
@@ -134,7 +151,14 @@ fun notificationIcon(onShowUpdateDetails: () -> Unit) {
             Popup(
                 alignment = Alignment.BottomEnd,
                 offset = IntOffset(0, -40),
-                onDismissRequest = { showEventPopup = false },
+                onDismissRequest = {
+                    showEventPopup = false
+                    // Persist the latest update version so the popup won't auto-reopen for it
+                    val latestUpdate = events.mapNotNull { it.event as? UpdateAvailableEvent }.firstOrNull()
+                    if (latestUpdate != null) {
+                        ApplicationPreferences.setDismissedUpdateVersion(latestUpdate.latestVersion)
+                    }
+                },
             ) {
                 Card(
                     modifier = Modifier.padding(8.dp),

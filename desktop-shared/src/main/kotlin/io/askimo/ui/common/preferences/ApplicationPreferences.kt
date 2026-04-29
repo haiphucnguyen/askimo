@@ -293,6 +293,22 @@ object ApplicationPreferences {
         safePutBoolean(PLAN_HISTORY_SIDE_PANEL_EXPANDED_KEY, expanded)
     }
 
+    private const val DISMISSED_UPDATE_VERSION_KEY = "update.dismissed_version"
+
+    /**
+     * Returns the latest version string the user has already dismissed,
+     * or null if they have never dismissed an update notification.
+     */
+    fun getDismissedUpdateVersion(): String? = safeGet(DISMISSED_UPDATE_VERSION_KEY, null)
+
+    /**
+     * Persists [version] so the update popup is not auto-shown again for this release.
+     * Call this when the user dismisses the notification popup or banner.
+     */
+    fun setDismissedUpdateVersion(version: String) {
+        safePut(DISMISSED_UPDATE_VERSION_KEY, version)
+    }
+
     // ============================================================
     // PLAN SYNC
     // ============================================================
