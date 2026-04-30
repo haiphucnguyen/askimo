@@ -191,6 +191,9 @@ object PlanYamlParser {
                     default = i.default,
                     required = i.required,
                     hint = i.resolvedHint,
+                    filter = i.filter,
+                    maxKb = i.maxKb,
+                    fetchTimeoutSec = i.fetchTimeoutSec,
                 )
             },
             tools = raw.tools,
@@ -269,6 +272,11 @@ private data class PlanInputYaml(
     val hint: String = "",
     @param:JsonProperty("placeholder")
     private val _placeholder: String = "",
+    val filter: String = "",
+    @param:JsonProperty("max_kb")
+    val maxKb: Int = 512,
+    @param:JsonProperty("fetch_timeout_sec")
+    val fetchTimeoutSec: Int = 10,
 ) {
     /** Resolved key: prefer explicit `key`, fall back to `id`. */
     val resolvedKey: String get() = key.ifBlank { _id }

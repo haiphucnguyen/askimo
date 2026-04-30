@@ -62,15 +62,17 @@ class PlanExecutor(private val chatModel: ChatModel) {
         // Collect interactive answers first by traversing the workflow for Ask nodes.
         // This populates a mutable scope map that is seeded into the agentic run.
         val scopeInputs: MutableMap<String, Any> = inputs.toMutableMap()
+
+        // Resolve file/folder inputs: replace the path value with actual file content.
+        resolveFileInputs(plan, scopeInputs)
+
         collectInteractiveInputs(plan.workflow, plan.steps, plan, executionId, scopeInputs)
 
         // Build the root agent with the observability listener attached.
         val listener = PlanExecutionListener(planId = plan.id, executionId = executionId)
         val rootAgent: UntypedAgent? = buildAgent(plan.workflow, plan.steps, plan, listener)
 
-        if (rootAgent != null) {
-            rootAgent.invoke(scopeInputs)
-        }
+        rootAgent?.invoke(scopeInputs)
 
         val lastStepId = lastLeafStepId(plan.workflow)
         val output = listener.stepOutputs.lastOrNull { (stepName, _) -> stepName == lastStepId }?.second
@@ -190,6 +192,24 @@ class PlanExecutor(private val chatModel: ChatModel) {
             return value.isNotBlank() && value != "false"
         }
         return false
+    }
+
+    /**
+     * Resolves `type: file` and `type: folder` inputs by reading the path value from [scope]
+     * and replacing it with the actual file/folder content via [PlanFileContentReader].
+     * Non-file inputs are left untouched.
+     */
+    private fun resolveFileInputs(plan: PlanDef, scope: MutableMap<String, Any>) {
+        plan.inputs
+            .filter { it.type == "file" || it.type == "folder" || it.type == "url" }
+            .forEach { input ->
+                val value = scope[input.key]?.toString()
+                if (value.isNullOrBlank()) return@forEach
+                log.debug("[{}] Resolving {} input '{}' from: {}", plan.id, input.type, input.key, value.take(100))
+                val content = PlanFileContentReader.read(value, input)
+                scope[input.key] = content
+                log.debug("[{}] Injected {} chars for input '{}'", plan.id, content.length, input.key)
+            }
     }
 
     private fun validateInputs(plan: PlanDef, inputs: Map<String, String>) {

@@ -230,7 +230,7 @@ class PlanService(
             name: string        # REQUIRED. Human-readable display name e.g. "Resume Tailor"
             icon: string        # REQUIRED. A SINGLE emoji character e.g. "🎯". Never a text name.
             description: string # Short description shown in the plan gallery.
-            inputs: []          # Ordered list of PlanInput objects (see below). Can be empty.
+            inputs: []          # Ordered list of PlanInput objects (see below). Can be empty. Supports types: text, multiline, number, toggle, select, file, folder.
             tools: []           # Optional list of tool IDs from the ToolRegistry e.g. [WEB_SEARCH].
             steps: {}           # REQUIRED. Map of stepId -> PlanStep (see below).
             workflow:           # REQUIRED. Root WorkflowNode tree (see below).
@@ -252,6 +252,24 @@ class PlanService(
             - Use "number" for numeric values.
             - Use "toggle" for yes/no boolean switches (default: "true" or "false").
             - Use "select" when the user must pick from a fixed set; populate "options".
+            - Use "file" when the user should pick one or more local files whose TEXT content is injected into the prompt.
+            - Use "folder" when the user should pick a local directory; all matching text files are recursively read and injected.
+            - Use "url" when the user provides a web page URL whose text content should be fetched and injected into the prompt.
+
+            Extra fields for type: file and type: folder only:
+            filter: string      # Comma-separated glob patterns e.g. "*.kt,*.java". Leave blank to include all text files.
+            max_kb: number      # Hard cap on total injected content in kilobytes. Default 512. Lower for large codebases.
+
+            Extra fields for type: url only:
+            fetch_timeout_sec: number  # HTTP timeout in seconds. Default 10.
+            max_kb: number             # Cap on fetched page content in kilobytes. Default 512.
+
+            file / folder / url usage guidance:
+            - Use "file" when the plan needs one specific document (e.g. a resume, a config file, a log file).
+            - Use "folder" when the plan should analyse a whole project or directory (e.g. code review, documentation).
+            - Always add a meaningful "filter" when the folder is a code project (e.g. "*.kt" for Kotlin, "*.py" for Python).
+            - Set max_kb to a sensible value: 128–256 for large codebases, 512 (default) for small documents.
+            - Reference injected content in step messages with {{key}} just like any other input.
 
             ────────────────────────────────────────
             ## PlanStep object (values in `steps:` map)
@@ -330,7 +348,7 @@ class PlanService(
             5. Later steps SHOULD reference prior step outputs via {{stepId}} in their message so reasoning compounds.
             6. The step map key is the step id — never add a redundant "id:" field inside the step body.
             7. icon MUST be one emoji character. Never write a text word like "lightbulb" or "pencil".
-            8. Every input MUST have key, label, type, and required.
+            8. Every input MUST have key, label, type, and required. For type: file or type: folder, add filter and max_kb when the context suggests a specific file type or large directory.
             9. Use "hint" (not "placeholder") for grey hint text.
             10. Do NOT invent tool names. Only include "tools" if the description explicitly requests tools.
         """.trimIndent()
