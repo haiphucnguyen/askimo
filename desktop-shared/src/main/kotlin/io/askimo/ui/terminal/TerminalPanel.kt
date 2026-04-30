@@ -693,6 +693,14 @@ private fun createTtyConnector(workDir: String): TtyConnector {
     envs.putAll(System.getenv())
     envs["TERM"] = "xterm-256color"
 
+    // Prepend ~/.askimo/bin to PATH so the bundled `askimo` CLI command is available
+    // in the Desktop terminal panel without requiring a separate CLI installation.
+    val askimoBin = System.getProperty("user.home") + "/.askimo/bin"
+    val currentPath = envs["PATH"] ?: "/usr/local/bin:/usr/bin:/bin"
+    if (!currentPath.contains(askimoBin)) {
+        envs["PATH"] = "$askimoBin:$currentPath"
+    }
+
     // Fix DEVELOPER_DIR for macOS to avoid xcrun errors
     if (System.getProperty("os.name").lowercase().contains("mac")) {
         // Only set DEVELOPER_DIR if it's not already set or points to invalid path

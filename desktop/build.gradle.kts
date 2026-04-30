@@ -171,6 +171,174 @@ tasks.withType<Zip> {
     isZip64 = true
 }
 
+// =============================================================================
+// Bundle CLI thin jar into the Desktop distribution
+// =============================================================================
+//
+// After `createDistributable`, copies the CLI thin jar (CLI classes only) plus
+// all its runtime dependency jars into the flat app libs directory, then writes
+// platform-specific launcher scripts so users can run `askimo` from within the
+// Desktop terminal panel without a separate CLI install.
+//
+// Dependency jars resolve via the Class-Path manifest entry in the thin jar,
+// which lists every dep by filename — matching the flat Compose Desktop layout.
+//
+// Run standalone:  ./gradlew :desktop:bundleCliJar
+// Run as part of signing: signMacApp already depends on it.
+// =============================================================================
+
+/**
+ * Shared helper: copies the CLI thin jar + all its runtime dep jars into [appLibDir],
+ * then writes a platform launcher script into [launcherDir] named `askimo`.
+ *
+ * @param appLibDir     Flat directory containing all app jars (Contents/app on macOS, app/ on Linux/Win).
+ * @param launcherDir   Directory where the `askimo` launcher script is written.
+ * @param javaRelPath   Relative path from [launcherDir] to the bundled `java` binary.
+ * @param appDirRelPath Relative path from [launcherDir] to [appLibDir].
+ */
+fun registerBundleCliJarTask(
+    appBundleName: String,
+    macOsAppDir: () -> File?,
+) {
+    tasks.register("bundleCliJar") {
+        group = "distribution"
+        description = "Copy CLI thin jar + deps into the Desktop distribution and write launcher scripts"
+        dependsOn("createDistributable", ":cli:cliThinJar")
+
+        doLast {
+            val cliProject = project.rootProject.project(":cli")
+            val cliVersion = cliProject.version.toString()
+            val cliThinJar =
+                cliProject.layout.buildDirectory
+                    .file("libs/cli-$cliVersion-bundled.jar")
+                    .get()
+                    .asFile
+
+            if (!cliThinJar.exists()) {
+                throw GradleException(
+                    "CLI thin jar not found: ${cliThinJar.absolutePath}\n" +
+                        "Run ./gradlew :cli:cliThinJar first.",
+                )
+            }
+
+            // All CLI runtime dep jars (the Class-Path entries the thin jar references)
+            val cliDepJars =
+                cliProject.configurations
+                    .getByName("runtimeClasspath")
+                    .resolvedConfiguration
+                    .resolvedArtifacts
+                    .map { it.file }
+
+            val os = System.getProperty("os.name").lowercase()
+
+            when {
+                // ── macOS .app layout ──────────────────────────────────────────
+                os.contains("mac") -> {
+                    val appBundle =
+                        macOsAppDir()
+                            ?: throw GradleException("No .app bundle found for $appBundleName")
+                    val appLibDir = File(appBundle, "Contents/app")
+                    val macOsDir = File(appBundle, "Contents/MacOS")
+
+                    // Copy thin jar
+                    cliThinJar.copyTo(File(appLibDir, "askimo-cli.jar"), overwrite = true)
+                    logger.lifecycle("📦 Copied CLI thin jar → ${appLibDir.name}/askimo-cli.jar")
+
+                    // Copy any CLI-only dep jars not already present (e.g. jline, commonmark)
+                    cliDepJars.forEach { jar ->
+                        val dest = File(appLibDir, jar.name)
+                        if (!dest.exists()) {
+                            jar.copyTo(dest, overwrite = false)
+                            logger.lifecycle("   + ${jar.name}")
+                        }
+                    }
+
+                    // Launcher script — uses the JVM bundled inside Contents/runtime
+                    val launcher = File(macOsDir, "askimo")
+                    launcher.writeText(
+                        """
+                        #!/bin/sh
+                        SCRIPT_DIR="$(cd "$(dirname "${'$'}0")" && pwd)"
+                        APP_DIR="${'$'}SCRIPT_DIR/../app"
+                        JAVA="${'$'}SCRIPT_DIR/../runtime/Contents/Home/bin/java"
+                        exec "${'$'}JAVA" \
+                            --add-modules jdk.incubator.vector \
+                            -jar "${'$'}APP_DIR/askimo-cli.jar" "${'$'}@"
+                        """.trimIndent(),
+                    )
+                    launcher.setExecutable(true)
+                    logger.lifecycle("✅ askimo launcher → ${launcher.absolutePath}")
+                }
+
+                // ── Linux / Windows flat layout ────────────────────────────────
+                else -> {
+                    val distDir =
+                        layout.buildDirectory
+                            .dir(
+                                "compose/binaries/main/app",
+                            ).get()
+                            .asFile
+                    val appLibDir = File(distDir, "app")
+                    val binDir = File(distDir, "bin").also { it.mkdirs() }
+
+                    cliThinJar.copyTo(File(appLibDir, "askimo-cli.jar"), overwrite = true)
+
+                    cliDepJars.forEach { jar ->
+                        val dest = File(appLibDir, jar.name)
+                        if (!dest.exists()) jar.copyTo(dest, overwrite = false)
+                    }
+
+                    val isWindows = os.contains("win")
+                    if (isWindows) {
+                        val bat = File(binDir, "askimo.bat")
+                        bat.writeText(
+                            """
+                            @echo off
+                            SET SCRIPT_DIR=%~dp0
+                            SET APP_DIR=%SCRIPT_DIR%..\app
+                            SET JAVA=%SCRIPT_DIR%..\runtime\bin\java.exe
+                            "%JAVA%" --add-modules jdk.incubator.vector ^
+                                -jar "%APP_DIR%\askimo-cli.jar" %*
+                            """.trimIndent(),
+                        )
+                        logger.lifecycle("✅ askimo.bat launcher → ${bat.absolutePath}")
+                    } else {
+                        val sh = File(binDir, "askimo")
+                        sh.writeText(
+                            """
+                            #!/bin/sh
+                            SCRIPT_DIR="$(cd "$(dirname "${'$'}0")" && pwd)"
+                            APP_DIR="${'$'}SCRIPT_DIR/../app"
+                            JAVA="${'$'}SCRIPT_DIR/../runtime/bin/java"
+                            exec "${'$'}JAVA" \
+                                --add-modules jdk.incubator.vector \
+                                -jar "${'$'}APP_DIR/askimo-cli.jar" "${'$'}@"
+                            """.trimIndent(),
+                        )
+                        sh.setExecutable(true)
+                        logger.lifecycle("✅ askimo launcher → ${sh.absolutePath}")
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Register for this (Askimo community) desktop app
+registerBundleCliJarTask("Askimo") {
+    val appDir =
+        layout.buildDirectory
+            .dir("compose/binaries/main/app")
+            .get()
+            .asFile
+    appDir.listFiles()?.firstOrNull { it.extension == "app" }
+}
+
+// Make signMacApp (if present) depend on bundleCliJar so CLI is included before signing/notarization
+afterEvaluate {
+    tasks.findByName("signMacApp")?.dependsOn("bundleCliJar")
+}
+
 // Configure Compose Desktop uber JAR tasks to exclude signature files
 // These tasks are created by the Compose Desktop plugin
 // The plugin creates uber JARs that may contain conflicting signatures from dependencies

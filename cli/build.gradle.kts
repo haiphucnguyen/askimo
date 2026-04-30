@@ -109,6 +109,47 @@ tasks.jar {
     }
 }
 
+// Produces a thin CLI jar (CLI classes + resources only, no transitive deps).
+//
+// The MANIFEST.MF Class-Path lists every runtime dependency jar by filename only
+// (no directory prefix), which matches the flat layout that Compose Desktop produces:
+//   - macOS: <App>.app/Contents/app/<all jars>
+//   - Linux/Win: app/<all jars>
+//
+// Both this jar and all dependency jars end up in the same directory, so relative
+// filename-only classpath entries resolve correctly at runtime.
+//
+// Usage: ./gradlew :cli:cliThinJar
+// Output: cli/build/libs/cli-<version>-bundled.jar
+tasks.register<Jar>("cliThinJar") {
+    group = "build"
+    description = "Thin CLI jar for bundling inside the Desktop distribution"
+    archiveClassifier.set("bundled")
+
+    // Only CLI module classes + resources — NO transitive dep classes
+    from(sourceSets.main.get().output)
+
+    dependsOn(configurations.runtimeClasspath)
+
+    manifest {
+        attributes["Main-Class"] = application.mainClass.get()
+        // Compute Class-Path as a space-separated list of dependency jar filenames.
+        // Evaluated lazily so the resolved configuration is ready.
+        attributes(
+            mapOf(
+                "Class-Path" to
+                    provider {
+                        configurations.runtimeClasspath
+                            .get()
+                            .resolvedConfiguration
+                            .resolvedArtifacts
+                            .joinToString(" ") { it.file.name }
+                    },
+            ),
+        )
+    }
+}
+
 sourceSets {
     main {
         kotlin.srcDirs("src/main/kotlin")

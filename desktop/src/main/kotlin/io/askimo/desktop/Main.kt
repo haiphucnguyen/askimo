@@ -193,6 +193,10 @@ fun main() {
 
     AskimoHomeMigration.migrate(AskimoHome.rootBase().toFile())
 
+    // Install / refresh the bundled CLI launcher symlink at ~/.askimo/bin/askimo
+    // so users can run `askimo` from any terminal without a separate install.
+    io.askimo.ui.util.CliLauncherInstaller.install()
+
     AppContext.initialize(ExecutionMode.STATEFUL_TOOLS_MODE)
 
     startKoin {
