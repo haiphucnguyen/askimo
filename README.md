@@ -65,11 +65,13 @@
 
 ## Why Askimo?
 
-Most AI desktop apps lock you into one model and one workflow. Askimo doesn't.
+You shouldn't have to choose between the best AI model, your privacy, and getting real work done.
 
-- **Tired of switching tabs** between ChatGPT, Claude, and Gemini? Askimo runs all of them in one place.
-- **Worried about your files leaving your machine?** RAG runs locally - your documents never touch a cloud server.
-- **Need more than chat?** Run Python/Bash scripts, chain multi-step AI workflows (Plans), and connect MCP tools - all from the same app.
+- **One app, every model.** Stop juggling browser tabs. Chat with OpenAI, Claude, Gemini, Grok, or a local Ollama model, switch in seconds, no copy-pasting.
+- **Built as a native desktop app.** Not a web wrapper. Starts fast, runs lean, and stays responsive even after hours of use and thousands of messages in a single conversation.
+- **Long conversations that actually work.** No crashes, no tab reloads, no lost context. Askimo handles deep, extended sessions the way a real desktop app should.
+- **Your files stay on your machine.** Search and chat with your own documents using local RAG. Nothing is uploaded. Nothing leaves your device.
+- **More than just chat.** Run Python/Bash scripts, chain multi-step AI workflows, and connect MCP tools, all from the same app.
 
 ---
 

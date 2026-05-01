@@ -532,7 +532,7 @@ jobs:
 
           # Resolve each commit to a GitHub login + avatar via the Commits API.
           declare -A SEEN_LOGINS
-          declare -a CONTRIBUTOR_LINES
+          CONTRIBUTOR_LINES=()
 
           for ENTRY in "${COMMITS[@]}"; do
             SHA="${ENTRY%%|*}"
