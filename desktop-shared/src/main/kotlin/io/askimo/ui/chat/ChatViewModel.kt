@@ -7,6 +7,8 @@ package io.askimo.ui.chat
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import io.askimo.core.analytics.Analytics
+import io.askimo.core.analytics.AnalyticsEvent
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.dto.FileAttachmentDTO
@@ -515,6 +517,9 @@ class ChatViewModel(
                 // 6. Resend the user message
                 currentJob = scope.launch {
                     try {
+                        if (selectedDirective != null) {
+                            Analytics.track(AnalyticsEvent.DIRECTIVE_USED)
+                        }
                         val threadId = sessionManager.sendMessage(
                             projectId = project?.id,
                             mode = CreationMode.Chat,
@@ -617,6 +622,9 @@ class ChatViewModel(
 
         currentJob = scope.launch {
             try {
+                if (selectedDirective != null) {
+                    Analytics.track(AnalyticsEvent.DIRECTIVE_USED)
+                }
                 val threadId = sessionManager.sendMessage(
                     projectId = projectId,
                     mode = mode,

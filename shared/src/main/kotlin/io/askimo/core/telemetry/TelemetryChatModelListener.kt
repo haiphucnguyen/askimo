@@ -9,7 +9,7 @@ import dev.langchain4j.model.chat.listener.ChatModelListener
 import dev.langchain4j.model.chat.listener.ChatModelRequestContext
 import dev.langchain4j.model.chat.listener.ChatModelResponseContext
 import io.askimo.core.analytics.Analytics
-import io.askimo.core.analytics.AnalyticsEvents
+import io.askimo.core.analytics.AnalyticsEvent
 import io.askimo.core.logging.logger
 import java.net.URI
 import java.net.http.HttpClient
@@ -106,7 +106,7 @@ class TelemetryChatModelListener(
         )
 
         Analytics.track(
-            AnalyticsEvents.PROVIDER_USED,
+            AnalyticsEvent.PROVIDER_USED,
             mapOf(
                 "provider" to provider,
                 "model_tier" to Analytics.modelTier(provider),
@@ -158,7 +158,7 @@ class TelemetryChatModelListener(
             else -> "provider_error"
         }
         Analytics.track(
-            AnalyticsEvents.ERROR_OCCURRED,
+            AnalyticsEvent.ERROR_OCCURRED,
             mapOf("error_type" to errorType, "provider" to provider),
         )
 

@@ -49,7 +49,7 @@ internal class AnalyticsReporter(
     fun flushNow() {
         runCatching {
             executor.submit(::flush).get(TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        }.onFailure { log.debug("Analytics: flushNow failed: ${it.message}") }
+        }.onFailure { log.trace("Analytics: flushNow failed: ${it.message}") }
     }
 
     fun shutdown() {
@@ -62,8 +62,8 @@ internal class AnalyticsReporter(
         val batch = queue.drainAll().take(BATCH_SIZE)
         if (batch.isEmpty()) return
         runCatching {
-            val body = appJson.encodeToString(ListSerializer(AnalyticsEvent.serializer()), batch)
-            log.debug("Analytics: flush data: $body")
+            val body = appJson.encodeToString(ListSerializer(AnalyticsEventPayload.serializer()), batch)
+            log.trace("Analytics: flush data: $body")
             val (status, _) = httpPost(
                 url = endpoint,
                 body = body,
@@ -78,7 +78,7 @@ internal class AnalyticsReporter(
                 batch.forEach { queue.enqueue(it) }
             }
         }.onFailure { e ->
-            log.debug("Analytics: flush error (${e.message}) - re-queuing ${batch.size} events")
+            log.trace("Analytics: flush error (${e.message}) - re-queuing ${batch.size} events")
             batch.forEach { queue.enqueue(it) }
         }
     }

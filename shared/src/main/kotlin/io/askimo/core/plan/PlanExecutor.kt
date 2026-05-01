@@ -7,6 +7,8 @@ package io.askimo.core.plan
 import dev.langchain4j.agentic.AgenticServices
 import dev.langchain4j.agentic.UntypedAgent
 import dev.langchain4j.model.chat.ChatModel
+import io.askimo.core.analytics.Analytics
+import io.askimo.core.analytics.AnalyticsEvent
 import io.askimo.core.event.EventBus
 import io.askimo.core.logging.logger
 import io.askimo.core.plan.domain.PlanDef
@@ -57,6 +59,64 @@ class PlanExecutor(private val chatModel: ChatModel) {
     fun execute(plan: PlanDef, inputs: Map<String, String>, executionId: String = ""): String {
         validateInputs(plan, inputs)
 
+        val stepCount = plan.steps.size
+        val hasParallel = containsNode<WorkflowNode.Parallel>(plan.workflow)
+        val hasConditional = containsNode<WorkflowNode.Conditional>(plan.workflow)
+        val hasInteractive = containsNode<WorkflowNode.Ask>(plan.workflow)
+        val toolCount = plan.tools.size + plan.steps.values.sumOf { it.tools.size }
+
+        Analytics.track(
+            AnalyticsEvent.PLAN_STARTED,
+            mapOf(
+                "step_count" to stepCount.toString(),
+                "has_parallel" to hasParallel.toString(),
+                "has_conditional" to hasConditional.toString(),
+                "has_interactive" to hasInteractive.toString(),
+                "tool_count" to toolCount.toString(),
+            ),
+        )
+
+        val startMs = System.currentTimeMillis()
+
+        return try {
+            val output = executeInternal(plan, inputs, executionId)
+            val durationMs = System.currentTimeMillis() - startMs
+            val durationBucket = when {
+                durationMs < 5_000 -> "<5s"
+                durationMs < 30_000 -> "5-30s"
+                durationMs < 120_000 -> "30-120s"
+                else -> ">120s"
+            }
+            val outputBucket = when {
+                output.length < 500 -> "<500"
+                output.length < 2000 -> "500-2000"
+                else -> ">2000"
+            }
+            Analytics.track(
+                AnalyticsEvent.PLAN_COMPLETED,
+                mapOf(
+                    "step_count" to stepCount.toString(),
+                    "duration_bucket" to durationBucket,
+                    "output_length_bucket" to outputBucket,
+                ),
+            )
+            output
+        } catch (e: IllegalArgumentException) {
+            Analytics.track(
+                AnalyticsEvent.PLAN_FAILED,
+                mapOf("step_count" to stepCount.toString(), "error_type" to "missing_input"),
+            )
+            throw e
+        } catch (e: Exception) {
+            Analytics.track(
+                AnalyticsEvent.PLAN_FAILED,
+                mapOf("step_count" to stepCount.toString(), "error_type" to "step_failed"),
+            )
+            throw e
+        }
+    }
+
+    private fun executeInternal(plan: PlanDef, inputs: Map<String, String>, executionId: String): String {
         log.debug("Executing plan '{}' (execution={}) with inputs: {}", plan.id, executionId, inputs.keys)
 
         // Collect interactive answers first by traversing the workflow for Ask nodes.
@@ -232,6 +292,17 @@ class PlanExecutor(private val chatModel: ChatModel) {
         } else {
             log.debug("[{}] Plan completed. Output length: {} chars", plan.id, output.length)
         }
+    }
+
+    /** Returns true if any node in the workflow tree is an instance of [T]. */
+    private inline fun <reified T : WorkflowNode> containsNode(node: WorkflowNode): Boolean = containsNodeClass(node, T::class.java)
+
+    private fun containsNodeClass(node: WorkflowNode, type: Class<*>): Boolean = when {
+        type.isInstance(node) -> true
+        node is WorkflowNode.Sequence -> node.nodes.any { containsNodeClass(it, type) }
+        node is WorkflowNode.Parallel -> node.nodes.any { containsNodeClass(it, type) }
+        node is WorkflowNode.Conditional -> containsNodeClass(node.node, type)
+        else -> false
     }
 
     /**

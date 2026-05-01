@@ -10,6 +10,8 @@ import dev.langchain4j.service.tool.DefaultToolExecutor
 import dev.langchain4j.service.tool.ToolProvider
 import dev.langchain4j.service.tool.ToolProviderRequest
 import dev.langchain4j.service.tool.ToolProviderResult
+import io.askimo.core.analytics.Analytics
+import io.askimo.core.analytics.AnalyticsEvent
 import io.askimo.core.context.ChatContext
 import io.askimo.core.intent.DetectUserIntentCommand
 import io.askimo.core.intent.ToolConfig
@@ -55,6 +57,14 @@ class ToolProviderImpl(
         )
 
         if (userIntent.tools.isEmpty()) return null
+
+        val mcpCount = userIntent.tools.count { it.source == ToolSource.MCP_EXTERNAL }
+        if (mcpCount > 0) {
+            Analytics.track(
+                AnalyticsEvent.MCP_TOOL_USED,
+                mapOf("scope" to "global", "tool_count" to mcpCount.toString()),
+            )
+        }
 
         val enabledServers = ChatContext.getEnabledServers()
 

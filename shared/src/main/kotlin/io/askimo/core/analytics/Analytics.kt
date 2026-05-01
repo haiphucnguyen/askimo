@@ -23,7 +23,7 @@ import io.askimo.core.logging.logger
  * ## Usage
  * ```kotlin
  * Analytics.initialize(AppConfig.analytics)
- * Analytics.track(AnalyticsEvents.APP_STARTED, mapOf("mode" to "desktop"))
+ * Analytics.track(AnalyticsEvent.APP_STARTED, mapOf("mode" to "desktop"))
  * Analytics.shutdown() // on clean app exit
  * ```
  */
@@ -56,7 +56,7 @@ object Analytics {
     }
 
     /**
-     * Convenience helper — tracks [AnalyticsEvents.APP_SESSION_ENDED] with bucketed duration
+     * Convenience helper — tracks [AnalyticsEvent.APP_SESSION_ENDED] with bucketed duration
      * and message count. Call on clean app exit after [shutdown].
      *
      * @param messageCount total number of chat messages sent in this session.
@@ -76,7 +76,7 @@ object Analytics {
             else -> ">20"
         }
         track(
-            AnalyticsEvents.APP_SESSION_ENDED,
+            AnalyticsEvent.APP_SESSION_ENDED,
             mapOf(
                 "session_duration_bucket" to durationBucket,
                 "message_count_bucket" to messageBucket,
@@ -110,9 +110,9 @@ object Analytics {
      * Records a feature usage event. No-op when not opted in or not initialized.
      * Call sites must never pass conversation content, file paths, or user identity.
      */
-    fun track(event: String, properties: Map<String, String> = emptyMap()) {
+    fun track(event: AnalyticsEvent, properties: Map<String, String> = emptyMap()) {
         if (!enabled || !initialized) return
-        queue.enqueue(AnalyticsEvent(event = event, properties = properties))
+        queue.enqueue(AnalyticsEventPayload(event = event.eventName, properties = properties))
     }
 
     /**
@@ -128,7 +128,7 @@ object Analytics {
                 reporterStarted = true
             }
         }
-        track(AnalyticsEvents.ANALYTICS_OPT_IN)
+        track(AnalyticsEvent.ANALYTICS_OPT_IN)
         persistChoice(true)
         log.info("Analytics: user opted in")
     }
@@ -138,7 +138,7 @@ object Analytics {
      * Stops collection, clears the queue, and deletes the disk file immediately.
      */
     fun optOut() {
-        track(AnalyticsEvents.ANALYTICS_OPT_OUT)
+        track(AnalyticsEvent.ANALYTICS_OPT_OUT)
         synchronized(this) {
             enabled = false
             if (initialized) {

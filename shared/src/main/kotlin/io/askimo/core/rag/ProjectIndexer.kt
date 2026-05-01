@@ -9,7 +9,7 @@ import dev.langchain4j.exception.ModelNotFoundException
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.store.embedding.EmbeddingStore
 import io.askimo.core.analytics.Analytics
-import io.askimo.core.analytics.AnalyticsEvents
+import io.askimo.core.analytics.AnalyticsEvent
 import io.askimo.core.chat.domain.KnowledgeSourceConfig
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.context.AppContext
@@ -281,7 +281,7 @@ class ProjectIndexer(
                 else -> ">30s"
             }
             Analytics.track(
-                AnalyticsEvents.RAG_INDEXED,
+                AnalyticsEvent.RAG_INDEXED,
                 mapOf(
                     "file_count" to totalFilesIndexed.toString(),
                     "index_duration_bucket" to durationBucket,

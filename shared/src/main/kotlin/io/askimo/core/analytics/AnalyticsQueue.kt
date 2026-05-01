@@ -13,7 +13,7 @@ import java.nio.file.StandardOpenOption
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
- * Thread-safe in-memory queue for [AnalyticsEvent]s.
+ * Thread-safe in-memory queue for [AnalyticsEventPayload]s.
  *
  * Events are persisted to [QUEUE_FILE] on every mutation so they survive app restarts.
  * [AnalyticsReporter] drains this queue on a scheduled background flush.
@@ -23,7 +23,7 @@ import java.util.concurrent.CopyOnWriteArrayList
  */
 internal class AnalyticsQueue {
     private val log = logger<AnalyticsQueue>()
-    private val events = CopyOnWriteArrayList<AnalyticsEvent>()
+    private val events = CopyOnWriteArrayList<AnalyticsEventPayload>()
 
     companion object {
         const val MAX_EVENTS = 500
@@ -37,7 +37,7 @@ internal class AnalyticsQueue {
     }
 
     /** Adds [event] to the tail of the queue, dropping the oldest entry when at capacity. */
-    fun enqueue(event: AnalyticsEvent) {
+    fun enqueue(event: AnalyticsEventPayload) {
         if (events.size >= MAX_EVENTS) events.removeAt(0)
         events.add(event)
         persistToDisk()
@@ -47,7 +47,7 @@ internal class AnalyticsQueue {
      * Returns all queued events as an immutable snapshot and clears the queue.
      * The caller is responsible for re-enqueuing on delivery failure.
      */
-    fun drainAll(): List<AnalyticsEvent> {
+    fun drainAll(): List<AnalyticsEventPayload> {
         val snapshot = events.toList()
         events.clear()
         persistToDisk()
@@ -65,7 +65,7 @@ internal class AnalyticsQueue {
     private fun persistToDisk() {
         runCatching {
             Files.createDirectories(queuePath.parent)
-            val json = appJson.encodeToString(ListSerializer(AnalyticsEvent.serializer()), events.toList())
+            val json = appJson.encodeToString(ListSerializer(AnalyticsEventPayload.serializer()), events.toList())
             Files.writeString(queuePath, json, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
         }.onFailure { log.debug("Analytics: queue persist failed: ${it.message}") }
     }
@@ -74,7 +74,7 @@ internal class AnalyticsQueue {
         runCatching {
             if (!Files.exists(queuePath)) return
             val json = Files.readString(queuePath)
-            val loaded = appJson.decodeFromString(ListSerializer(AnalyticsEvent.serializer()), json)
+            val loaded = appJson.decodeFromString(ListSerializer(AnalyticsEventPayload.serializer()), json)
             events.addAll(loaded.takeLast(MAX_EVENTS))
             log.debug("Analytics: loaded ${events.size} queued events from disk")
         }.onFailure { log.debug("Analytics: queue load failed: ${it.message}") }

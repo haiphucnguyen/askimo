@@ -37,7 +37,7 @@ import io.askimo.cli.util.CompositeCommandExecutor
 import io.askimo.cli.util.NonInteractiveCommandParser
 import io.askimo.core.VersionInfo
 import io.askimo.core.analytics.Analytics
-import io.askimo.core.analytics.AnalyticsEvents
+import io.askimo.core.analytics.AnalyticsEvent
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.dto.ChatMessageDTO
 import io.askimo.core.chat.service.ChatSessionService
@@ -91,7 +91,7 @@ fun main(args: Array<String>) {
     Analytics.initialize()
     val hasRag = AskimoHome.projectsDir().toFile().let { it.exists() && (it.listFiles()?.isNotEmpty() == true) }
     Analytics.track(
-        AnalyticsEvents.APP_STARTED,
+        AnalyticsEvent.APP_STARTED,
         mapOf(
             "mode" to "cli",
             "has_rag" to hasRag.toString(),

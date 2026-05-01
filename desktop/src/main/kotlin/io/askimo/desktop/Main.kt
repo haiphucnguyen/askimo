@@ -59,7 +59,7 @@ import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import io.askimo.core.analytics.Analytics
-import io.askimo.core.analytics.AnalyticsEvents
+import io.askimo.core.analytics.AnalyticsEvent
 import io.askimo.core.backup.BackupManager
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.dto.ChatMessageDTO
@@ -177,6 +177,7 @@ import java.util.Locale
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.system.exitProcess
+import kotlin.time.Duration.Companion.milliseconds
 
 private val log = currentFileLogger()
 
@@ -472,11 +473,11 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     }
 
     LaunchedEffect(Unit) {
-        delay(5000)
+        delay(5000.milliseconds)
         updateViewModel.checkForUpdates(silent = true)
 
         while (true) {
-            delay(24 * 60 * 60 * 1000L) // 24 hours
+            delay((24 * 60 * 60 * 1000L).milliseconds) // 24 hours
             updateViewModel.checkForUpdates(silent = true)
         }
     }
@@ -516,7 +517,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
             runCatching { koin.get<McpInstanceService>().getInstances().isNotEmpty() }.getOrDefault(false)
         }
         Analytics.track(
-            AnalyticsEvents.APP_STARTED,
+            AnalyticsEvent.APP_STARTED,
             mapOf(
                 "mode" to "desktop",
                 "has_rag" to hasRag.toString(),
@@ -621,6 +622,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                 },
                 onNavigateToProjects = {
                     currentView = View.PROJECTS
+                    Analytics.track(AnalyticsEvent.RAG_PANEL_OPENED)
                 },
                 onToggleSidebar = {
                     isSidebarExpanded = !isSidebarExpanded
@@ -739,7 +741,12 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                         },
                                         settingsViewModel = settingsViewModel,
                                         selectedSection = settingsSection,
-                                        onSectionChange = { settingsSection = it },
+                                        onSectionChange = { section ->
+                                            settingsSection = section
+                                            if (section == SettingsSection.MCP_SERVERS) {
+                                                Analytics.track(AnalyticsEvent.MCP_SETTINGS_OPENED)
+                                            }
+                                        },
                                     )
                                 } else {
                                     // Main View - With sidebar and content
@@ -847,6 +854,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
 
                                                         AppShortcut.NAVIGATE_TO_PROJECTS -> {
                                                             currentView = View.PROJECTS
+                                                            Analytics.track(AnalyticsEvent.RAG_PANEL_OPENED)
                                                             true
                                                         }
 
@@ -923,6 +931,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                         },
                                                         onNavigateToPlans = {
                                                             currentView = View.PLANS
+                                                            Analytics.track(AnalyticsEvent.PLAN_VIEW_OPENED)
                                                         },
                                                     )
                                                 } // End BoxWithConstraints
@@ -1003,6 +1012,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                         },
                                                         onNavigateToPlans = {
                                                             currentView = View.PLANS
+                                                            Analytics.track(AnalyticsEvent.PLAN_VIEW_OPENED)
                                                         },
                                                         onNavigateToPlanDetail = {
                                                             currentView = View.PLAN_DETAIL
