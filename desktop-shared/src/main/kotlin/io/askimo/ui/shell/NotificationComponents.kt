@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -55,9 +56,13 @@ import io.askimo.core.event.EventBus
 import io.askimo.core.event.system.ShellErrorEvent
 import io.askimo.core.event.system.UpdateAvailableEvent
 import io.askimo.core.util.TimeUtil.formatInstantDisplay
+import io.askimo.ui.common.components.linkButton
+import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.preferences.ApplicationPreferences
 import io.askimo.ui.common.theme.AppComponents
+import java.awt.Desktop
+import java.net.URI
 
 /**
  * Wrapper to give each notification event a stable unique key for [LazyColumn].
@@ -360,19 +365,24 @@ fun notificationEventCard(
         else -> event::class.simpleName ?: "Unknown"
     }
 
-    val cardColors = if (isShellError) {
-        CardDefaults.cardColors(
+    val cardColors = when {
+        isUpdateEvent -> CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+
+        isShellError -> CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.errorContainer,
             contentColor = MaterialTheme.colorScheme.onErrorContainer,
         )
-    } else {
-        AppComponents.surfaceVariantCardColors()
+
+        else -> AppComponents.surfaceVariantCardColors()
     }
 
-    val contentColor = if (isShellError) {
-        MaterialTheme.colorScheme.onErrorContainer
-    } else {
-        MaterialTheme.colorScheme.onSurface
+    val contentColor = when {
+        isUpdateEvent -> MaterialTheme.colorScheme.onSecondaryContainer
+        isShellError -> MaterialTheme.colorScheme.onErrorContainer
+        else -> MaterialTheme.colorScheme.onSurface
     }
 
     Card(
@@ -410,18 +420,45 @@ fun notificationEventCard(
                 }
             }
 
+            // Version badge for update events
+            if (event is UpdateAvailableEvent) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                color = contentColor.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(4.dp),
+                            )
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    ) {
+                        Text(
+                            text = "v${event.currentVersion} → v${event.latestVersion}",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = contentColor,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(2.dp))
+            }
+
             Text(
                 text = formatInstantDisplay(event.timestamp),
                 style = MaterialTheme.typography.bodySmall,
                 color = contentColor.copy(alpha = 0.7f),
             )
 
-            SelectionContainer {
-                Text(
-                    text = event.getDetails(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = contentColor,
-                )
+            if (!isUpdateEvent) {
+                SelectionContainer {
+                    Text(
+                        text = event.getDetails(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = contentColor,
+                    )
+                }
             }
 
             // Expandable technical details for ShellErrorEvent — lets users copy & report
@@ -455,25 +492,38 @@ fun notificationEventCard(
                 }
             }
 
-            if (isUpdateEvent) {
+            if (event is UpdateAvailableEvent) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.End,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(
+                    linkButton(
                         onClick = {
-                            onRemoveEvent()
                             onShowUpdateDetails()
                             onDismissPopup()
                         },
-                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
                         Text(
                             text = stringResource("event.details.action"),
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                    primaryButton(
+                        onClick = {
+                            runCatching {
+                                Desktop.getDesktop().browse(URI(event.downloadUrl))
+                            }
+                            onRemoveEvent()
+                            onDismissPopup()
+                        },
+                    ) {
+                        Text(
+                            text = stringResource("event.update.download"),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
                         )
                     }
                 }

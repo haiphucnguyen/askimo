@@ -83,7 +83,7 @@ class KeychainManagerMacOSIntegrationTest {
         println("Retrieved length: ${retrievedKey.length}")
         println("Retrieved prefix: ${retrievedKey.take(20)}...")
 
-        assertEquals(LONG_API_KEY.length, retrievedKey?.length, "Retrieved API key length should match original")
+        assertEquals(LONG_API_KEY.length, retrievedKey.length, "Retrieved API key length should match original")
         assertEquals(LONG_API_KEY, retrievedKey, "Retrieved API key should match stored key exactly")
     }
 

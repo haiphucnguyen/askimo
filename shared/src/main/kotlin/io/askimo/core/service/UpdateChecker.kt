@@ -121,7 +121,7 @@ class UpdateChecker(
             latestVersion = latestVersion,
             releaseName = latest.name,
             releaseDate = formatReleaseDate(latest.published_at),
-            downloadUrl = latest.html_url,
+            downloadUrl = "https://askimo.chat/download/",
             releaseNotes = latest.body,
             isNewVersion = isNewVersion,
             versionsBehind = versionsBehind,

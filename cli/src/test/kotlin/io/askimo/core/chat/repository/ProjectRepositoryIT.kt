@@ -154,7 +154,7 @@ class ProjectRepositoryIT {
         val projects = projectRepository.getAllProjects()
         val updatedProject = projects.find { it.id == project.id }
         assertNotNull(updatedProject)
-        assertEquals("Updated Name", updatedProject!!.name)
+        assertEquals("Updated Name", updatedProject.name)
         assertEquals("Updated Description", updatedProject.description)
         assertEquals(1, updatedProject.knowledgeSources.size)
         assertEquals("/new/path", (updatedProject.knowledgeSources[0] as LocalFoldersKnowledgeSourceConfig).resourceIdentifier)

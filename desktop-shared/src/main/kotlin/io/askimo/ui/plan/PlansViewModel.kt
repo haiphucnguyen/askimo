@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.PlansRefreshEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.plan.PlanRunResult
 import io.askimo.core.plan.PlanService
@@ -15,7 +16,7 @@ import io.askimo.core.plan.PlanStepEvent
 import io.askimo.core.plan.PlanYamlParser
 import io.askimo.core.plan.domain.PlanDef
 import io.askimo.core.plan.domain.PlanExecution
-import io.askimo.ui.common.preferences.ApplicationPreferences
+import io.askimo.ui.common.preferences.AccountPreferences
 import io.askimo.ui.plan.PlanExportService.ExportFormat
 import io.askimo.ui.plan.PlanExportService.ExportMode
 import kotlinx.coroutines.CoroutineScope
@@ -46,10 +47,7 @@ import java.io.File
 class PlansViewModel(
     private val scope: CoroutineScope,
     private val planService: PlanService,
-    /**
-     * Optional callback invoked after a plan is saved or deleted so the team sync
-     * layer can push the change to the server. Pass null in offline / community mode.
-     */
+    private val accountPreferences: AccountPreferences? = null,
     private val onPlanChanged: (suspend (planId: String, deleted: Boolean) -> Unit)? = null,
 ) {
 
@@ -205,6 +203,17 @@ class PlansViewModel(
 
     private val planStateCache = mutableMapOf<String, PlanStateSnapshot>()
 
+    init {
+        scope.launch {
+            EventBus.internalEvents
+                .filterIsInstance<PlansRefreshEvent>()
+                .collect { event ->
+                    log.debug("Plans refresh requested: ${event.reason ?: "no reason specified"}")
+                    loadPlans()
+                }
+        }
+    }
+
     fun loadPlans() {
         scope.launch {
             isLoadingPlans = true
@@ -250,7 +259,7 @@ class PlansViewModel(
             activeExecutionId = cached.activeExecutionId
         } else {
             val defaults = plan.inputs.associate { it.key to it.default }
-            val persisted = ApplicationPreferences.getPlanInputs(plan.id)
+            val persisted = accountPreferences?.getPlanInputs(plan.id) ?: emptyMap()
             inputValues = defaults + persisted
             runResult = null
             runError = null
@@ -281,7 +290,7 @@ class PlansViewModel(
             newErrors.remove(key)
         }
         inputErrors = newErrors
-        selectedPlan?.id?.let { ApplicationPreferences.setPlanInputs(it, inputValues) }
+        selectedPlan?.id?.let { accountPreferences?.setPlanInputs(it, inputValues) }
     }
 
     fun runPlan() {

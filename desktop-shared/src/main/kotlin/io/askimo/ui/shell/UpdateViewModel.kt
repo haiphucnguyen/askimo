@@ -41,8 +41,8 @@ class UpdateViewModel(
 
     /**
      * Check for updates in the background.
-     * If silent is true, NO dialog is shown - only notification badge appears.
-     * User must manually click "Help → Check for Updates" to see details.
+     * If [silent] is true, only the notification badge/popup appears — no blocking dialog.
+     * If [silent] is false (manual "Check for Updates"), the dialog is always shown.
      */
     fun checkForUpdates(silent: Boolean = false) {
         if (isChecking) return
@@ -60,13 +60,12 @@ class UpdateViewModel(
                 releaseInfo = info
 
                 if (info != null) {
-                    if (info.isNewVersion) {
-                        if (!silent) {
-                            showUpdateDialog = true
-                        }
-                    } else if (!silent) {
+                    if (!silent) {
+                        // Manual check: always show the dialog regardless of version
                         showUpdateDialog = true
                     }
+                    // Silent auto-check: UpdateAvailableEvent is emitted by UpdateService
+                    // which causes notificationIcon to auto-open the notification popup.
                 } else {
                     if (!silent) {
                         errorMessage = "Failed to check for updates"

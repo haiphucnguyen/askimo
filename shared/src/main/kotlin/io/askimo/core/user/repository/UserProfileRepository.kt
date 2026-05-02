@@ -51,44 +51,50 @@ class UserProfileRepository internal constructor(
 
     /**
      * Get the user profile. Creates a default profile if none exists.
+     * Synchronized to prevent concurrent first-login callers from racing to insert
+     * the default row simultaneously (which causes SQLITE_BUSY on a multi-connection pool).
      *
      * @return The user profile
      */
-    fun getProfile(): UserProfile = transaction(database) {
-        val profileRow = UserProfilesTable
-            .selectAll()
-            .where { UserProfilesTable.id eq DEFAULT_PROFILE_ID }
-            .singleOrNull()
+    @Synchronized
+    fun getProfile(): UserProfile {
+        // 1. Check if profile exists
+        val profileRow = transaction(database) {
+            UserProfilesTable
+                .selectAll()
+                .where { UserProfilesTable.id eq DEFAULT_PROFILE_ID }
+                .singleOrNull()
+        }
 
+        // 2. Create default profile if absent (one separate transaction, never nested)
         if (profileRow == null) {
-            // Create default profile
             val defaultProfile = UserProfile(
                 id = DEFAULT_PROFILE_ID,
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now(),
             )
             saveProfile(defaultProfile)
-            defaultProfile
-        } else {
-            val profile = profileRow.toUserProfile()
+            return defaultProfile
+        }
 
-            // Load interests
-            val interests = UserInterestsTable
+        // 3. Load the existing profile
+        val profile = profileRow.toUserProfile()
+
+        val interests = transaction(database) {
+            UserInterestsTable
                 .selectAll()
                 .where { UserInterestsTable.profileId eq profile.id }
                 .map { it[UserInterestsTable.interest] }
+        }
 
-            // Load preferences
-            val preferences = UserPreferencesTable
+        val preferences = transaction(database) {
+            UserPreferencesTable
                 .selectAll()
                 .where { UserPreferencesTable.profileId eq profile.id }
                 .associate { it[UserPreferencesTable.key] to it[UserPreferencesTable.value] }
-
-            profile.copy(
-                interests = interests,
-                preferences = preferences,
-            )
         }
+
+        return profile.copy(interests = interests, preferences = preferences)
     }
 
     /**
@@ -97,53 +103,40 @@ class UserProfileRepository internal constructor(
      * @param profile The profile to save
      * @return The saved profile
      */
-    fun saveProfile(profile: UserProfile): UserProfile = transaction(database) {
+    @Synchronized
+    fun saveProfile(profile: UserProfile): UserProfile {
         val profileToSave = profile.copy(
             id = DEFAULT_PROFILE_ID,
             updatedAt = LocalDateTime.now(),
         )
 
-        // Check if profile exists
-        val exists = UserProfilesTable
-            .selectAll()
-            .where { UserProfilesTable.id eq DEFAULT_PROFILE_ID }
-            .singleOrNull() != null
+        val exists = transaction(database) {
+            UserProfilesTable
+                .selectAll()
+                .where { UserProfilesTable.id eq DEFAULT_PROFILE_ID }
+                .singleOrNull() != null
+        }
 
         if (exists) {
-            // Update existing profile
-            UserProfilesTable.update({ UserProfilesTable.id eq DEFAULT_PROFILE_ID }) {
-                it[name] = profileToSave.name
-                it[email] = profileToSave.email
-                it[preferredTitle] = profileToSave.preferredTitle
-                it[occupation] = profileToSave.occupation
-                it[location] = profileToSave.location
-                it[timezone] = profileToSave.timezone
-                it[bio] = profileToSave.bio
-                it[updatedAt] = profileToSave.updatedAt
+            transaction(database) {
+                UserProfilesTable.update({ UserProfilesTable.id eq DEFAULT_PROFILE_ID }) {
+                    it.applyProfile(profileToSave)
+                }
             }
         } else {
-            // Insert new profile
-            UserProfilesTable.insert {
-                it[id] = profileToSave.id
-                it[name] = profileToSave.name
-                it[email] = profileToSave.email
-                it[preferredTitle] = profileToSave.preferredTitle
-                it[occupation] = profileToSave.occupation
-                it[location] = profileToSave.location
-                it[timezone] = profileToSave.timezone
-                it[bio] = profileToSave.bio
-                it[createdAt] = profileToSave.createdAt
-                it[updatedAt] = profileToSave.updatedAt
+            transaction(database) {
+                UserProfilesTable.insert {
+                    it[id] = profileToSave.id
+                    it[createdAt] = profileToSave.createdAt
+                    it.applyProfile(profileToSave)
+                }
             }
         }
 
-        // Update interests
         saveInterests(profileToSave.id, profileToSave.interests)
-
-        // Update preferences
         savePreferences(profileToSave.id, profileToSave.preferences)
 
-        profileToSave
+        return profileToSave
     }
 
     /**
@@ -152,7 +145,8 @@ class UserProfileRepository internal constructor(
      * @param updates Map of field names to new values
      * @return The updated profile
      */
-    fun updateProfile(updates: Map<String, Any?>): UserProfile = transaction(database) {
+    @Synchronized
+    fun updateProfile(updates: Map<String, Any?>): UserProfile {
         val currentProfile = getProfile()
 
         val updatedProfile = currentProfile.copy(
@@ -169,7 +163,7 @@ class UserProfileRepository internal constructor(
             } ?: currentProfile.preferences,
         )
 
-        saveProfile(updatedProfile)
+        return saveProfile(updatedProfile)
     }
 
     /**
@@ -210,16 +204,17 @@ class UserProfileRepository internal constructor(
      * Save interests for a profile.
      */
     private fun saveInterests(profileId: String, interests: List<String>) {
-        // Delete existing interests
-        UserInterestsTable.deleteWhere { UserInterestsTable.profileId eq profileId }
-
-        // Insert new interests
+        transaction(database) {
+            UserInterestsTable.deleteWhere { UserInterestsTable.profileId eq profileId }
+        }
         interests.forEach { interest ->
-            UserInterestsTable.insert {
-                it[id] = UUID.randomUUID().toString()
-                it[UserInterestsTable.profileId] = profileId
-                it[UserInterestsTable.interest] = interest
-                it[createdAt] = LocalDateTime.now()
+            transaction(database) {
+                UserInterestsTable.insert {
+                    it[id] = UUID.randomUUID().toString()
+                    it[UserInterestsTable.profileId] = profileId
+                    it[UserInterestsTable.interest] = interest
+                    it[createdAt] = LocalDateTime.now()
+                }
             }
         }
     }
@@ -228,18 +223,19 @@ class UserProfileRepository internal constructor(
      * Save preferences for a profile.
      */
     private fun savePreferences(profileId: String, preferences: Map<String, String>) {
-        // Delete existing preferences
-        UserPreferencesTable.deleteWhere { UserPreferencesTable.profileId eq profileId }
-
-        // Insert new preferences
+        transaction(database) {
+            UserPreferencesTable.deleteWhere { UserPreferencesTable.profileId eq profileId }
+        }
         preferences.forEach { (key, value) ->
-            UserPreferencesTable.insert {
-                it[id] = UUID.randomUUID().toString()
-                it[UserPreferencesTable.profileId] = profileId
-                it[UserPreferencesTable.key] = key
-                it[UserPreferencesTable.value] = value
-                it[createdAt] = LocalDateTime.now()
-                it[updatedAt] = LocalDateTime.now()
+            transaction(database) {
+                UserPreferencesTable.insert {
+                    it[id] = UUID.randomUUID().toString()
+                    it[UserPreferencesTable.profileId] = profileId
+                    it[UserPreferencesTable.key] = key
+                    it[UserPreferencesTable.value] = value
+                    it[createdAt] = LocalDateTime.now()
+                    it[updatedAt] = LocalDateTime.now()
+                }
             }
         }
     }
@@ -295,4 +291,18 @@ class UserProfileRepository internal constructor(
             }
         }
     }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Applies the mutable profile fields shared between INSERT and UPDATE statements. */
+private fun org.jetbrains.exposed.v1.core.statements.UpdateBuilder<*>.applyProfile(p: UserProfile) {
+    this[UserProfilesTable.name] = p.name
+    this[UserProfilesTable.email] = p.email
+    this[UserProfilesTable.preferredTitle] = p.preferredTitle
+    this[UserProfilesTable.occupation] = p.occupation
+    this[UserProfilesTable.location] = p.location
+    this[UserProfilesTable.timezone] = p.timezone
+    this[UserProfilesTable.bio] = p.bio
+    this[UserProfilesTable.updatedAt] = p.updatedAt
 }

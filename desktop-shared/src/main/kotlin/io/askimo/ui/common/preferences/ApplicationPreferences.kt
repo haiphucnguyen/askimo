@@ -171,13 +171,13 @@ object ApplicationPreferences {
     }
 
     // ============================================================
-    // CONVERSATION SYNC
+    // CONVERSATION SYNC — machine-level only
     // ============================================================
     private const val DEVICE_ID_KEY = "sync.device_id"
-    private const val LAST_SYNC_SEQ_KEY = "sync.last_seq"
 
     /**
      * Returns a stable device identifier used for echo suppression during sync pull.
+     * This is machine-level (shared across accounts) — a single device sends one ID.
      */
     fun getOrCreateDeviceId(): String {
         val cached = safeGet(DEVICE_ID_KEY, null)
@@ -186,22 +186,6 @@ object ApplicationPreferences {
         val id = MachineId.resolve() ?: UUID.randomUUID().toString()
         safePut(DEVICE_ID_KEY, id)
         return id
-    }
-
-    /**
-     * The highest `seq` value received from the server during the last pull.
-     * Send this as the `since` parameter on the next pull to fetch only the delta.
-     * Defaults to 0 (first pull fetches all history).
-     */
-    fun getLastSyncSeq(): Long = safeGetLong(LAST_SYNC_SEQ_KEY, 0L)
-
-    /**
-     * Persists [seq] as the new cursor bookmark after a successful pull.
-     * Must only be called when the pull succeeded — a failed pull must not
-     * advance the cursor so the delta is retried on the next attempt.
-     */
-    fun saveLastSyncSeq(seq: Long) {
-        safePutLong(LAST_SYNC_SEQ_KEY, seq)
     }
 
     // ============================================================
@@ -213,23 +197,10 @@ object ApplicationPreferences {
     private const val PROJECT_SIDE_PANEL_EXPANDED_KEY = "ui.project_side_panel_expanded"
     private const val DEFAULT_PROJECT_SIDE_PANEL_EXPANDED = true
     private const val FILE_VIEWER_HEIGHT_RATIO_KEY = "ui.file_viewer_height_ratio"
-    private const val DEFAULT_FILE_VIEWER_HEIGHT_RATIO = 50 // stored as integer percent (50 = 50%)
+    private const val DEFAULT_FILE_VIEWER_HEIGHT_RATIO = 50
     private const val PLAN_HISTORY_SIDE_PANEL_WIDTH_KEY = "ui.plan_history_side_panel_width"
     private const val DEFAULT_PLAN_HISTORY_SIDE_PANEL_WIDTH = 320
     private const val PLAN_HISTORY_SIDE_PANEL_EXPANDED_KEY = "ui.plan_history_side_panel_expanded"
-    private const val DEFAULT_MODEL_KEY = "ui.default_model"
-
-    /**
-     * Get the saved default AI model ID, or null if never set (first launch).
-     */
-    fun getDefaultModel(): String? = safeGet(DEFAULT_MODEL_KEY, null)
-
-    /**
-     * Persist the chosen default AI model ID.
-     */
-    fun setDefaultModel(modelId: String) {
-        safePut(DEFAULT_MODEL_KEY, modelId)
-    }
 
     /**
      * Get the project side panel width in pixels.
@@ -307,62 +278,6 @@ object ApplicationPreferences {
      */
     fun setDismissedUpdateVersion(version: String) {
         safePut(DISMISSED_UPDATE_VERSION_KEY, version)
-    }
-
-    // ============================================================
-    // PLAN SYNC
-    // ============================================================
-    private const val LAST_PLAN_SYNC_SEQ_KEY = "sync.plan_last_seq"
-
-    /**
-     * The highest plan `seq` value received from the server during the last pull.
-     * Send this as the `since` parameter on the next pull to fetch only the delta.
-     * Defaults to 0 (first pull fetches all history).
-     */
-    fun getLastPlanSyncSeq(): Long = safeGetLong(LAST_PLAN_SYNC_SEQ_KEY, 0L)
-
-    /**
-     * Persists [seq] as the new plan cursor bookmark after a successful pull.
-     * Must only be called when the pull succeeded.
-     */
-    fun saveLastPlanSyncSeq(seq: Long) {
-        safePutLong(LAST_PLAN_SYNC_SEQ_KEY, seq)
-    }
-
-    // ============================================================
-    // PLAN INPUT PERSISTENCE
-    // ============================================================
-
-    /**
-     * Returns the last-used input values for a plan, keyed by input key.
-     * Stored as a single string using U+001F (Unit Separator) between entries
-     * and '=' between key and value — both characters safe for [Preferences.put].
-     * Returns an empty map if no values have been saved for this plan.
-     */
-    fun getPlanInputs(planId: String): Map<String, String> {
-        val raw = safeGet("plan.inputs.$planId", null) ?: return emptyMap()
-        return raw.split("\u001F")
-            .mapNotNull { entry ->
-                val idx = entry.indexOf('=')
-                if (idx > 0) entry.substring(0, idx) to entry.substring(idx + 1) else null
-            }
-            .toMap()
-    }
-
-    /**
-     * Persists the current input values for a plan so they can be restored on next visit.
-     * Values are serialised as "key1=value1\u001Fkey2=value2" (U+001F Unit Separator).
-     * U+0000 is stripped from keys and values because [Preferences.put] rejects it.
-     */
-    fun setPlanInputs(planId: String, inputs: Map<String, String>) {
-        val raw = inputs.entries.joinToString("\u001F") { (k, v) ->
-            // Strip any characters that Preferences.put rejects (null bytes, surrogates)
-            val safeKey = k.filter { it != '\u0000' && !it.isLowSurrogate() && !it.isHighSurrogate() }
-            val safeVal = v.filter { it != '\u0000' && !it.isLowSurrogate() && !it.isHighSurrogate() }
-            "$safeKey=$safeVal"
-        }
-        val truncated = if (raw.length > Preferences.MAX_VALUE_LENGTH) raw.substring(0, Preferences.MAX_VALUE_LENGTH) else raw
-        safePut("plan.inputs.$planId", truncated)
     }
 
     /**
