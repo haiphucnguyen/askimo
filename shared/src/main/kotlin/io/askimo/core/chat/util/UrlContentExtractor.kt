@@ -126,7 +126,7 @@ object UrlContentExtractor {
 
         val mainContent = doc.body()
 
-        val cleanText = mainContent.text().trim() ?: ""
+        val cleanText = mainContent.text().trim()
 
         val finalContent = if (cleanText.length < 100) {
             doc.body().text().trim()

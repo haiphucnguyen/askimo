@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
@@ -49,6 +50,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -141,6 +143,7 @@ fun chatInputField(
     sessionId: String? = null,
     placeholder: String = stringResource("chat.input.placeholder"),
     onEnabledServerIdsChange: ((Set<String>) -> Unit)? = null,
+    onNavigateToMcpSettings: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val inputFocusRequester = remember { FocusRequester() }
@@ -625,6 +628,7 @@ fun chatInputField(
                         onEnabledServerIdsChange = { updated ->
                             enabledServerIds = updated
                         },
+                        onNavigateToMcpSettings = onNavigateToMcpSettings,
                     )
 
                     // Spacer to push any future right-aligned controls
@@ -650,6 +654,7 @@ private fun toolsIndicatorButton(
     isLoading: Boolean,
     enabledServerIds: Set<String>,
     onEnabledServerIdsChange: (Set<String>) -> Unit,
+    onNavigateToMcpSettings: (() -> Unit)? = null,
 ) {
     var showToolsPopup by remember { mutableStateOf(false) }
     var mcpServers by remember { mutableStateOf<List<McpServerInfo>>(emptyList()) }
@@ -852,6 +857,34 @@ private fun toolsIndicatorButton(
                                             onCloseAll = { showToolsPopup = false },
                                         )
                                     }
+                                }
+                            }
+                        }
+
+                        // Footer link to MCP settings
+                        if (onNavigateToMcpSettings != null) {
+                            HorizontalDivider()
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End,
+                            ) {
+                                TextButton(
+                                    onClick = {
+                                        showToolsPopup = false
+                                        onNavigateToMcpSettings()
+                                    },
+                                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.Settings,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(14.dp),
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = stringResource("chat.tools.popup.manage"),
+                                        style = MaterialTheme.typography.labelMedium,
+                                    )
                                 }
                             }
                         }

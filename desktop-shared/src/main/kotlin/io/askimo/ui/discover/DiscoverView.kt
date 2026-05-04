@@ -7,6 +7,7 @@ package io.askimo.ui.discover
 import androidx.compose.foundation.ScrollbarStyle
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
@@ -25,21 +27,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -58,6 +58,7 @@ import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.plan.repository.PlanDefRepository
 import io.askimo.core.user.domain.UserProfile
 import io.askimo.core.util.TimeUtil
+import io.askimo.ui.common.components.clickableCard
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.ThemePreferences
 import kotlinx.coroutines.Dispatchers
@@ -79,7 +80,7 @@ fun discoverView(
     onNavigateToSessions: () -> Unit,
     onNavigateToProjects: () -> Unit,
     onNavigateToPlans: () -> Unit,
-    onNavigateToSettings: () -> Unit,
+    onNavigateToMcpSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var totalChats by remember { mutableStateOf<Int?>(null) }
@@ -123,7 +124,7 @@ fun discoverView(
                     onNavigateToSessions = onNavigateToSessions,
                     onNavigateToProjects = onNavigateToProjects,
                     onNavigateToPlans = onNavigateToPlans,
-                    onNavigateToSettings = onNavigateToSettings,
+                    onNavigateToMcpSettings = onNavigateToMcpSettings,
                 )
 
                 exploreFeaturesSection()
@@ -197,7 +198,7 @@ private fun statCardsSection(
     onNavigateToSessions: () -> Unit,
     onNavigateToProjects: () -> Unit,
     onNavigateToPlans: () -> Unit,
-    onNavigateToSettings: () -> Unit,
+    onNavigateToMcpSettings: () -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -221,7 +222,7 @@ private fun statCardsSection(
             label = stringResource("discover.stat.mcp"),
             value = totalMcpServers.toString(),
             icon = { Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.primary) },
-            onClick = onNavigateToSettings,
+            onClick = onNavigateToMcpSettings,
             modifier = Modifier.weight(1f),
         )
         statCard(
@@ -242,22 +243,12 @@ private fun statCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
 ) {
-    Card(
-        modifier = modifier
-            .then(
-                if (onClick != null) {
-                    Modifier
-                        .clickable(onClick = onClick)
-                        .pointerHoverIcon(PointerIcon.Hand)
-                } else {
-                    Modifier
-                },
-            ),
+    clickableCard(
+        onClick = onClick,
+        modifier = modifier,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        shape = MaterialTheme.shapes.large,
     ) {
         Column(
             modifier = Modifier
@@ -339,15 +330,12 @@ private fun exploreCard(
     url: String,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier
-            .clickable { runCatching { Desktop.getDesktop().browse(URI(url)) } }
-            .pointerHoverIcon(PointerIcon.Hand),
+    clickableCard(
+        onClick = { runCatching { Desktop.getDesktop().browse(URI(url)) } },
+        modifier = modifier,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        shape = MaterialTheme.shapes.large,
     ) {
         Column(
             modifier = Modifier
@@ -409,7 +397,11 @@ private fun recentSessionsSection(
                 tonalElevation = 1.dp,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                ) {
                     sessions.forEachIndexed { index, session ->
                         recentSessionRow(
                             session = session,
@@ -435,9 +427,13 @@ private fun recentSessionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onResumeSession(session.id) }
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = ripple(bounded = true),
+                onClick = { onResumeSession(session.id) },
+            )
             .pointerHoverIcon(PointerIcon.Hand)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -460,6 +456,7 @@ private fun recentSessionRow(
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
         }
+        Spacer(modifier = Modifier.width(16.dp))
         Text(
             text = TimeUtil.formatDisplay(session.updatedAt),
             style = MaterialTheme.typography.bodySmall,

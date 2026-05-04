@@ -105,6 +105,7 @@ fun projectView(
     onExportSession: (String) -> Unit,
     onEditProject: (String) -> Unit,
     onDeleteProject: (String) -> Unit,
+    onNavigateToMcpSettings: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     // Create ViewModel
@@ -334,6 +335,7 @@ fun projectView(
                             }
                         },
                         onEnabledServerIdsChange = { currentEnabledServerIds = it },
+                        onNavigateToMcpSettings = onNavigateToMcpSettings,
                         sessionId = currentProject.id,
                         placeholder = stringResource("project.new.chat.placeholder", currentProject.name),
                         modifier = Modifier.padding(top = 16.dp),

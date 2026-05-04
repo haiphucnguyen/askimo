@@ -1064,7 +1064,11 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                         chatSessionRepository = koin.get(),
                                                         projectRepository = koin.get(),
                                                         planDefRepository = koin.get(),
-                                                        onNavigateToSettings = { currentView = View.SETTINGS },
+                                                        onNavigateToMcpSettings = {
+                                                            settingsSection = SettingsSection.MCP_SERVERS
+                                                            previousView = currentView
+                                                            currentView = View.SETTINGS
+                                                        },
                                                     )
                                                 } else {
                                                     Box(
@@ -1803,7 +1807,7 @@ fun mainContent(
     onNavigateToPlans: () -> Unit = {},
     onNavigateToPlanDetail: () -> Unit = {},
     onNavigateToPlanEditor: () -> Unit = {},
-    onNavigateToSettings: () -> Unit = {},
+    onNavigateToMcpSettings: () -> Unit = {},
     activeSessionId: String?,
     sessionChatState: ChatViewState?,
     onChatStateChange: (TextFieldValue, List<FileAttachmentDTO>, ChatMessageDTO?) -> Unit,
@@ -1839,7 +1843,7 @@ fun mainContent(
                 onNavigateToSessions = onNavigateToSessions,
                 onNavigateToProjects = onNavigateToProjects,
                 onNavigateToPlans = onNavigateToPlans,
-                onNavigateToSettings = onNavigateToSettings,
+                onNavigateToMcpSettings = onNavigateToMcpSettings,
                 modifier = Modifier.fillMaxSize(),
             )
 
@@ -1868,6 +1872,7 @@ fun mainContent(
                         sessionsViewModel.deleteSessionWithCleanup(sessionId)
                     },
                     onNavigateToProject = onSelectProject,
+                    onNavigateToMcpSettings = onNavigateToMcpSettings,
                     userAvatarPath = userAvatarPath,
                     modifier = Modifier.fillMaxSize(),
                 )
@@ -1917,6 +1922,7 @@ fun mainContent(
                                 projectsViewModel.deleteProject(projectId)
                                 onNavigateToSessions()
                             },
+                            onNavigateToMcpSettings = onNavigateToMcpSettings,
                             modifier = Modifier.fillMaxSize(),
                         )
                     } else {

@@ -126,6 +126,7 @@ fun chatView(
     onExportSession: (String) -> Unit = {},
     onDeleteSession: (String) -> Unit = {},
     onNavigateToProject: ((String) -> Unit)? = null,
+    onNavigateToMcpSettings: (() -> Unit)? = null,
     userAvatarPath: String? = null,
     serverBaseUrl: String? = null,
     modifier: Modifier = Modifier,
@@ -1088,6 +1089,7 @@ fun chatView(
                     },
                     sessionId = sessionId,
                     onEnabledServerIdsChange = { currentEnabledServerIds = it },
+                    onNavigateToMcpSettings = onNavigateToMcpSettings,
                     modifier = Modifier
                         .widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH)
                         .fillMaxWidth()
