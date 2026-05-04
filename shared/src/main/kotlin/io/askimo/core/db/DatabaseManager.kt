@@ -189,6 +189,14 @@ class DatabaseManager private constructor(
             } catch (_: Exception) {
                 // Column already exists — safe to ignore.
             }
+
+            try {
+                stmt.executeUpdate(
+                    "ALTER TABLE projects ADD COLUMN is_starred INTEGER DEFAULT 0",
+                )
+            } catch (_: Exception) {
+                // Column already exists — safe to ignore.
+            }
         }
     }
 

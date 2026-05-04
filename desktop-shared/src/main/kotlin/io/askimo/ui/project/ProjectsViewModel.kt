@@ -37,6 +37,8 @@ class ProjectsViewModel(
     var projects by mutableStateOf<List<Project>>(emptyList())
         private set
 
+    val starredProjects: List<Project> get() = projects.filter { it.isStarred }
+
     var pagedProjects by mutableStateOf<Pageable<Project>?>(null)
         private set
 
@@ -158,6 +160,18 @@ class ProjectsViewModel(
      */
     fun dismissSuccessMessage() {
         deleteProjectSuccessfulBannerMessage = null
+    }
+
+    /**
+     * Toggle the starred status of a project.
+     */
+    fun starProject(projectId: String, isStarred: Boolean) {
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                projectRepository.starProject(projectId, isStarred)
+            }
+            refresh()
+        }
     }
 
     /**

@@ -114,7 +114,7 @@ fun settingsViewWithSidebar(
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = "Askimo AI",
+                    text = "Askimo",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,

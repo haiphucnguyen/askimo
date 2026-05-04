@@ -892,7 +892,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                             chatViewModel?.clearChat()
                                                             currentView = View.CHAT
                                                         },
-                                                        onToggleProjects = { isProjectsExpanded = !isProjectsExpanded },
+                                                        onToggleProjects = { currentView = View.PROJECTS },
                                                         onNewProject = {
                                                             showNewProjectDialog = true
                                                         },
@@ -909,6 +909,9 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                         onStarSession = { sessionId, isStarred ->
                                                             sessionsViewModel.updateSessionStarred(sessionId, isStarred)
                                                         },
+                                                        onStarProject = { projectId, isStarred ->
+                                                            projectsViewModel.starProject(projectId, isStarred)
+                                                        },
                                                         onRenameSession = { sessionId, _ ->
                                                             sessionsViewModel.showRenameDialog(sessionId)
                                                         },
@@ -918,6 +921,16 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                         onShowSessionSummary = { sessionId ->
                                                             sessionMemorySessionId = sessionId
                                                             showSessionMemoryDialog = true
+                                                        },
+                                                        onEditProject = { projectId ->
+                                                            editingProjectId = projectId
+                                                            showEditProjectDialog = true
+                                                        },
+                                                        onDeleteProject = { projectId ->
+                                                            projectsViewModel.deleteProject(projectId)
+                                                            if (selectedProjectId == projectId) {
+                                                                currentView = View.SESSIONS
+                                                            }
                                                         },
                                                         onEditUserProfile = {
                                                             showUserProfileDialog = true
@@ -1009,6 +1022,12 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                         onEditProject = { projectId ->
                                                             editingProjectId = projectId
                                                             showEditProjectDialog = true
+                                                        },
+                                                        onNewProject = {
+                                                            showNewProjectDialog = true
+                                                        },
+                                                        onNavigateToProjects = {
+                                                            currentView = View.PROJECTS
                                                         },
                                                         onNavigateToPlans = {
                                                             currentView = View.PLANS
@@ -1766,6 +1785,8 @@ fun mainContent(
     onNavigateToSessions: () -> Unit,
     onSelectProject: (String) -> Unit,
     onEditProject: (String) -> Unit,
+    onNewProject: () -> Unit = {},
+    onNavigateToProjects: () -> Unit = {},
     onNavigateToPlans: () -> Unit = {},
     onNavigateToPlanDetail: () -> Unit = {},
     onNavigateToPlanEditor: () -> Unit = {},
@@ -1827,6 +1848,7 @@ fun mainContent(
                 viewModel = projectsViewModel,
                 onSelectProject = onSelectProject,
                 onEditProject = onEditProject,
+                onNewProject = onNewProject,
                 modifier = Modifier.fillMaxSize(),
             )
 
@@ -1836,6 +1858,7 @@ fun mainContent(
                     if (project != null) {
                         projectView(
                             project = project,
+                            onBack = onNavigateToProjects,
                             onStartChat = { projId, mode, message, attachments, enabledServerIds ->
                                 sessionManager.createProjectSessionAndSendMessage(
                                     projectId = projId,

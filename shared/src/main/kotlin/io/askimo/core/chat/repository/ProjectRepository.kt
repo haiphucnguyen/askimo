@@ -39,6 +39,7 @@ private fun ResultRow.toProject(): Project = Project(
     knowledgeSources = KnowledgeSourceSerializer.deserialize(this[ProjectsTable.knowledgeSourcesConfig]),
     createdAt = this[ProjectsTable.createdAt],
     updatedAt = this[ProjectsTable.updatedAt],
+    isStarred = this[ProjectsTable.isStarred] == 1,
 )
 
 /**
@@ -83,6 +84,7 @@ class ProjectRepository internal constructor(
     fun getAllProjects(): List<Project> = transaction(database) {
         ProjectsTable
             .selectAll()
+            .orderBy(ProjectsTable.isStarred, SortOrder.DESC)
             .orderBy(ProjectsTable.updatedAt, SortOrder.DESC)
             .map { it.toProject() }
     }
@@ -205,6 +207,12 @@ class ProjectRepository internal constructor(
      * @param projectId The project id to delete
      * @return true if deleted successfully
      */
+    fun starProject(projectId: String, isStarred: Boolean): Boolean = transaction(database) {
+        ProjectsTable.update({ ProjectsTable.id eq projectId }) {
+            it[ProjectsTable.isStarred] = if (isStarred) 1 else 0
+        } > 0
+    }.also { if (it) EventBus.post(PushDataToServerEvent(reason = "project starred")) }
+
     fun deleteProject(projectId: String): Boolean {
         log.debug("Deleting project $projectId")
         return transaction(database) {

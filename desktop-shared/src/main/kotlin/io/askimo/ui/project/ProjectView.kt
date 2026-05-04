@@ -30,6 +30,7 @@ import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.filled.Add
@@ -44,6 +45,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -95,6 +97,7 @@ import kotlin.let
 @Composable
 fun projectView(
     project: Project,
+    onBack: () -> Unit,
     onStartChat: (projectId: String, mode: CreationMode, message: String, attachments: List<FileAttachmentDTO>, enabledServerIds: Set<String>) -> Unit,
     onResumeSession: (String) -> Unit,
     onDeleteSession: (sessionId: String, projectId: String) -> Unit,
@@ -163,6 +166,33 @@ fun projectView(
                         .fillMaxWidth()
                         .padding(start = 24.dp, end = 36.dp, top = 24.dp, bottom = 8.dp),
                 ) {
+                    // ── Back navigation (same style as PlanDetailView) ─────────
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(bottom = 8.dp),
+                    ) {
+                        IconButton(
+                            onClick = onBack,
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource("action.back"),
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                        TextButton(
+                            onClick = onBack,
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Text(
+                                text = stringResource("projects.title"),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
+                    }
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()

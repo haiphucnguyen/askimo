@@ -24,6 +24,7 @@ data class Project(
     val knowledgeSources: List<KnowledgeSourceConfig>,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
+    val isStarred: Boolean = false,
 )
 
 /**
@@ -38,6 +39,7 @@ object ProjectsTable : Table("projects") {
     val createdAt = sqliteDatetime("created_at")
     val updatedAt = sqliteDatetime("updated_at")
     val syncedAt = varchar("synced_at", 32).nullable()
+    val isStarred = integer("is_starred").default(0)
 
     override val primaryKey = PrimaryKey(id)
 }

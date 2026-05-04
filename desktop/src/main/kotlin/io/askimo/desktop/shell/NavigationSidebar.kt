@@ -29,9 +29,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuOpen
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -83,6 +84,7 @@ import io.askimo.ui.project.deleteProjectDialog
 import io.askimo.ui.project.newProjectDialog
 import io.askimo.ui.session.SessionActionMenu
 import io.askimo.ui.session.SessionsViewModel
+import io.askimo.ui.session.deleteSessionDialog
 import io.askimo.ui.util.Platform
 import org.jetbrains.skia.Image
 import java.io.File
@@ -115,9 +117,12 @@ fun navigationSidebar(
     onResumeSession: (String) -> Unit,
     onDeleteSession: (String) -> Unit,
     onStarSession: (String, Boolean) -> Unit,
+    onStarProject: (String, Boolean) -> Unit = { _, _ -> },
     onRenameSession: (String, String) -> Unit,
     onExportSession: (String) -> Unit,
     onShowSessionSummary: (String) -> Unit = {},
+    onEditProject: (String) -> Unit = {},
+    onDeleteProject: (String) -> Unit = {},
     onEditUserProfile: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToAbout: () -> Unit,
@@ -134,26 +139,26 @@ fun navigationSidebar(
         expandedNavigationSidebar(
             animatedWidth = animatedWidth,
             currentView = currentView,
-            isProjectsExpanded = isProjectsExpanded,
             isSessionsExpanded = isSessionsExpanded,
             projectsViewModel = projectsViewModel,
             sessionsViewModel = sessionsViewModel,
             currentSessionId = currentSessionId,
-            currentProjectId = currentProjectId,
             userProfile = userProfile,
             onToggleExpand = onToggleExpand,
             onNewChat = onNewChat,
             onToggleProjects = onToggleProjects,
-            onNewProject = onNewProject,
             onSelectProject = onSelectProject,
             onToggleSessions = onToggleSessions,
             onNavigateToSessions = onNavigateToSessions,
             onResumeSession = onResumeSession,
             onDeleteSession = onDeleteSession,
             onStarSession = onStarSession,
+            onStarProject = onStarProject,
             onRenameSession = onRenameSession,
             onExportSession = onExportSession,
             onShowSessionSummary = onShowSessionSummary,
+            onEditProject = onEditProject,
+            onDeleteProject = onDeleteProject,
             onEditUserProfile = onEditUserProfile,
             onNavigateToSettings = onNavigateToSettings,
             onNavigateToAbout = onNavigateToAbout,
@@ -166,6 +171,7 @@ fun navigationSidebar(
             userProfile = userProfile,
             onToggleExpand = onToggleExpand,
             onNewChat = onNewChat,
+            onToggleProjects = onToggleProjects,
             onNavigateToSessions = onNavigateToSessions,
             onEditUserProfile = onEditUserProfile,
             onNavigateToSettings = onNavigateToSettings,
@@ -179,29 +185,29 @@ fun navigationSidebar(
 private fun expandedNavigationSidebar(
     animatedWidth: Dp,
     currentView: View,
-    isProjectsExpanded: Boolean,
     isSessionsExpanded: Boolean,
     projectsViewModel: ProjectsViewModel,
     sessionsViewModel: SessionsViewModel,
     currentSessionId: String?,
-    currentProjectId: String?,
     userProfile: UserProfile?,
     onToggleExpand: () -> Unit,
     onNewChat: () -> Unit,
     onToggleProjects: () -> Unit,
-    onNewProject: () -> Unit,
-    onSelectProject: (String) -> Unit,
+    onSelectProject: (String) -> Unit = {},
     onToggleSessions: () -> Unit,
     onNavigateToSessions: () -> Unit,
     onResumeSession: (String) -> Unit,
     onDeleteSession: (String) -> Unit,
     onStarSession: (String, Boolean) -> Unit,
+    onStarProject: (String, Boolean) -> Unit = { _, _ -> },
     onRenameSession: (String, String) -> Unit,
     onExportSession: (String) -> Unit,
     onShowSessionSummary: (String) -> Unit = {},
-    onEditUserProfile: () -> Unit, // Add this
+    onEditProject: (String) -> Unit = {},
+    onDeleteProject: (String) -> Unit = {},
+    onEditUserProfile: () -> Unit,
     onNavigateToSettings: () -> Unit,
-    onNavigateToAbout: () -> Unit, // Add this
+    onNavigateToAbout: () -> Unit,
     onNavigateToPlans: () -> Unit = {},
 ) {
     val fontScale = LocalFontScale.current
@@ -239,7 +245,7 @@ private fun expandedNavigationSidebar(
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = "Askimo AI",
+                    text = "Askimo",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -302,35 +308,27 @@ private fun expandedNavigationSidebar(
                 label = { Text(stringResource("project.title"), style = MaterialTheme.typography.labelLarge) },
                 selected = currentView == View.PROJECTS,
                 onClick = onToggleProjects,
-                badge = {
-                    Icon(
-                        imageVector = if (isProjectsExpanded) {
-                            Icons.Default.ExpandLess
-                        } else {
-                            Icons.Default.ExpandMore
-                        },
-                        contentDescription = if (isProjectsExpanded) "Collapse" else "Expand",
-                        tint = if (currentView == View.PROJECTS) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    )
-                },
                 modifier = Modifier
                     .padding(horizontal = (12 * fontScale).dp)
                     .pointerHoverIcon(PointerIcon.Hand),
                 colors = AppComponents.navigationDrawerItemColors(),
             )
-            // Projects list (collapsible content)
-            if (isProjectsExpanded) {
-                projectsList(
-                    projectsViewModel = projectsViewModel,
-                    currentProjectId = currentProjectId,
-                    onNewProject = onNewProject,
-                    onSelectProject = onSelectProject,
-                )
-            }
+
+            // ── Pinned section — shown only when ≥1 project or session is starred ──
+            pinnedSection(
+                starredProjects = projectsViewModel.starredProjects,
+                starredSessions = sessionsViewModel.recentSessions.filter { it.isStarred },
+                currentSessionId = currentSessionId,
+                onSelectProject = onSelectProject,
+                onResumeSession = onResumeSession,
+                onStarProject = onStarProject,
+                onStarSession = onStarSession,
+                onDeleteSession = onDeleteSession,
+                onRenameSession = onRenameSession,
+                onExportSession = onExportSession,
+                onEditProject = onEditProject,
+                onDeleteProject = onDeleteProject,
+            )
 
             NavigationDrawerItem(
                 icon = { Icon(Icons.Default.History, contentDescription = null) },
@@ -338,19 +336,29 @@ private fun expandedNavigationSidebar(
                 selected = currentView == View.SESSIONS,
                 onClick = onToggleSessions,
                 badge = {
-                    Icon(
-                        imageVector = if (isSessionsExpanded) {
-                            Icons.Default.ExpandLess
-                        } else {
-                            Icons.Default.ExpandMore
-                        },
-                        contentDescription = if (isSessionsExpanded) "Collapse" else "Expand",
-                        tint = if (currentView == View.SESSIONS) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    )
+                    val badgeColor = if (currentView == View.SESSIONS) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        if (!isSessionsExpanded && sessionsViewModel.totalSessionCount > 0) {
+                            val count = sessionsViewModel.totalSessionCount
+                            Text(
+                                text = if (count > 99) "99+" else "$count",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            )
+                        }
+                        Icon(
+                            imageVector = if (isSessionsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = if (isSessionsExpanded) "Collapse" else "Expand",
+                            tint = badgeColor,
+                        )
+                    }
                 },
                 modifier = Modifier
                     .padding(horizontal = (12 * fontScale).dp)
@@ -397,6 +405,7 @@ private fun collapsedNavigationSidebar(
     userProfile: UserProfile?,
     onToggleExpand: () -> Unit,
     onNewChat: () -> Unit,
+    onToggleProjects: () -> Unit,
     onNavigateToSessions: () -> Unit,
     onEditUserProfile: () -> Unit,
     onNavigateToSettings: () -> Unit,
@@ -503,6 +512,23 @@ private fun collapsedNavigationSidebar(
                 )
             }
 
+            // Projects
+            themedTooltip(text = stringResource("project.title")) {
+                NavigationRailItem(
+                    icon = {
+                        Icon(
+                            Icons.Default.FolderOpen,
+                            contentDescription = stringResource("project.title"),
+                        )
+                    },
+                    label = null,
+                    selected = currentView == View.PROJECTS,
+                    onClick = onToggleProjects,
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    colors = AppComponents.navigationRailItemColors(),
+                )
+            }
+
             // Sessions
             themedTooltip(
                 text = stringResource("chat.sessions.tooltip"),
@@ -595,77 +621,6 @@ private fun collapsedNavigationSidebar(
     }
 }
 
-@Composable
-private fun projectsList(
-    projectsViewModel: ProjectsViewModel,
-    currentProjectId: String?,
-    onNewProject: () -> Unit,
-    onSelectProject: (String) -> Unit,
-) {
-    val fontScale = LocalFontScale.current
-    var projectToDelete by remember { mutableStateOf<Project?>(null) }
-
-    Column(
-        modifier = Modifier.padding(
-            start = (32 * fontScale).dp,
-            end = (12 * fontScale).dp,
-            top = (4 * fontScale).dp,
-            bottom = (4 * fontScale).dp,
-        ),
-    ) {
-        NavigationDrawerItem(
-            icon = { Icon(Icons.Default.Add, contentDescription = null) },
-            label = {
-                Text(
-                    stringResource("project.new"),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            },
-            selected = false,
-            onClick = onNewProject,
-            modifier = Modifier
-                .padding(vertical = (2 * fontScale).dp)
-                .pointerHoverIcon(PointerIcon.Hand),
-            colors = AppComponents.navigationDrawerItemColors(),
-        )
-
-        if (projectsViewModel.projects.isEmpty()) {
-            // No projects yet
-            Text(
-                text = stringResource("project.none"),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(
-                    horizontal = (16 * fontScale).dp,
-                    vertical = (8 * fontScale).dp,
-                ),
-            )
-        } else {
-            // Display projects
-            projectsViewModel.projects.forEach { project ->
-                projectItemWithMenu(
-                    project = project,
-                    isSelected = project.id == currentProjectId,
-                    onProjectClick = { onSelectProject(project.id) },
-                    onDeleteProject = { projectToDelete = it },
-                )
-            }
-        }
-    }
-
-    // Delete confirmation dialog
-    projectToDelete?.let { project ->
-        deleteProjectDialog(
-            projectName = project.name,
-            onConfirm = {
-                projectsViewModel.deleteProject(project.id)
-                projectToDelete = null
-            },
-            onDismiss = { projectToDelete = null },
-        )
-    }
-}
-
 /**
  * Reusable label composable for navigation items with a menu button.
  * Displays text with ellipsis and a three-dot menu button on the right.
@@ -711,78 +666,6 @@ private fun navigationItemLabelWithMenu(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun projectItemWithMenu(
-    project: Project,
-    isSelected: Boolean,
-    onProjectClick: () -> Unit,
-    onDeleteProject: (Project) -> Unit,
-) {
-    var showMenu by remember { mutableStateOf(false) }
-    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    val isHovered by interactionSource.collectIsHoveredAsState()
-
-    val tooltipText = if (project.description.isNullOrBlank()) {
-        project.name
-    } else {
-        "${project.name}\n\n${project.description}"
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp)
-            .hoverable(interactionSource),
-    ) {
-        themedTooltip(
-            text = tooltipText,
-        ) {
-            NavigationDrawerItem(
-                icon = { Icon(Icons.Default.Folder, contentDescription = null) },
-                label = {
-                    navigationItemLabelWithMenu(
-                        text = project.name,
-                        onMenuClick = { showMenu = true },
-                        isHovered = isHovered || showMenu,
-                    )
-                },
-                selected = isSelected,
-                onClick = onProjectClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .pointerHoverIcon(PointerIcon.Hand),
-                colors = AppComponents.navigationDrawerItemColors(),
-            )
-        }
-
-        Box(
-            modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp),
-        ) {
-            AppComponents.dropdownMenu(
-                expanded = showMenu,
-                onDismissRequest = { showMenu = false },
-            ) {
-                DropdownMenuItem(
-                    text = { Text(stringResource("project.delete")) },
-                    onClick = {
-                        showMenu = false
-                        onDeleteProject(project)
-                    },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
-                        )
-                    },
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                )
-            }
-        }
-    }
-}
-
 @Composable
 private fun sessionsList(
     sessionsViewModel: SessionsViewModel,
@@ -797,7 +680,6 @@ private fun sessionsList(
     projectsViewModel: ProjectsViewModel,
 ) {
     val fontScale = LocalFontScale.current
-    var isStarredExpanded by remember { mutableStateOf(true) }
 
     Column(
         modifier = Modifier.padding(
@@ -818,81 +700,10 @@ private fun sessionsList(
                 ),
             )
         } else {
-            val starredSessions = sessionsViewModel.recentSessions.filter { it.isStarred }
+            // Only show unstarred sessions here — starred ones appear in Pinned section above
             val unstarredSessions = sessionsViewModel.recentSessions.filter { !it.isStarred }
 
-            // Starred section (collapsible)
-            if (starredSessions.isNotEmpty()) {
-                NavigationDrawerItem(
-                    icon = {
-                        Icon(
-                            Icons.Default.Star,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
-                    },
-                    label = {
-                        Text(
-                            "Starred (${starredSessions.size})",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    },
-                    selected = false,
-                    onClick = { isStarredExpanded = !isStarredExpanded },
-                    badge = {
-                        Icon(
-                            imageVector = if (isStarredExpanded) {
-                                Icons.Default.ExpandLess
-                            } else {
-                                Icons.Default.ExpandMore
-                            },
-                            contentDescription = if (isStarredExpanded) "Collapse" else "Expand",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    },
-                    modifier = Modifier
-                        .padding(vertical = (2 * fontScale).dp)
-                        .pointerHoverIcon(PointerIcon.Hand),
-                    colors = AppComponents.navigationDrawerItemColors(),
-                )
-
-                // Starred sessions list
-                if (isStarredExpanded) {
-                    Column(
-                        modifier = Modifier.padding(
-                            start = (16 * fontScale).dp,
-                        ),
-                    ) {
-                        starredSessions.forEach { session ->
-                            sessionItemWithMenu(
-                                session = session,
-                                isSelected = session.id == currentSessionId,
-                                onResumeSession = onResumeSession,
-                                onDeleteSession = onDeleteSession,
-                                onStarSession = onStarSession,
-                                onRenameSession = onRenameSession,
-                                onExportSession = onExportSession,
-                                onShowSessionSummary = onShowSessionSummary,
-                                availableProjects = projectsViewModel.projects,
-                            )
-                        }
-                    }
-                }
-
-                // Divider between starred and unstarred
-                if (unstarredSessions.isNotEmpty()) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(
-                            vertical = (8 * fontScale).dp,
-                            horizontal = (8 * fontScale).dp,
-                        ),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                    )
-                }
-            }
-
-            // Unstarred sessions (always visible when sessions expanded)
+            // Unstarred sessions
             unstarredSessions.forEach { session ->
                 sessionItemWithMenu(
                     session = session,
@@ -931,6 +742,325 @@ private fun sessionsList(
     }
 }
 
+@Composable
+private fun pinnedSection(
+    starredProjects: List<Project>,
+    starredSessions: List<ChatSession>,
+    currentSessionId: String?,
+    onSelectProject: (String) -> Unit,
+    onResumeSession: (String) -> Unit,
+    onStarProject: (String, Boolean) -> Unit,
+    onStarSession: (String, Boolean) -> Unit,
+    onDeleteSession: (String) -> Unit = {},
+    onRenameSession: (String, String) -> Unit = { _, _ -> },
+    onExportSession: (String) -> Unit = {},
+    onEditProject: (String) -> Unit = {},
+    onDeleteProject: (String) -> Unit = {},
+) {
+    if (starredProjects.isEmpty() && starredSessions.isEmpty()) return
+
+    val fontScale = LocalFontScale.current
+    var isExpanded by remember { mutableStateOf(true) }
+
+    Column(
+        modifier = Modifier.padding(
+            start = (12 * fontScale).dp,
+            end = (12 * fontScale).dp,
+            top = (4 * fontScale).dp,
+        ),
+    ) {
+        NavigationDrawerItem(
+            icon = {
+                Icon(
+                    Icons.Default.Star,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                )
+            },
+            label = {
+                Text(
+                    stringResource("sidebar.pinned"),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+            selected = false,
+            onClick = { isExpanded = !isExpanded },
+            badge = {
+                Icon(
+                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+            colors = AppComponents.navigationDrawerItemColors(),
+        )
+
+        if (isExpanded) {
+            Column(modifier = Modifier.padding(start = (16 * fontScale).dp)) {
+                starredProjects.forEach { project ->
+                    pinnedProjectItem(
+                        project = project,
+                        onSelectProject = onSelectProject,
+                        onUnpin = { onStarProject(project.id, false) },
+                        onEdit = { onEditProject(project.id) },
+                        onDelete = { onDeleteProject(project.id) },
+                    )
+                }
+                starredSessions.forEach { session ->
+                    pinnedSessionItem(
+                        session = session,
+                        isSelected = session.id == currentSessionId,
+                        onResumeSession = onResumeSession,
+                        onUnpin = { onStarSession(session.id, false) },
+                        onDelete = { onDeleteSession(session.id) },
+                        onRename = { onRenameSession(session.id, session.title) },
+                        onExport = { onExportSession(session.id) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun pinnedProjectItem(
+    project: Project,
+    onSelectProject: (String) -> Unit,
+    onUnpin: () -> Unit,
+    onEdit: () -> Unit = {},
+    onDelete: () -> Unit = {},
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val isHovered by interactionSource.collectIsHoveredAsState()
+    val fontScale = LocalFontScale.current
+
+    if (showDeleteDialog) {
+        deleteProjectDialog(
+            projectName = project.name,
+            onConfirm = {
+                showDeleteDialog = false
+                onDelete()
+            },
+            onDismiss = { showDeleteDialog = false },
+        )
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp)
+            .hoverable(interactionSource),
+    ) {
+        themedTooltip(text = project.name) {
+            NavigationDrawerItem(
+                icon = {
+                    Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(16.dp))
+                },
+                label = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            project.name,
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (isHovered || showMenu) {
+                            IconButton(
+                                onClick = { showMenu = true },
+                                modifier = Modifier.size(24.dp).pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Icon(
+                                    Icons.Default.MoreVert,
+                                    contentDescription = "More options",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                            }
+                        }
+                    }
+                },
+                selected = false,
+                onClick = { onSelectProject(project.id) },
+                modifier = Modifier
+                    .padding(vertical = (2 * fontScale).dp)
+                    .pointerHoverIcon(PointerIcon.Hand),
+                colors = AppComponents.navigationDrawerItemColors(),
+            )
+        }
+
+        Box(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp)) {
+            AppComponents.dropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource("action.unpin")) },
+                    leadingIcon = { Icon(Icons.Default.Star, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                    onClick = {
+                        showMenu = false
+                        onUnpin()
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource("action.open")) },
+                    leadingIcon = { Icon(Icons.Default.FolderOpen, contentDescription = null) },
+                    onClick = {
+                        showMenu = false
+                        onSelectProject(project.id)
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource("action.edit")) },
+                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                    onClick = {
+                        showMenu = false
+                        onEdit()
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text(stringResource("action.delete"), color = MaterialTheme.colorScheme.error) },
+                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                    onClick = {
+                        showMenu = false
+                        showDeleteDialog = true
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun pinnedSessionItem(
+    session: ChatSession,
+    isSelected: Boolean,
+    onResumeSession: (String) -> Unit,
+    onUnpin: () -> Unit,
+    onDelete: () -> Unit,
+    onRename: () -> Unit,
+    onExport: () -> Unit,
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val isHovered by interactionSource.collectIsHoveredAsState()
+    val fontScale = LocalFontScale.current
+
+    if (showDeleteDialog) {
+        deleteSessionDialog(
+            sessionTitle = session.title,
+            onConfirm = {
+                showDeleteDialog = false
+                onDelete()
+            },
+            onDismiss = { showDeleteDialog = false },
+        )
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp)
+            .hoverable(interactionSource),
+    ) {
+        themedTooltip(text = session.title) {
+            NavigationDrawerItem(
+                icon = null,
+                label = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            session.title,
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (isHovered || showMenu) {
+                            IconButton(
+                                onClick = { showMenu = true },
+                                modifier = Modifier.size(24.dp).pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Icon(
+                                    Icons.Default.MoreVert,
+                                    contentDescription = "More options",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                            }
+                        }
+                    }
+                },
+                selected = isSelected,
+                onClick = { onResumeSession(session.id) },
+                modifier = Modifier
+                    .padding(vertical = (2 * fontScale).dp)
+                    .pointerHoverIcon(PointerIcon.Hand),
+                colors = AppComponents.navigationDrawerItemColors(),
+            )
+        }
+
+        Box(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp)) {
+            AppComponents.dropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource("action.unpin")) },
+                    leadingIcon = { Icon(Icons.Default.Star, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                    onClick = {
+                        showMenu = false
+                        onUnpin()
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource("action.rename")) },
+                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                    onClick = {
+                        showMenu = false
+                        onRename()
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource("action.export")) },
+                    leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
+                    onClick = {
+                        showMenu = false
+                        onExport()
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text(stringResource("action.delete"), color = MaterialTheme.colorScheme.error) },
+                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                    onClick = {
+                        showMenu = false
+                        showDeleteDialog = true
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun sessionItemWithMenu(
@@ -946,11 +1076,23 @@ private fun sessionItemWithMenu(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showNewProjectDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
     var sessionIdToMove by remember { mutableStateOf<String?>(null) }
     val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val isHovered by interactionSource.collectIsHoveredAsState()
 
     val sessionRepository = remember { DatabaseManager.getInstance().getChatSessionRepository() }
+
+    if (showDeleteDialog) {
+        deleteSessionDialog(
+            sessionTitle = session.title,
+            onConfirm = {
+                showDeleteDialog = false
+                onDeleteSession(session.id)
+            },
+            onDismiss = { showDeleteDialog = false },
+        )
+    }
 
     Box(
         modifier = Modifier
@@ -992,7 +1134,10 @@ private fun sessionItemWithMenu(
                     onExport = { onExportSession(session.id) },
                     onRename = { onRenameSession(session.id, session.title) },
                     onStar = { onStarSession(session.id, !session.isStarred) },
-                    onDelete = { onDeleteSession(session.id) },
+                    onDelete = {
+                        showMenu = false
+                        showDeleteDialog = true
+                    },
                     onMoveToNewProject = {
                         sessionIdToMove = session.id
                         showNewProjectDialog = true

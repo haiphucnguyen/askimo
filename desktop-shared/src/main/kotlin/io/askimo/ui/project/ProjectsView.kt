@@ -4,12 +4,9 @@
  */
 package io.askimo.ui.project
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ScrollbarStyle
 import androidx.compose.foundation.VerticalScrollbar
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -30,16 +27,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Card
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.outlined.StarOutline
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -56,17 +55,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import io.askimo.core.chat.domain.KnowledgeSourceConfig
-import io.askimo.core.chat.domain.LocalFilesKnowledgeSourceConfig
-import io.askimo.core.chat.domain.LocalFoldersKnowledgeSourceConfig
 import io.askimo.core.chat.domain.Project
-import io.askimo.core.chat.domain.UrlKnowledgeSourceConfig
 import io.askimo.core.util.TimeUtil
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
@@ -77,6 +71,7 @@ fun projectsView(
     viewModel: ProjectsViewModel,
     onSelectProject: (String) -> Unit,
     onEditProject: (String) -> Unit,
+    onNewProject: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
@@ -94,6 +89,7 @@ fun projectsView(
                     .fillMaxWidth()
                     .padding(start = 24.dp, end = 36.dp, top = 24.dp, bottom = 24.dp),
             ) {
+                // ── Title + New Project button ─────────────────────────────────
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -105,24 +101,22 @@ fun projectsView(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
-                    IconButton(
-                        onClick = { viewModel.refresh() },
+                    Button(
+                        onClick = onNewProject,
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Refresh projects",
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.size(6.dp))
+                        Text(stringResource("project.new"))
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // ── Success banner ────────────────────────────────────────────────
+                // ── Success banner ─────────────────────────────────────────────
                 viewModel.deleteProjectSuccessfulBannerMessage?.let { message ->
                     Surface(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                         color = MaterialTheme.colorScheme.primaryContainer,
                         shape = MaterialTheme.shapes.medium,
                     ) {
@@ -136,49 +130,29 @@ fun projectsView(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                )
-                                Text(
-                                    text = message,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                )
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+                                Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
                             }
                             IconButton(onClick = { viewModel.dismissSuccessMessage() }) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Dismiss",
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                )
+                                Icon(Icons.Default.Close, contentDescription = "Dismiss", tint = MaterialTheme.colorScheme.onPrimaryContainer)
                             }
                         }
                     }
                 }
 
+                // ── Loading / error / empty ────────────────────────────────────
                 when {
                     viewModel.isLoading -> {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().height(200.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
+                        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator()
                         }
                     }
 
                     viewModel.errorMessage != null -> {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().height(200.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
+                        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(
-                                    text = stringResource("projects.error", viewModel.errorMessage ?: ""),
+                                    stringResource("projects.error", viewModel.errorMessage ?: ""),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.error,
                                 )
@@ -193,47 +167,26 @@ fun projectsView(
                     }
 
                     viewModel.pagedProjects?.isEmpty == true -> {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().height(200.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                Text(
-                                    text = stringResource("projects.empty"),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Text(
-                                    text = stringResource("projects.empty.hint"),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(stringResource("projects.empty"), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource("projects.empty.hint"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
 
                     else -> {
-                        val pagedProjects = viewModel.pagedProjects!!
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            pagedProjects.items.forEach { project ->
-                                projectCard(
-                                    project = project,
-                                    onSelectProject = onSelectProject,
-                                    onEditProject = onEditProject,
-                                    onDeleteProject = { viewModel.deleteProject(it) },
-                                )
-                            }
-                        }
+                        projectTable(
+                            projects = viewModel.pagedProjects!!.items,
+                            onSelectProject = onSelectProject,
+                            onEditProject = onEditProject,
+                            onDeleteProject = { viewModel.deleteProject(it) },
+                            onStarProject = { id, starred -> viewModel.starProject(id, starred) },
+                        )
                     }
                 }
 
-                // ── Pagination — fixed footer, always visible ─────────────────────
+                // ── Pagination ─────────────────────────────────────────────────
                 val pagedProjects = viewModel.pagedProjects
                 if (pagedProjects != null && pagedProjects.totalPages > 1) {
                     Spacer(modifier = Modifier.height(8.dp))
@@ -246,14 +199,12 @@ fun projectsView(
                         onNext = { viewModel.nextPage() },
                     )
                 }
-            } // end width-constrained column
-        } // end scrollable column
+            }
+        }
 
         VerticalScrollbar(
             adapter = rememberScrollbarAdapter(scrollState),
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .fillMaxHeight(),
+            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
             style = ScrollbarStyle(
                 minimalHeight = 16.dp,
                 thickness = 8.dp,
@@ -266,248 +217,210 @@ fun projectsView(
     }
 }
 
+// ── Table ─────────────────────────────────────────────────────────────────────
+
 @Composable
-private fun projectCard(
+private fun projectTable(
+    projects: List<Project>,
+    onSelectProject: (String) -> Unit,
+    onEditProject: (String) -> Unit,
+    onDeleteProject: (String) -> Unit,
+    onStarProject: (String, Boolean) -> Unit,
+) {
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Header row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Star column spacer
+                Spacer(modifier = Modifier.size(36.dp))
+                Text(
+                    text = stringResource("projects.col.name"),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = stringResource("projects.col.modified"),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.widthIn(min = 140.dp),
+                )
+                // Actions column spacer
+                Spacer(modifier = Modifier.size(36.dp))
+            }
+
+            HorizontalDivider()
+
+            projects.forEachIndexed { index, project ->
+                projectRow(
+                    project = project,
+                    onSelectProject = onSelectProject,
+                    onEditProject = onEditProject,
+                    onDeleteProject = onDeleteProject,
+                    onStarProject = onStarProject,
+                )
+                if (index < projects.lastIndex) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun projectRow(
     project: Project,
     onSelectProject: (String) -> Unit,
     onEditProject: (String) -> Unit,
     onDeleteProject: (String) -> Unit,
+    onStarProject: (String, Boolean) -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    var isExpanded by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered by interactionSource.collectIsHoveredAsState()
-    val showActions = isHovered || showMenu
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .hoverable(interactionSource),
-        colors = AppComponents.bannerCardColors(),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
-            ) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                        ) { onSelectProject(project.id) }
-                        .pointerHoverIcon(PointerIcon.Hand),
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = project.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        project.description?.let { desc ->
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = desc,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    ) {
-                        Text(
-                            text = stringResource("projects.created", TimeUtil.formatDisplay(project.createdAt)),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Text(
-                            text = stringResource("projects.updated", TimeUtil.formatDisplay(project.updatedAt)),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-
-                // Menu button — only shown on hover, no space reserved when hidden
-                if (showActions) {
-                    Box {
-                        IconButton(
-                            onClick = { showMenu = true },
-                            modifier = Modifier
-                                .size(36.dp)
-                                .pointerHoverIcon(PointerIcon.Hand),
-                        ) {
-                            Icon(
-                                Icons.Default.MoreVert,
-                                contentDescription = "More options",
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-
-                        AppComponents.dropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false },
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(stringResource("action.edit")) },
-                                onClick = {
-                                    showMenu = false
-                                    onEditProject(project.id)
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Edit,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                },
-                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                            )
-                            DropdownMenuItem(
-                                text = { Text(stringResource("action.delete")) },
-                                onClick = {
-                                    showMenu = false
-                                    onDeleteProject(project.id)
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error,
-                                    )
-                                },
-                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Knowledge Sources Section
-            if (project.knowledgeSources.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
-
-                HorizontalDivider(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Collapsible header
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                        ) { isExpanded = !isExpanded }
-                        .pointerHoverIcon(PointerIcon.Hand)
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = stringResource("projects.sources.count", project.knowledgeSources.size),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-
-                    val rotation by animateFloatAsState(
-                        targetValue = if (isExpanded) 180f else 0f,
-                        label = "rotation",
-                    )
-
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (isExpanded) {
-                            stringResource("projects.sources.collapse")
-                        } else {
-                            stringResource("projects.sources.expand")
-                        },
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.rotate(rotation),
-                    )
-                }
-
-                // Expandable content
-                AnimatedVisibility(
-                    visible = isExpanded,
-                    enter = expandVertically(),
-                    exit = shrinkVertically(),
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        project.knowledgeSources.forEach { source ->
-                            knowledgeSourceItem(source)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun knowledgeSourceItem(source: KnowledgeSourceConfig) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        // Source type header
-        Text(
-            text = when (source) {
-                is LocalFoldersKnowledgeSourceConfig -> stringResource("projects.sources.type.local_folders")
-                is LocalFilesKnowledgeSourceConfig -> stringResource("projects.sources.type.local_files")
-                is UrlKnowledgeSourceConfig -> stringResource("projects.sources.type.urls")
+    if (showDeleteDialog) {
+        deleteProjectDialog(
+            projectName = project.name,
+            onConfirm = {
+                showDeleteDialog = false
+                onDeleteProject(project.id)
             },
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            onDismiss = { showDeleteDialog = false },
         )
+    }
 
-        // Resource identifier (path/URL)
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "•",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .hoverable(interactionSource)
+            .background(
+                if (isHovered) {
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                } else {
+                    MaterialTheme.colorScheme.surface
+                },
             )
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) { onSelectProject(project.id) }
+            .pointerHoverIcon(PointerIcon.Hand)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Star toggle
+        IconButton(
+            onClick = { onStarProject(project.id, !project.isStarred) },
+            modifier = Modifier.size(36.dp).pointerHoverIcon(PointerIcon.Hand),
+        ) {
+            Icon(
+                imageVector = if (project.isStarred) Icons.Default.Star else Icons.Outlined.StarOutline,
+                contentDescription = if (project.isStarred) "Unstar project" else "Star project",
+                tint = if (project.isStarred) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                },
+                modifier = Modifier.size(16.dp),
+            )
+        }
+
+        // Name + description
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = source.resourceIdentifier,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = project.name,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            project.description?.let { desc ->
+                Text(
+                    text = desc,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+
+        // Modified date
+        Text(
+            text = TimeUtil.formatDisplay(project.updatedAt),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.widthIn(min = 140.dp),
+        )
+
+        // Actions
+        Box {
+            IconButton(
+                onClick = { showMenu = true },
+                modifier = Modifier.size(36.dp).pointerHoverIcon(PointerIcon.Hand),
+            ) {
+                Icon(Icons.Default.MoreVert, contentDescription = "More options", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+            }
+            AppComponents.dropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                DropdownMenuItem(
+                    text = { Text(if (project.isStarred) stringResource("action.unpin") else stringResource("action.pin")) },
+                    onClick = {
+                        showMenu = false
+                        onStarProject(project.id, !project.isStarred)
+                    },
+                    leadingIcon = {
+                        Icon(
+                            if (project.isStarred) Icons.Default.StarBorder else Icons.Default.Star,
+                            contentDescription = null,
+                            tint = if (project.isStarred) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            },
+                        )
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource("action.edit")) },
+                    onClick = {
+                        showMenu = false
+                        onEditProject(project.id)
+                    },
+                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface) },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource("action.delete"), color = MaterialTheme.colorScheme.error) },
+                    onClick = {
+                        showMenu = false
+                        showDeleteDialog = true
+                    },
+                    leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+            }
         }
     }
 }
+
+// ── Pagination ────────────────────────────────────────────────────────────────
 
 @Composable
 private fun paginationControls(
@@ -523,30 +436,20 @@ private fun paginationControls(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(
-            onClick = onPrevious,
-            enabled = hasPrevious,
-            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-        ) {
+        IconButton(onClick = onPrevious, enabled = hasPrevious, modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)) {
             Icon(
                 Icons.Default.ChevronLeft,
                 contentDescription = stringResource("projects.page.previous"),
                 tint = if (hasPrevious) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
             )
         }
-
         Text(
             text = stringResource("projects.page", currentPage, totalPages),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
-
-        IconButton(
-            onClick = onNext,
-            enabled = hasNext,
-            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-        ) {
+        IconButton(onClick = onNext, enabled = hasNext, modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)) {
             Icon(
                 Icons.Default.ChevronRight,
                 contentDescription = stringResource("projects.page.next"),
