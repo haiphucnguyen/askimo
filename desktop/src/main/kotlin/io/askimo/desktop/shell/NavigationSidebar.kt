@@ -180,6 +180,7 @@ fun navigationSidebar(
             onNavigateToSettings = onNavigateToSettings,
             onNavigateToAbout = onNavigateToAbout,
             onNavigateToPlans = onNavigateToPlans,
+            onNavigateToDiscover = onNavigateToDiscover,
         )
     }
 }
@@ -427,6 +428,7 @@ private fun collapsedNavigationSidebar(
     onNavigateToSettings: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onNavigateToPlans: () -> Unit = {},
+    onNavigateToDiscover: () -> Unit = {},
 ) {
     val fontScale = LocalFontScale.current
 
@@ -506,6 +508,23 @@ private fun collapsedNavigationSidebar(
                     label = null,
                     selected = false,
                     onClick = onNewChat,
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                    colors = AppComponents.navigationRailItemColors(),
+                )
+            }
+
+            // Discover
+            themedTooltip(text = stringResource("sidebar.discover")) {
+                NavigationRailItem(
+                    icon = {
+                        Icon(
+                            Icons.Default.GridView,
+                            contentDescription = stringResource("sidebar.discover"),
+                        )
+                    },
+                    label = null,
+                    selected = currentView == View.DISCOVER,
+                    onClick = onNavigateToDiscover,
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     colors = AppComponents.navigationRailItemColors(),
                 )
