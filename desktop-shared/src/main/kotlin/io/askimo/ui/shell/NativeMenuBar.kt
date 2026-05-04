@@ -45,6 +45,7 @@ object NativeMenuBar {
         onEnterFullScreen: () -> Unit,
         onNavigateToSessions: () -> Unit,
         onNavigateToProjects: () -> Unit,
+        onNavigateToDiscover: () -> Unit,
         onToggleSidebar: () -> Unit,
         onInvalidateCaches: () -> Unit,
         onExportBackup: () -> Unit,
@@ -56,7 +57,7 @@ object NativeMenuBar {
         val window = frameWindowScope.window
 
         // Setup AWT menu bar for all platforms (includes Documentation)
-        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates, onEnterFullScreen, onNavigateToSessions, onNavigateToProjects, onToggleSidebar, onInvalidateCaches, onExportBackup, onImportBackup, onShowTutorial, onOpenTerminal, onClearPreferences)
+        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates, onEnterFullScreen, onNavigateToSessions, onNavigateToProjects, onNavigateToDiscover, onToggleSidebar, onInvalidateCaches, onExportBackup, onImportBackup, onShowTutorial, onOpenTerminal, onClearPreferences)
 
         // On macOS, also register the About handler for the app menu
         if (Platform.isMac) {
@@ -90,6 +91,7 @@ object NativeMenuBar {
         onEnterFullScreen: () -> Unit,
         onNavigateToSessions: () -> Unit,
         onNavigateToProjects: () -> Unit,
+        onNavigateToDiscover: () -> Unit,
         onToggleSidebar: () -> Unit,
         onInvalidateCaches: () -> Unit,
         onExportBackup: () -> Unit,
@@ -315,6 +317,20 @@ object NativeMenuBar {
             viewMenu.add(appearanceMenu)
 
             // Separator after Appearance group
+            viewMenu.addSeparator()
+
+            // Discover View
+            val discoverViewItem = MenuItem(
+                LocalizationManager.getString("menu.view.discover"),
+                MenuShortcut(KeyEvent.VK_D), // Ctrl+D (or Cmd+D on Mac)
+            )
+            discoverViewItem.addActionListener(
+                ActionListener {
+                    onNavigateToDiscover()
+                },
+            )
+            viewMenu.add(discoverViewItem)
+
             viewMenu.addSeparator()
 
             // Session View

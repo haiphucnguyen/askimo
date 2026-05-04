@@ -6,6 +6,7 @@ package io.askimo.ui.session
 
 import androidx.compose.foundation.ScrollbarStyle
 import androidx.compose.foundation.VerticalScrollbar
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -26,16 +27,19 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Card
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -56,10 +60,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.util.TimeUtil
+import io.askimo.ui.common.components.tablePageSizeSelector
+import io.askimo.ui.common.components.tablePagination
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.ThemePreferences
-import io.askimo.ui.common.ui.themedTooltip
+
+private enum class SessionSortColumn { UPDATED, CREATED }
+private enum class SortDirection { ASC, DESC }
 
 @Composable
 fun sessionsView(
@@ -68,16 +76,17 @@ fun sessionsView(
     modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
+    var sortColumn by remember { mutableStateOf(SessionSortColumn.UPDATED) }
+    var sortDirection by remember { mutableStateOf(SortDirection.DESC) }
+    var pageSize by remember { mutableStateOf(10) }
 
     Box(modifier = modifier.fillMaxSize()) {
-        // Full-width scrollable column — captures scroll events everywhere in the viewport
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Width-constrained content column
             Column(
                 modifier = Modifier
                     .widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH)
@@ -127,23 +136,11 @@ fun sessionsView(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                )
-                                Text(
-                                    text = message,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                )
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
                             }
                             IconButton(onClick = { viewModel.dismissSuccessMessage() }) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Dismiss",
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                )
+                                Icon(Icons.Default.Close, contentDescription = "Dismiss", tint = MaterialTheme.colorScheme.onPrimaryContainer)
                             }
                         }
                     }
@@ -152,23 +149,14 @@ fun sessionsView(
                 // ── Content ───────────────────────────────────────────────────
                 when {
                     viewModel.isLoading -> {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().height(200.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
+                        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator()
                         }
                     }
 
                     viewModel.errorMessage != null -> {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().height(200.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
+                        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(
                                     text = stringResource("sessions.error", viewModel.errorMessage ?: ""),
                                     style = MaterialTheme.typography.bodyLarge,
@@ -185,42 +173,31 @@ fun sessionsView(
                     }
 
                     viewModel.pagedSessions?.isEmpty == true -> {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().height(200.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                Text(
-                                    text = stringResource("sessions.empty"),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Text(
-                                    text = stringResource("sessions.empty.hint"),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(stringResource("sessions.empty"), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource("sessions.empty.hint"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     }
 
                     else -> {
-                        val pagedSessions = viewModel.pagedSessions!!
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            pagedSessions.items.forEach { session ->
-                                sessionCard(
-                                    session = session,
-                                    onResumeSession = onResumeSession,
-                                    onDeleteSession = { viewModel.deleteSession(it) },
-                                )
-                            }
-                        }
+                        sessionTable(
+                            sessions = viewModel.pagedSessions!!.items,
+                            onResumeSession = onResumeSession,
+                            onDeleteSession = { viewModel.deleteSession(it) },
+                            onStarSession = { id, starred -> viewModel.updateSessionStarred(id, starred) },
+                            sortColumn = sortColumn,
+                            sortDirection = sortDirection,
+                            onSortChange = { col ->
+                                if (sortColumn == col) {
+                                    sortDirection = if (sortDirection == SortDirection.DESC) SortDirection.ASC else SortDirection.DESC
+                                } else {
+                                    sortColumn = col
+                                    sortDirection = SortDirection.DESC
+                                }
+                            },
+                        )
                     }
                 }
 
@@ -228,24 +205,37 @@ fun sessionsView(
                 val pagedSessions = viewModel.pagedSessions
                 if (pagedSessions != null && pagedSessions.totalPages > 1) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    paginationControls(
+                    tablePagination(
                         currentPage = pagedSessions.currentPage,
                         totalPages = pagedSessions.totalPages,
                         hasPrevious = pagedSessions.hasPreviousPage,
                         hasNext = pagedSessions.hasNextPage,
+                        pageSize = pageSize,
                         onPrevious = { viewModel.previousPage() },
                         onNext = { viewModel.nextPage() },
+                        onPageSizeChange = { size ->
+                            pageSize = size
+                            viewModel.setPageSize(size)
+                        },
+                    )
+                } else if (viewModel.pagedSessions != null) {
+                    // Still show page size selector even on single page
+                    Spacer(modifier = Modifier.height(8.dp))
+                    tablePageSizeSelector(
+                        pageSize = pageSize,
+                        onPageSizeChange = { size ->
+                            pageSize = size
+                            viewModel.setPageSize(size)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
-            } // end width-constrained column
-        } // end scrollable column
+            }
+        }
 
-        // ── Scrollbar ─────────────────────────────────────────────────────────
         VerticalScrollbar(
             adapter = rememberScrollbarAdapter(scrollState),
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .fillMaxHeight(),
+            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
             style = ScrollbarStyle(
                 minimalHeight = 16.dp,
                 thickness = 8.dp,
@@ -258,107 +248,88 @@ fun sessionsView(
     }
 }
 
+// ── Table ─────────────────────────────────────────────────────────────────────
+
 @Composable
-private fun sessionCard(
-    session: ChatSession,
+private fun sessionTable(
+    sessions: List<ChatSession>,
     onResumeSession: (String) -> Unit,
     onDeleteSession: (String) -> Unit,
+    onStarSession: (String, Boolean) -> Unit,
+    sortColumn: SessionSortColumn,
+    sortDirection: SortDirection,
+    onSortChange: (SessionSortColumn) -> Unit,
 ) {
-    var showMenu by remember { mutableStateOf(false) }
-    val interactionSource = remember { MutableInteractionSource() }
-    val isHovered by interactionSource.collectIsHoveredAsState()
-    val showActions = isHovered || showMenu
+    val sortedSessions = remember(sessions, sortColumn, sortDirection) {
+        val comparator = when (sortColumn) {
+            SessionSortColumn.UPDATED -> compareBy<ChatSession> { it.updatedAt }
+            SessionSortColumn.CREATED -> compareBy<ChatSession> { it.createdAt }
+        }
+        if (sortDirection == SortDirection.DESC) {
+            sessions.sortedWith(comparator.reversed())
+        } else {
+            sessions.sortedWith(comparator)
+        }
+    }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .hoverable(interactionSource),
-        colors = AppComponents.bannerCardColors(),
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 1.dp,
+        modifier = Modifier.fillMaxWidth(),
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top,
-        ) {
-            // Clickable content area — takes full width when not hovered, shrinks to make room for menu
-            Column(
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Header row
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                    ) { onResumeSession(session.id) }
-                    .pointerHoverIcon(PointerIcon.Hand),
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                themedTooltip(text = session.title) {
-                    Text(
-                        text = session.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    Text(
-                        text = stringResource("sessions.created", TimeUtil.formatDisplay(session.createdAt)),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = stringResource("sessions.updated", TimeUtil.formatDisplay(session.updatedAt)),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                // Star column spacer
+                Spacer(modifier = Modifier.size(36.dp))
+                // Title column (non-sortable)
+                Text(
+                    text = stringResource("sessions.col.title"),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                // Created sortable header
+                sortableHeader(
+                    label = stringResource("sessions.col.created"),
+                    column = SessionSortColumn.CREATED,
+                    currentColumn = sortColumn,
+                    direction = sortDirection,
+                    onClick = { onSortChange(SessionSortColumn.CREATED) },
+                    modifier = Modifier.widthIn(min = 140.dp).padding(horizontal = 16.dp),
+                )
+                // Updated sortable header
+                sortableHeader(
+                    label = stringResource("sessions.col.updated"),
+                    column = SessionSortColumn.UPDATED,
+                    currentColumn = sortColumn,
+                    direction = sortDirection,
+                    onClick = { onSortChange(SessionSortColumn.UPDATED) },
+                    modifier = Modifier.widthIn(min = 140.dp).padding(horizontal = 16.dp),
+                )
+                // Actions column spacer
+                Spacer(modifier = Modifier.size(36.dp))
             }
 
-            // Menu button — only shown on hover, no space reserved when hidden
-            if (showActions) {
-                Box {
-                    IconButton(
-                        onClick = { showMenu = true },
-                        modifier = Modifier
-                            .size(36.dp)
-                            .pointerHoverIcon(PointerIcon.Hand),
-                    ) {
-                        Icon(
-                            Icons.Default.MoreVert,
-                            contentDescription = "More options",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
+            HorizontalDivider()
 
-                    AppComponents.dropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource("action.delete")) },
-                            onClick = {
-                                showMenu = false
-                                onDeleteSession(session.id)
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Delete,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error,
-                                )
-                            },
-                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                        )
-                    }
+            sortedSessions.forEachIndexed { index, session ->
+                sessionRow(
+                    session = session,
+                    onResumeSession = onResumeSession,
+                    onDeleteSession = onDeleteSession,
+                    onStarSession = onStarSession,
+                )
+                if (index < sortedSessions.lastIndex) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                 }
             }
         }
@@ -366,48 +337,166 @@ private fun sessionCard(
 }
 
 @Composable
-private fun paginationControls(
-    currentPage: Int,
-    totalPages: Int,
-    hasPrevious: Boolean,
-    hasNext: Boolean,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit,
+private fun sortableHeader(
+    label: String,
+    column: SessionSortColumn,
+    currentColumn: SessionSortColumn,
+    direction: SortDirection,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
+    val isActive = currentColumn == column
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
+        modifier = modifier
+            .clickable(onClick = onClick)
+            .pointerHoverIcon(PointerIcon.Hand),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = if (isActive) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (isActive) {
+            Icon(
+                imageVector = if (direction == SortDirection.DESC) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(12.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun sessionRow(
+    session: ChatSession,
+    onResumeSession: (String) -> Unit,
+    onDeleteSession: (String) -> Unit,
+    onStarSession: (String, Boolean) -> Unit,
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isHovered by interactionSource.collectIsHoveredAsState()
+
+    if (showDeleteDialog) {
+        deleteSessionDialog(
+            sessionTitle = session.title,
+            onConfirm = {
+                showDeleteDialog = false
+                onDeleteSession(session.id)
+            },
+            onDismiss = { showDeleteDialog = false },
+        )
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .hoverable(interactionSource)
+            .background(
+                if (isHovered) {
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                } else {
+                    MaterialTheme.colorScheme.surface
+                },
+            )
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) { onResumeSession(session.id) }
+            .pointerHoverIcon(PointerIcon.Hand)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Star toggle
         IconButton(
-            onClick = onPrevious,
-            enabled = hasPrevious,
-            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+            onClick = { onStarSession(session.id, !session.isStarred) },
+            modifier = Modifier.size(36.dp).pointerHoverIcon(PointerIcon.Hand),
         ) {
             Icon(
-                Icons.Default.ChevronLeft,
-                contentDescription = stringResource("sessions.page.previous"),
-                tint = if (hasPrevious) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                imageVector = if (session.isStarred) Icons.Default.Star else Icons.Outlined.StarOutline,
+                contentDescription = if (session.isStarred) "Unpin session" else "Pin session",
+                tint = if (session.isStarred) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                },
+                modifier = Modifier.size(16.dp),
             )
         }
 
+        // Title
         Text(
-            text = stringResource("sessions.page", currentPage, totalPages),
+            text = session.title,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(horizontal = 16.dp),
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
         )
 
-        IconButton(
-            onClick = onNext,
-            enabled = hasNext,
-            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-        ) {
-            Icon(
-                Icons.Default.ChevronRight,
-                contentDescription = stringResource("sessions.page.next"),
-                tint = if (hasNext) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-            )
+        // Created date
+        Text(
+            text = TimeUtil.formatDisplay(session.createdAt),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.widthIn(min = 140.dp).padding(horizontal = 16.dp),
+        )
+
+        // Updated date
+        Text(
+            text = TimeUtil.formatDisplay(session.updatedAt),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.widthIn(min = 140.dp).padding(horizontal = 16.dp),
+        )
+
+        // Actions menu
+        Box {
+            IconButton(
+                onClick = { showMenu = true },
+                modifier = Modifier.size(36.dp).pointerHoverIcon(PointerIcon.Hand),
+            ) {
+                Icon(
+                    Icons.Default.MoreVert,
+                    contentDescription = "More options",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            AppComponents.dropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                DropdownMenuItem(
+                    text = { Text(if (session.isStarred) stringResource("action.unpin") else stringResource("action.pin")) },
+                    onClick = {
+                        showMenu = false
+                        onStarSession(session.id, !session.isStarred)
+                    },
+                    leadingIcon = {
+                        Icon(
+                            if (session.isStarred) Icons.Default.StarBorder else Icons.Default.Star,
+                            contentDescription = null,
+                            tint = if (session.isStarred) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+                        )
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource("action.delete"), color = MaterialTheme.colorScheme.error) },
+                    onClick = {
+                        showMenu = false
+                        showDeleteDialog = true
+                    },
+                    leadingIcon = {
+                        Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                    },
+                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                )
+            }
         }
     }
 }

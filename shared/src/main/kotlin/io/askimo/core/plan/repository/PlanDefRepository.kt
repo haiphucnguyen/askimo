@@ -45,6 +45,11 @@ class PlanDefRepository {
     private var builtInYamlCache: Map<String, String> = emptyMap()
 
     /**
+     * Returns the total number of plans (built-ins + user plans) without loading full objects.
+     */
+    fun count(): Int = getAll().size
+
+    /**
      * Returns all known plans: built-ins + user plans merged.
      * User plans take precedence — a user plan with the same id as a built-in shadows it.
      */
@@ -125,28 +130,38 @@ class PlanDefRepository {
             return emptyList()
         }
 
+        fun loadPlanFile(path: Path) = runCatching {
+            val yaml = Files.readString(path)
+            val plan = PlanYamlParser.parse(yaml)
+            loaded += plan.copy(builtIn = true)
+            rawYamls[plan.id] = yaml
+            log.debug("Loaded built-in plan '{}' from {}", plan.id, path.fileName)
+        }.onFailure { e ->
+            log.warn("Skipped built-in plan '{}': {}", path.fileName, e.message)
+        }
+
         try {
             val uri = plansUrl.toURI()
-            val planDir: Path = if (uri.scheme == "jar") {
-                val fs = java.nio.file.FileSystems.newFileSystem(uri, emptyMap<String, Any>())
-                fs.getPath("/plans/")
-            } else {
-                Path.of(uri)
-            }
-
-            Files.walk(planDir)
-                .filter { it.isRegularFile() && it.extension == "yml" }
-                .forEach { path ->
-                    runCatching {
-                        val yaml = Files.readString(path)
-                        val plan = PlanYamlParser.parse(yaml)
-                        loaded += plan.copy(builtIn = true)
-                        rawYamls[plan.id] = yaml
-                        log.debug("Loaded built-in plan '{}' from {}", plan.id, path.fileName)
-                    }.onFailure { e ->
-                        log.warn("Skipped built-in plan '{}': {}", path.fileName, e.message)
-                    }
+            if (uri.scheme == "jar") {
+                var ownedFs: java.nio.file.FileSystem? = null
+                val fs = try {
+                    java.nio.file.FileSystems.getFileSystem(uri)
+                } catch (_: java.nio.file.FileSystemNotFoundException) {
+                    java.nio.file.FileSystems.newFileSystem(uri, emptyMap<String, Any>())
+                        .also { ownedFs = it }
                 }
+                try {
+                    Files.walk(fs.getPath("/plans/"))
+                        .filter { it.isRegularFile() && it.extension == "yml" }
+                        .forEach { loadPlanFile(it) }
+                } finally {
+                    ownedFs?.close()
+                }
+            } else {
+                Files.walk(Path.of(uri))
+                    .filter { it.isRegularFile() && it.extension == "yml" }
+                    .forEach { loadPlanFile(it) }
+            }
         } catch (e: Exception) {
             log.warn("Failed to scan built-in plans: {}", e.message)
         }

@@ -128,6 +128,7 @@ import io.askimo.ui.common.theme.createCustomTypography
 import io.askimo.ui.common.theme.detectMacOSDarkMode
 import io.askimo.ui.common.ui.util.CustomUriHandler
 import io.askimo.ui.common.ui.util.FileDialogUtils
+import io.askimo.ui.discover.discoverView
 import io.askimo.ui.plan.PlansViewModel
 import io.askimo.ui.plan.planDetailView
 import io.askimo.ui.plan.plansGalleryView
@@ -279,7 +280,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     var isReady by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { isReady = true }
 
-    var currentView by remember { mutableStateOf(View.CHAT) }
+    var currentView by remember { mutableStateOf(View.DISCOVER) }
     var previousView by remember { mutableStateOf(View.CHAT) }
     var settingsSection by remember { mutableStateOf(SettingsSection.GENERAL) }
     var isSidebarExpanded by remember { mutableStateOf(true) }
@@ -624,6 +625,9 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                     currentView = View.PROJECTS
                     Analytics.track(AnalyticsEvent.RAG_PANEL_OPENED)
                 },
+                onNavigateToDiscover = {
+                    currentView = View.DISCOVER
+                },
                 onToggleSidebar = {
                     isSidebarExpanded = !isSidebarExpanded
                     NativeMenuBar.updateSidebarMenuLabel(isSidebarExpanded)
@@ -946,6 +950,9 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                             currentView = View.PLANS
                                                             Analytics.track(AnalyticsEvent.PLAN_VIEW_OPENED)
                                                         },
+                                                        onNavigateToDiscover = {
+                                                            currentView = View.DISCOVER
+                                                        },
                                                     )
                                                 } // End BoxWithConstraints
 
@@ -1052,6 +1059,12 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                         },
                                                         selectedProjectId = selectedProjectId,
                                                         userAvatarPath = userProfile?.preferences?.get("avatarPath"),
+                                                        userProfile = userProfile,
+                                                        totalMcpServers = remember { runCatching { koin.get<McpInstanceService>().getInstances().size }.getOrDefault(0) },
+                                                        chatSessionRepository = koin.get(),
+                                                        projectRepository = koin.get(),
+                                                        planDefRepository = koin.get(),
+                                                        onNavigateToSettings = { currentView = View.SETTINGS },
                                                     )
                                                 } else {
                                                     Box(
@@ -1790,11 +1803,17 @@ fun mainContent(
     onNavigateToPlans: () -> Unit = {},
     onNavigateToPlanDetail: () -> Unit = {},
     onNavigateToPlanEditor: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
     activeSessionId: String?,
     sessionChatState: ChatViewState?,
     onChatStateChange: (TextFieldValue, List<FileAttachmentDTO>, ChatMessageDTO?) -> Unit,
     selectedProjectId: String?,
     userAvatarPath: String? = null,
+    userProfile: io.askimo.core.user.domain.UserProfile? = null,
+    totalMcpServers: Int = 0,
+    chatSessionRepository: io.askimo.core.chat.repository.ChatSessionRepository,
+    projectRepository: io.askimo.core.chat.repository.ProjectRepository,
+    planDefRepository: io.askimo.core.plan.repository.PlanDefRepository,
 ) {
     Box(
         modifier = Modifier
@@ -1808,6 +1827,22 @@ fun mainContent(
             ),
     ) {
         when (currentView) {
+            View.DISCOVER -> discoverView(
+                userProfile = userProfile,
+                recentSessions = sessionsViewModel.recentSessions.take(5),
+                totalMcpServers = totalMcpServers,
+                chatSessionRepository = chatSessionRepository,
+                projectRepository = projectRepository,
+                planDefRepository = planDefRepository,
+                onNewChat = onNavigateToChat,
+                onResumeSession = onResumeSession,
+                onNavigateToSessions = onNavigateToSessions,
+                onNavigateToProjects = onNavigateToProjects,
+                onNavigateToPlans = onNavigateToPlans,
+                onNavigateToSettings = onNavigateToSettings,
+                modifier = Modifier.fillMaxSize(),
+            )
+
             View.CHAT, View.NEW_CHAT -> {
                 val configInfo = appContext.getConfigInfo()
                 chatView(

@@ -24,7 +24,7 @@ import java.util.UUID
  * The streaming message will be supported in the future
  */
 class PlanService(
-    private val planDefRepository: PlanDefRepository = PlanDefRepository(),
+    private val planDefRepository: PlanDefRepository,
     private val planExecutionRepository: PlanExecutionRepository = DatabaseManager.getInstance().getPlanExecutionRepository(),
     private val appContext: AppContext,
 ) {

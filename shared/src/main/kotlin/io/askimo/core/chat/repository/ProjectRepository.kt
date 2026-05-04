@@ -18,6 +18,7 @@ import io.askimo.core.logging.logger
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
@@ -75,6 +76,14 @@ class ProjectRepository internal constructor(
         log.debug("Created project ${projectWithInjectedFields.id} with name '${projectWithInjectedFields.name}'")
         EventBus.post(PushDataToServerEvent(reason = "project created"))
         return projectWithInjectedFields
+    }
+
+    /**
+     * Returns the total number of projects using a SQL COUNT(*) query.
+     */
+    fun countAll(): Int = transaction(database) {
+        val count = ProjectsTable.id.count()
+        ProjectsTable.select(count).first()[count].toInt()
     }
 
     /**
@@ -169,7 +178,8 @@ class ProjectRepository internal constructor(
      * @return Paginated project results
      */
     fun getProjectsPaged(page: Int = 1, pageSize: Int = 10): Pageable<Project> = transaction(database) {
-        val totalItems = ProjectsTable.selectAll().count().toInt()
+        val countExpr = ProjectsTable.id.count()
+        val totalItems = ProjectsTable.select(countExpr).first()[countExpr].toInt()
 
         if (totalItems == 0) {
             return@transaction Pageable(

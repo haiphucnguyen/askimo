@@ -5,6 +5,7 @@
 package io.askimo.desktop
 
 enum class View {
+    DISCOVER,
     CHAT,
     NEW_CHAT,
     PROJECTS,

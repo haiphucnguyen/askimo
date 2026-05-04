@@ -51,7 +51,12 @@ class ProjectsViewModel(
     var deleteProjectSuccessfulBannerMessage by mutableStateOf<String?>(null)
         private set
 
-    private val projectsPerPage = 10
+    private var projectsPerPage = 10
+
+    fun setPageSize(size: Int) {
+        projectsPerPage = size
+        loadProjectsPaged(1)
+    }
 
     init {
         loadProjects()

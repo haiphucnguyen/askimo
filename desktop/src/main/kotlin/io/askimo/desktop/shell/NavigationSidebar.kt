@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
@@ -127,6 +128,7 @@ fun navigationSidebar(
     onNavigateToSettings: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onNavigateToPlans: () -> Unit = {},
+    onNavigateToDiscover: () -> Unit = {},
 ) {
     // Animated width for smooth transition
     val targetWidth = if (isExpanded) width else 72.dp
@@ -163,6 +165,7 @@ fun navigationSidebar(
             onNavigateToSettings = onNavigateToSettings,
             onNavigateToAbout = onNavigateToAbout,
             onNavigateToPlans = onNavigateToPlans,
+            onNavigateToDiscover = onNavigateToDiscover,
         )
     } else {
         collapsedNavigationSidebar(
@@ -209,6 +212,7 @@ private fun expandedNavigationSidebar(
     onNavigateToSettings: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onNavigateToPlans: () -> Unit = {},
+    onNavigateToDiscover: () -> Unit = {},
 ) {
     val fontScale = LocalFontScale.current
 
@@ -290,6 +294,18 @@ private fun expandedNavigationSidebar(
                     colors = AppComponents.navigationDrawerItemColors(),
                 )
             }
+
+            // Discover
+            NavigationDrawerItem(
+                icon = { Icon(Icons.Default.GridView, contentDescription = null) },
+                label = { Text(stringResource("sidebar.discover"), style = MaterialTheme.typography.labelLarge) },
+                selected = currentView == View.DISCOVER,
+                onClick = onNavigateToDiscover,
+                modifier = Modifier
+                    .padding(horizontal = (12 * fontScale).dp)
+                    .pointerHoverIcon(PointerIcon.Hand),
+                colors = AppComponents.navigationDrawerItemColors(),
+            )
 
             // Plans
             NavigationDrawerItem(

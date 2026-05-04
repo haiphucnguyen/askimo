@@ -28,9 +28,9 @@ import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -62,9 +62,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.util.TimeUtil
+import io.askimo.ui.common.components.tablePageSizeSelector
+import io.askimo.ui.common.components.tablePagination
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.ThemePreferences
+
+private enum class ProjectSortColumn { CREATED, MODIFIED }
+private enum class ProjectSortDirection { ASC, DESC }
 
 @Composable
 fun projectsView(
@@ -75,6 +80,9 @@ fun projectsView(
     modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
+    var sortColumn by remember { mutableStateOf(ProjectSortColumn.MODIFIED) }
+    var sortDirection by remember { mutableStateOf(ProjectSortDirection.DESC) }
+    var pageSize by remember { mutableStateOf(10) }
 
     Box(modifier = modifier.fillMaxSize()) {
         Column(
@@ -182,6 +190,16 @@ fun projectsView(
                             onEditProject = onEditProject,
                             onDeleteProject = { viewModel.deleteProject(it) },
                             onStarProject = { id, starred -> viewModel.starProject(id, starred) },
+                            sortColumn = sortColumn,
+                            sortDirection = sortDirection,
+                            onSortChange = { col ->
+                                if (sortColumn == col) {
+                                    sortDirection = if (sortDirection == ProjectSortDirection.DESC) ProjectSortDirection.ASC else ProjectSortDirection.DESC
+                                } else {
+                                    sortColumn = col
+                                    sortDirection = ProjectSortDirection.DESC
+                                }
+                            },
                         )
                     }
                 }
@@ -190,13 +208,28 @@ fun projectsView(
                 val pagedProjects = viewModel.pagedProjects
                 if (pagedProjects != null && pagedProjects.totalPages > 1) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    paginationControls(
+                    tablePagination(
                         currentPage = pagedProjects.currentPage,
                         totalPages = pagedProjects.totalPages,
                         hasPrevious = pagedProjects.hasPreviousPage,
                         hasNext = pagedProjects.hasNextPage,
+                        pageSize = pageSize,
                         onPrevious = { viewModel.previousPage() },
                         onNext = { viewModel.nextPage() },
+                        onPageSizeChange = { size ->
+                            pageSize = size
+                            viewModel.setPageSize(size)
+                        },
+                    )
+                } else if (viewModel.pagedProjects != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    tablePageSizeSelector(
+                        pageSize = pageSize,
+                        onPageSizeChange = { size ->
+                            pageSize = size
+                            viewModel.setPageSize(size)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
@@ -226,7 +259,22 @@ private fun projectTable(
     onEditProject: (String) -> Unit,
     onDeleteProject: (String) -> Unit,
     onStarProject: (String, Boolean) -> Unit,
+    sortColumn: ProjectSortColumn,
+    sortDirection: ProjectSortDirection,
+    onSortChange: (ProjectSortColumn) -> Unit,
 ) {
+    val sortedProjects = remember(projects, sortColumn, sortDirection) {
+        val comparator = when (sortColumn) {
+            ProjectSortColumn.MODIFIED -> compareBy<Project> { it.updatedAt }
+            ProjectSortColumn.CREATED -> compareBy<Project> { it.createdAt }
+        }
+        if (sortDirection == ProjectSortDirection.DESC) {
+            projects.sortedWith(comparator.reversed())
+        } else {
+            projects.sortedWith(comparator)
+        }
+    }
+
     Surface(
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surface,
@@ -244,6 +292,7 @@ private fun projectTable(
             ) {
                 // Star column spacer
                 Spacer(modifier = Modifier.size(36.dp))
+                // Name column (non-sortable)
                 Text(
                     text = stringResource("projects.col.name"),
                     style = MaterialTheme.typography.labelMedium,
@@ -251,12 +300,23 @@ private fun projectTable(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
                 )
-                Text(
-                    text = stringResource("projects.col.modified"),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.widthIn(min = 140.dp),
+                // Created sortable header
+                projectSortableHeader(
+                    label = stringResource("projects.col.created"),
+                    column = ProjectSortColumn.CREATED,
+                    currentColumn = sortColumn,
+                    direction = sortDirection,
+                    onClick = { onSortChange(ProjectSortColumn.CREATED) },
+                    modifier = Modifier.widthIn(min = 140.dp).padding(horizontal = 16.dp),
+                )
+                // Modified sortable header
+                projectSortableHeader(
+                    label = stringResource("projects.col.modified"),
+                    column = ProjectSortColumn.MODIFIED,
+                    currentColumn = sortColumn,
+                    direction = sortDirection,
+                    onClick = { onSortChange(ProjectSortColumn.MODIFIED) },
+                    modifier = Modifier.widthIn(min = 140.dp).padding(horizontal = 16.dp),
                 )
                 // Actions column spacer
                 Spacer(modifier = Modifier.size(36.dp))
@@ -264,7 +324,7 @@ private fun projectTable(
 
             HorizontalDivider()
 
-            projects.forEachIndexed { index, project ->
+            sortedProjects.forEachIndexed { index, project ->
                 projectRow(
                     project = project,
                     onSelectProject = onSelectProject,
@@ -272,10 +332,44 @@ private fun projectTable(
                     onDeleteProject = onDeleteProject,
                     onStarProject = onStarProject,
                 )
-                if (index < projects.lastIndex) {
+                if (index < sortedProjects.lastIndex) {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun projectSortableHeader(
+    label: String,
+    column: ProjectSortColumn,
+    currentColumn: ProjectSortColumn,
+    direction: ProjectSortDirection,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val isActive = currentColumn == column
+    Row(
+        modifier = modifier
+            .clickable(onClick = onClick)
+            .pointerHoverIcon(PointerIcon.Hand),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = if (isActive) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (isActive) {
+            Icon(
+                imageVector = if (direction == ProjectSortDirection.DESC) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(12.dp),
+            )
         }
     }
 }
@@ -361,12 +455,20 @@ private fun projectRow(
             }
         }
 
+        // Created date
+        Text(
+            text = TimeUtil.formatDisplay(project.createdAt),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.widthIn(min = 140.dp).padding(horizontal = 16.dp),
+        )
+
         // Modified date
         Text(
             text = TimeUtil.formatDisplay(project.updatedAt),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.widthIn(min = 140.dp),
+            modifier = Modifier.widthIn(min = 140.dp).padding(horizontal = 16.dp),
         )
 
         // Actions
@@ -388,11 +490,7 @@ private fun projectRow(
                         Icon(
                             if (project.isStarred) Icons.Default.StarBorder else Icons.Default.Star,
                             contentDescription = null,
-                            tint = if (project.isStarred) {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            } else {
-                                MaterialTheme.colorScheme.primary
-                            },
+                            tint = if (project.isStarred) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
                         )
                     },
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
@@ -416,45 +514,6 @@ private fun projectRow(
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                 )
             }
-        }
-    }
-}
-
-// ── Pagination ────────────────────────────────────────────────────────────────
-
-@Composable
-private fun paginationControls(
-    currentPage: Int,
-    totalPages: Int,
-    hasPrevious: Boolean,
-    hasNext: Boolean,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = onPrevious, enabled = hasPrevious, modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)) {
-            Icon(
-                Icons.Default.ChevronLeft,
-                contentDescription = stringResource("projects.page.previous"),
-                tint = if (hasPrevious) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-            )
-        }
-        Text(
-            text = stringResource("projects.page", currentPage, totalPages),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(horizontal = 16.dp),
-        )
-        IconButton(onClick = onNext, enabled = hasNext, modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)) {
-            Icon(
-                Icons.Default.ChevronRight,
-                contentDescription = stringResource("projects.page.next"),
-                tint = if (hasNext) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-            )
         }
     }
 }

@@ -4956,7 +4956,7 @@
     "parameterTypes": [ "dev.langchain4j.data.message.UserMessage", "dev.langchain4j.model.chat.request.ChatRequestParameters" ]
   } ]
 }, {
-  "name": "io.askimo.core.providers.ChatClient$MockitoMock$BWpIngmU",
+  "name": "io.askimo.core.providers.ChatClient$MockitoMock$IuSXTOm9",
   "queryAllDeclaredConstructors": true,
   "methods": [ {
     "name": "<init>",
@@ -7433,7 +7433,7 @@
     "parameterTypes": [ ]
   } ]
 }, {
-  "name": "org.jline.reader.ParsedLine$MockitoMock$wHFeIUu1",
+  "name": "org.jline.reader.ParsedLine$MockitoMock$GRAXfBY0",
   "queryAllDeclaredConstructors": true,
   "methods": [ {
     "name": "<init>",

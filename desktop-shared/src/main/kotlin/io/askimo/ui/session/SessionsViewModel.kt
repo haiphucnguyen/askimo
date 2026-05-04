@@ -97,7 +97,12 @@ class SessionsViewModel(
     var renameCurrentTitle by mutableStateOf("")
         private set
 
-    private val sessionsPerPage = 10
+    private var sessionsPerPage = 10
+
+    fun setPageSize(size: Int) {
+        sessionsPerPage = size
+        loadSessions(1)
+    }
 
     init {
         loadSessions(1)

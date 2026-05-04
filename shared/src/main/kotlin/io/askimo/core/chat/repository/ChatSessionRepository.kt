@@ -15,6 +15,7 @@ import io.askimo.core.event.internal.PushDataToServerEvent
 import io.askimo.core.logging.logger
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNotNull
@@ -22,6 +23,7 @@ import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.jdbc.deleteAll
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
@@ -74,6 +76,14 @@ class ChatSessionRepository internal constructor(
 
         EventBus.post(PushDataToServerEvent(reason = "session created"))
         return sessionWithInjectedFields
+    }
+
+    /**
+     * Returns the total number of sessions using a SQL COUNT(*) query.
+     */
+    fun countAll(): Int = transaction(database) {
+        val count = ChatSessionsTable.id.count()
+        ChatSessionsTable.select(count).first()[count].toInt()
     }
 
     /**
