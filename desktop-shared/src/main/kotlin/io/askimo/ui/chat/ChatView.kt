@@ -13,12 +13,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
@@ -535,12 +537,6 @@ fun chatView(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(
-                                text = stringResource("chat.directive"),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-
                             var showManageDirectivesDialog by remember { mutableStateOf(false) }
                             var directiveDropdownExpanded by remember { mutableStateOf(false) }
 
@@ -554,18 +550,28 @@ fun chatView(
                             Box {
                                 themedTooltip(
                                     text = if (selectedDirectiveObj != null) {
-                                        "${selectedDirectiveObj.name}\n${selectedDirectiveObj.content}"
+                                        "${stringResource("chat.directive")}: ${selectedDirectiveObj.name}\n${selectedDirectiveObj.content}"
                                     } else {
-                                        ""
+                                        "${stringResource("chat.directive")}: ${stringResource("chat.directive.none")}"
                                     },
                                 ) {
                                     TextButton(
                                         onClick = { directiveDropdownExpanded = true },
                                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                         colors = ButtonDefaults.textButtonColors(
-                                            contentColor = MaterialTheme.colorScheme.onSurface,
+                                            contentColor = if (selectedDirectiveObj != null) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface
+                                            },
                                         ),
                                     ) {
+                                        Icon(
+                                            imageVector = Icons.Default.AutoAwesome,
+                                            contentDescription = stringResource("chat.directive"),
+                                            modifier = Modifier.size(16.dp),
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
                                         Text(
                                             text = selectedDirectiveObj?.name?.take(30)?.let {
                                                 if (selectedDirectiveObj.name.length > 30) "$it..." else it
@@ -709,6 +715,37 @@ fun chatView(
                                         },
                                         onClick = {
                                             showManageDirectivesDialog = true
+                                            directiveDropdownExpanded = false
+                                        },
+                                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                    )
+
+                                    // Learn more link
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(vertical = 4.dp),
+                                    )
+                                    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+                                    DropdownMenuItem(
+                                        text = {
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.ChevronRight,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(16.dp),
+                                                )
+                                                Text(
+                                                    text = stringResource("chat.directive.learn.more"),
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                )
+                                            }
+                                        },
+                                        onClick = {
+                                            uriHandler.openUri("https://askimo.chat/docs/desktop/directives/")
                                             directiveDropdownExpanded = false
                                         },
                                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),

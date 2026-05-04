@@ -28,7 +28,6 @@ import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Fullscreen
@@ -909,42 +908,18 @@ private fun fullScreenDiagramDialog(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background,
         ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                // Close button
-                themedTooltip(
-                    text = stringResource("mermaid.button.close"),
-                    placement = TooltipPlacement.LEFT,
-                ) {
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(16.dp)
-                            .size(48.dp)
-                            .pointerHoverIcon(PointerIcon.Hand),
-                    ) {
-                        Icon(
-                            Icons.Default.Close,
-                            contentDescription = stringResource("mermaid.button.close"),
-                            modifier = Modifier.size(32.dp),
-                        )
-                    }
-                }
-
-                // Diagram with zoom controls
-                diagramViewer(
-                    imageData = imageData,
-                    sanitizedDiagram = sanitizedDiagram,
-                    zoomLevel = dialogZoomLevel,
-                    onZoomIn = { dialogZoomLevel = (dialogZoomLevel + 0.2f).coerceAtMost(5f) },
-                    onZoomOut = { dialogZoomLevel = (dialogZoomLevel - 0.2f).coerceAtLeast(0.5f) },
-                    onResetZoom = { dialogZoomLevel = 1f },
-                    onFullScreen = null,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = 80.dp, end = 16.dp, bottom = 16.dp, start = 16.dp),
-                )
-            }
+            diagramViewer(
+                imageData = imageData,
+                sanitizedDiagram = sanitizedDiagram,
+                zoomLevel = dialogZoomLevel,
+                onZoomIn = { dialogZoomLevel = (dialogZoomLevel + 0.2f).coerceAtMost(5f) },
+                onZoomOut = { dialogZoomLevel = (dialogZoomLevel - 0.2f).coerceAtLeast(0.5f) },
+                onResetZoom = { dialogZoomLevel = 1f },
+                onFullScreen = null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+            )
         }
     }
 }
