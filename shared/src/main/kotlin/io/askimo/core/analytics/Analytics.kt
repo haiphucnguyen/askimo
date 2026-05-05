@@ -85,6 +85,22 @@ object Analytics {
     }
 
     /**
+     * Fires [AnalyticsEvent.RETURNING_USER] when [launchCount] hits a retention milestone
+     * (2nd, 7th, or 30th launch). No-op for other counts or when analytics is disabled.
+     *
+     * @param launchCount The current launch count returned by `ApplicationPreferences.incrementLaunchCount()`.
+     */
+    fun trackRetentionMilestone(launchCount: Int) {
+        val bucket = when (launchCount) {
+            2 -> "2"
+            7 -> "7"
+            30 -> "30"
+            else -> return
+        }
+        track(AnalyticsEvent.RETURNING_USER, mapOf("launch_count_bucket" to bucket))
+    }
+
+    /**
      * Reads opt-in state and endpoint from [AppConfig.analytics], then starts
      * the reporter if the user has already opted in.
      * Must be called once at app startup before any [track] calls.

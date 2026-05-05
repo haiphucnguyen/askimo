@@ -5,6 +5,7 @@
 package io.askimo.ui.shell
 
 import androidx.compose.ui.window.FrameWindowScope
+import io.askimo.core.config.AppConfig
 import io.askimo.core.i18n.LocalizationManager
 import io.askimo.ui.common.theme.ThemeMode
 import io.askimo.ui.common.theme.ThemePreferences
@@ -53,11 +54,12 @@ object NativeMenuBar {
         onShowTutorial: () -> Unit,
         onOpenTerminal: () -> Unit,
         onClearPreferences: () -> Unit = {},
+        onClearAccountPreferences: () -> Unit = {},
     ) {
         val window = frameWindowScope.window
 
         // Setup AWT menu bar for all platforms (includes Documentation)
-        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates, onEnterFullScreen, onNavigateToSessions, onNavigateToProjects, onNavigateToDiscover, onToggleSidebar, onInvalidateCaches, onExportBackup, onImportBackup, onShowTutorial, onOpenTerminal, onClearPreferences)
+        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates, onEnterFullScreen, onNavigateToSessions, onNavigateToProjects, onNavigateToDiscover, onToggleSidebar, onInvalidateCaches, onExportBackup, onImportBackup, onShowTutorial, onOpenTerminal, onClearPreferences, onClearAccountPreferences)
 
         // On macOS, also register the About handler for the app menu
         if (Platform.isMac) {
@@ -99,6 +101,7 @@ object NativeMenuBar {
         onShowTutorial: () -> Unit,
         onOpenTerminal: () -> Unit,
         onClearPreferences: () -> Unit,
+        onClearAccountPreferences: () -> Unit,
     ) {
         if (window is Frame) {
             val menuBar = MenuBar()
@@ -517,6 +520,18 @@ object NativeMenuBar {
                 },
             )
             helpMenu.add(eventLogItem)
+
+            // Clear Account Preferences (Developer Tools — only shown when developer mode is active)
+            val devConfig = AppConfig.developer
+            if (devConfig.enabled && devConfig.active) {
+                val clearAccountPrefsItem = MenuItem(LocalizationManager.getString("menu.dev.clear.account.preferences"))
+                clearAccountPrefsItem.addActionListener(
+                    ActionListener {
+                        onClearAccountPreferences()
+                    },
+                )
+                helpMenu.add(clearAccountPrefsItem)
+            }
 
             helpMenu.addSeparator()
 

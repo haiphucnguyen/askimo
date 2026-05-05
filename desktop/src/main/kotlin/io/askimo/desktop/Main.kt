@@ -464,8 +464,11 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     // Check if we should show star prompt (once on startup)
     LaunchedEffect(Unit) {
         ApplicationPreferences.recordFirstUseIfNeeded()
+        val launchCount = ApplicationPreferences.incrementLaunchCount()
+        Analytics.trackRetentionMilestone(launchCount)
         if (ApplicationPreferences.shouldShowStarPrompt()) {
             showStarPromptDialog = true
+            Analytics.track(AnalyticsEvent.STAR_PROMPT_SHOWN)
         }
     }
 
@@ -1589,21 +1592,21 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                     if (showStarPromptDialog) {
                         starPromptDialog(
                             onDismiss = {
+                                Analytics.track(AnalyticsEvent.STAR_PROMPT_DISMISSED)
                                 ApplicationPreferences.markAsPrompted()
                                 showStarPromptDialog = false
                             },
                             onStar = {
+                                Analytics.track(AnalyticsEvent.STAR_PROMPT_ACCEPTED)
                                 ApplicationPreferences.markAsPrompted()
                                 showStarPromptDialog = false
-                                try {
+                                runCatching {
                                     if (Desktop.isDesktopSupported()) {
                                         Desktop.getDesktop().browse(
                                             URI("https://github.com/haiphucnguyen/askimo"),
                                         )
                                     }
-                                } catch (e: Exception) {
-                                    log.error("Can not open the browser", e)
-                                }
+                                }.onFailure { log.error("Can not open the browser", it) }
                             },
                         )
                     }

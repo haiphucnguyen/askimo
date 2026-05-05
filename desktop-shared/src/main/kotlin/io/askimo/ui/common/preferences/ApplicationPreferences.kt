@@ -158,6 +158,25 @@ object ApplicationPreferences {
     }
 
     // ============================================================
+    // LAUNCH COUNT — retention milestones
+    // ============================================================
+
+    private const val LAUNCH_COUNT_KEY = "launch_count"
+
+    /**
+     * Increments the persistent launch counter and returns the new value.
+     * Call once per app startup, before reading [getLaunchCount].
+     */
+    fun incrementLaunchCount(): Int {
+        val next = safeGetInt(LAUNCH_COUNT_KEY, 0) + 1
+        safePutInt(LAUNCH_COUNT_KEY, next)
+        return next
+    }
+
+    /** Returns the total number of times the app has been launched on this device. */
+    fun getLaunchCount(): Int = safeGetInt(LAUNCH_COUNT_KEY, 0)
+
+    // ============================================================
     // ANALYTICS CONSENT
     // ============================================================
     private const val ANALYTICS_CONSENT_ASKED_KEY = "analytics_consent_asked"

@@ -248,6 +248,37 @@ enum class AnalyticsEvent(
         "Categorised error. Properties: error_type, provider (optional).",
     ),
 
+    // ── Retention ────────────────────────────────────────────────────────────
+
+    /**
+     * Fired on the 2nd, 7th, and 30th app launch to measure retention.
+     * Properties: `launch_count_bucket=2|7|30`.
+     */
+    RETURNING_USER(
+        "returning_user",
+        "User returned. Properties: launch_count_bucket=2|7|30.",
+    ),
+
+    // ── Star prompt ──────────────────────────────────────────────────────────
+
+    /** Star prompt dialog was displayed to the user. */
+    STAR_PROMPT_SHOWN(
+        "star_prompt_shown",
+        "Star prompt dialog displayed to the user.",
+    ),
+
+    /** User clicked 'Star on GitHub' in the star prompt dialog. */
+    STAR_PROMPT_ACCEPTED(
+        "star_prompt_accepted",
+        "User clicked Star on GitHub in the star prompt.",
+    ),
+
+    /** User dismissed the star prompt dialog without starring. */
+    STAR_PROMPT_DISMISSED(
+        "star_prompt_dismissed",
+        "User dismissed the star prompt without starring.",
+    ),
+
     // ── Consent ──────────────────────────────────────────────────────────────
 
     /** User explicitly opted in via the consent dialog or flag. */
