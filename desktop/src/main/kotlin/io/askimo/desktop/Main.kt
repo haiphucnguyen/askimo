@@ -54,10 +54,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
-import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
-import androidx.compose.ui.window.rememberWindowState
 import io.askimo.core.analytics.Analytics
 import io.askimo.core.analytics.AnalyticsEvent
 import io.askimo.core.backup.BackupManager
@@ -125,7 +123,6 @@ import io.askimo.ui.common.theme.ThemeMode
 import io.askimo.ui.common.theme.ThemePreferences
 import io.askimo.ui.common.theme.appBackground
 import io.askimo.ui.common.theme.createCustomTypography
-import io.askimo.ui.common.theme.detectMacOSDarkMode
 import io.askimo.ui.common.ui.util.CustomUriHandler
 import io.askimo.ui.common.ui.util.FileDialogUtils
 import io.askimo.ui.discover.discoverView
@@ -144,6 +141,7 @@ import io.askimo.ui.session.exportSessionDialog
 import io.askimo.ui.session.renameSessionDialog
 import io.askimo.ui.session.sessionMemoryDialog
 import io.askimo.ui.session.sessionsView
+import io.askimo.ui.shell.ChatViewState
 import io.askimo.ui.shell.ErrorDialogState
 import io.askimo.ui.shell.EventLogDockPosition
 import io.askimo.ui.shell.NativeMenuBar
@@ -153,6 +151,8 @@ import io.askimo.ui.shell.eventLogPanel
 import io.askimo.ui.shell.eventLogWindow
 import io.askimo.ui.shell.globalErrorHandler
 import io.askimo.ui.shell.globalSearchDialog
+import io.askimo.ui.shell.rememberPersistedWindowState
+import io.askimo.ui.shell.rememberThemeState
 import io.askimo.ui.shell.splashScreen
 import io.askimo.ui.shell.starPromptDialog
 import io.askimo.ui.terminal.PendingTerminalCommand
@@ -216,38 +216,8 @@ fun main() {
             ).toComposeImageBitmap(),
         )
 
-        // Load saved window state or use defaults
-        val savedWidth = ThemePreferences.getWindowWidth()
-        val savedHeight = ThemePreferences.getWindowHeight()
-        val savedX = ThemePreferences.getWindowX()
-        val savedY = ThemePreferences.getWindowY()
-        val isMaximized = ThemePreferences.isWindowMaximized()
-
-        val windowState = rememberWindowState(
-            width = if (savedWidth > 0) savedWidth.dp else 1920.dp,
-            height = if (savedHeight > 0) savedHeight.dp else 1080.dp,
-            position = if (savedX >= 0 && savedY >= 0) {
-                WindowPosition(savedX.dp, savedY.dp)
-            } else {
-                WindowPosition.Aligned(Alignment.Center)
-            },
-            placement = if (isMaximized) {
-                WindowPlacement.Maximized
-            } else {
-                WindowPlacement.Floating
-            },
-        )
-
-        // Save window state when it changes
-        LaunchedEffect(windowState.size, windowState.position, windowState.placement) {
-            ThemePreferences.saveWindowState(
-                width = windowState.size.width.value.toInt(),
-                height = windowState.size.height.value.toInt(),
-                x = windowState.position.x.value.toInt(),
-                y = windowState.position.y.value.toInt(),
-                isMaximized = windowState.placement == WindowPlacement.Maximized,
-            )
-        }
+        // Load saved window state or use defaults (persisted automatically via rememberPersistedWindowState)
+        val windowState = rememberPersistedWindowState()
 
         Window(
             icon = icon,
@@ -263,15 +233,6 @@ fun main() {
         }
     }
 }
-
-/**
- * Data class to hold chat view state per session for restoration when switching
- */
-data class ChatViewState(
-    val inputText: TextFieldValue = TextFieldValue(""),
-    val attachments: List<FileAttachmentDTO> = emptyList(),
-    val editingMessage: ChatMessageDTO? = null,
-)
 
 @Composable
 @Preview
@@ -542,10 +503,12 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     }
 
     // Theme state
-    val themeMode by ThemePreferences.themeMode.collectAsState()
-    val fontSettings by ThemePreferences.fontSettings.collectAsState()
-    val locale by ThemePreferences.locale.collectAsState()
-    val backgroundImage by ThemePreferences.backgroundImage.collectAsState()
+    val themeState = rememberThemeState()
+    val themeMode = themeState.themeMode
+    val fontSettings = themeState.fontSettings
+    val locale = themeState.locale
+    val backgroundImage = themeState.backgroundImage
+    val useDarkMode = themeState.useDarkMode
 
     // Watch AI response language config and update directive
     var preferredResponseAILocale by remember { mutableStateOf(AppConfig.chat.defaultResponseAILocale) }
@@ -652,26 +615,6 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                 },
             )
         }
-    }
-
-    var isSystemInDarkMode by remember { mutableStateOf(detectMacOSDarkMode()) }
-
-    LaunchedEffect(themeMode) {
-        if (themeMode == ThemeMode.SYSTEM) {
-            isSystemInDarkMode = detectMacOSDarkMode()
-        }
-    }
-
-    val useDarkMode = when (themeMode) {
-        ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
-        ThemeMode.SYSTEM -> isSystemInDarkMode
-        ThemeMode.SEPIA -> false
-        ThemeMode.OCEAN -> false
-        ThemeMode.NORD -> true
-        ThemeMode.SAGE -> false
-        ThemeMode.ROSE -> false
-        ThemeMode.INDIGO -> true
     }
 
     val colorScheme = when (themeMode) {
