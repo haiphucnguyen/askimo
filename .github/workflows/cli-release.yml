@@ -281,13 +281,12 @@ jobs:
 
   # Publish CLI packages — runs only after release job completes successfully
   publish:
-    name: Publish packages (homebrew / scoop / docker)
+    name: Publish packages (homebrew / scoop)
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [ release ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      packages: write
     steps:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
@@ -308,8 +307,6 @@ jobs:
           ARM_NAME="askimo-darwin-arm64.tar.gz"
           AMD_NAME="askimo-darwin-amd64.tar.gz"
           WIN_NAME="askimo-windows-x64.zip"
-          LIN_NAME="askimo-linux-x64.tar.gz"
-          LIN_ARM_NAME="askimo-linux-arm64.tar.gz"
 
           JSON="$(curl -sSL -H "Authorization: Bearer $GH_TOKEN" "$API")"
           echo "Assets  :"
@@ -321,8 +318,6 @@ jobs:
           MAC_ARM_URL="$(get_url "$ARM_NAME")"
           MAC_AMD_URL="$(get_url "$AMD_NAME")"
           WIN_URL="$(get_url "$WIN_NAME")"
-          LIN_AMD_URL="$(get_url "$LIN_NAME")"
-          LIN_ARM_URL="$(get_url "$LIN_ARM_NAME")"
           SHA_URL="$(get_url "SHA256SUMS.txt")"
 
           if [ -z "${SHA_URL:-}" ]; then
@@ -345,9 +340,6 @@ jobs:
             # scoop
             echo "win_url=${WIN_URL:-}"
             echo "win_sha=$(get_sha "$WIN_NAME")"
-            # docker
-            echo "lin_amd_url=${LIN_AMD_URL:-}"
-            echo "lin_arm_url=${LIN_ARM_URL:-}"
           } >> "$GITHUB_OUTPUT"
 
       # ── Homebrew tap ──────────────────────────────────────────────────────
@@ -494,96 +486,3 @@ jobs:
             echo "No changes to commit."
           fi
 
-      # ── Docker multi-arch images ──────────────────────────────────────────
-      # Checkout repo at workspace root so Dockerfile.runtime and out/ are
-      # both inside the same Docker build context.
-      - name: Checkout source for Dockerfile
-        if: steps.meta.outputs.lin_amd_url != ''
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.ref_name }}
-
-      - name: Download & extract amd64 binary
-        if: steps.meta.outputs.lin_amd_url != ''
-        shell: bash
-        run: |
-          mkdir -p out
-          curl -sSL "${{ steps.meta.outputs.lin_amd_url }}" | tar -xz -C out/
-          mv out/askimo out/askimo-amd64
-          chmod +x out/askimo-amd64
-          echo "✅ amd64: $(out/askimo-amd64 --version 2>&1 || true)"
-
-      - name: Download & extract arm64 binary
-        if: steps.meta.outputs.lin_amd_url != '' && steps.meta.outputs.lin_arm_url != ''
-        shell: bash
-        run: |
-          mkdir -p out
-          curl -sSL "${{ steps.meta.outputs.lin_arm_url }}" | tar -xz -C out/
-          mv out/askimo out/askimo-arm64
-          chmod +x out/askimo-arm64
-          echo "✅ arm64 binary ready"
-
-      - name: Set up Buildx
-        if: steps.meta.outputs.lin_amd_url != ''
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to GHCR
-        if: steps.meta.outputs.lin_amd_url != ''
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Compute Docker image tags
-        if: steps.meta.outputs.lin_amd_url != ''
-        id: docker_tags
-        shell: bash
-        run: |
-          REPO="ghcr.io/${GITHUB_REPOSITORY_OWNER}/askimo"
-          V="${{ steps.meta.outputs.tag }}"
-          echo "base=$REPO"                                  >> $GITHUB_OUTPUT
-          echo "tags=$REPO:latest,$REPO:${V},$REPO:${V#v}"  >> $GITHUB_OUTPUT
-
-      - name: Build & push amd64 image
-        if: steps.meta.outputs.lin_amd_url != ''
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile.runtime
-          build-args: BIN=out/askimo-amd64
-          platforms: linux/amd64
-          push: true
-          tags: ${{ steps.docker_tags.outputs.base }}:amd64-temp
-          provenance: false
-          sbom: false
-
-      - name: Build & push arm64 image
-        if: steps.meta.outputs.lin_amd_url != '' && steps.meta.outputs.lin_arm_url != ''
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile.runtime
-          build-args: BIN=out/askimo-arm64
-          platforms: linux/arm64
-          push: true
-          tags: ${{ steps.docker_tags.outputs.base }}:arm64-temp
-          provenance: false
-          sbom: false
-
-      - name: Create & push multi-arch manifests
-        if: steps.meta.outputs.lin_amd_url != ''
-        shell: bash
-        run: |
-          set -euo pipefail
-          I="${{ steps.docker_tags.outputs.base }}"
-          IFS=',' read -ra TAGS <<< "${{ steps.docker_tags.outputs.tags }}"
-          AMENDS="--amend $I:amd64-temp"
-          if [ -n "${{ steps.meta.outputs.lin_arm_url }}" ]; then
-            AMENDS="$AMENDS --amend $I:arm64-temp"
-          fi
-          for T in "${TAGS[@]}"; do
-            docker manifest create "$T" $AMENDS
-            docker manifest push "$T"
-          done
-          docker rmi "$I:amd64-temp" "$I:arm64-temp" 2>/dev/null || true

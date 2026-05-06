@@ -25,7 +25,7 @@
 # Usage: ./tools/macos/test-signing-local.sh
 #
 # Prerequisites:
-# 1. Copy .env.example to .env and fill in your credentials
+# 1. Copy .env.template to .env and fill in your credentials
 # 2. Import your Developer ID certificate (.p12) to keychain
 
 set -euo pipefail

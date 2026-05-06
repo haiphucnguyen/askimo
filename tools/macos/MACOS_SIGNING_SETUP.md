@@ -25,7 +25,7 @@
 
 ```bash
 # 1. Setup (one-time)
-cp .env.example .env
+cp .env.template .env
 # Edit .env with your Apple credentials
 ./tools/macos/test-signing-local.sh
 
@@ -63,7 +63,7 @@ cp .env.example .env
 Create `.env` file from template:
 
 ```bash
-cp .env.example .env
+cp .env.template .env
 ```
 
 Add your credentials:
