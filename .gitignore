@@ -49,7 +49,6 @@ Gemfile.lock
 *.p12
 certificate*.txt
 
-cloudflare-worker-openai-proxy.js
 .idea/
 create_dmg_bg.py
 create_dmg_background.sh
