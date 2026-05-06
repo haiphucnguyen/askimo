@@ -67,6 +67,7 @@ import io.askimo.ui.common.components.tablePagination
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.ThemePreferences
+import io.askimo.ui.common.ui.themedTooltip
 
 private enum class ProjectSortColumn { CREATED, MODIFIED }
 private enum class ProjectSortDirection { ASC, DESC }
@@ -436,14 +437,16 @@ private fun projectRow(
 
         // Name + description
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = project.name,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            themedTooltip(text = project.name) {
+                Text(
+                    text = project.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             project.description?.let { desc ->
                 Text(
                     text = desc,

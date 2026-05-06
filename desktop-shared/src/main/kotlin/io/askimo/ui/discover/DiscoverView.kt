@@ -6,8 +6,11 @@ package io.askimo.ui.discover
 
 import androidx.compose.foundation.ScrollbarStyle
 import androidx.compose.foundation.VerticalScrollbar
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -60,6 +63,7 @@ import io.askimo.core.util.TimeUtil
 import io.askimo.ui.common.components.clickableCard
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.ThemePreferences
+import io.askimo.ui.common.ui.themedTooltip
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.awt.Desktop
@@ -396,11 +400,7 @@ private fun recentSessionsSection(
                 tonalElevation = 1.dp,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
                     sessions.forEachIndexed { index, session ->
                         recentSessionRow(
                             session = session,
@@ -423,9 +423,20 @@ private fun recentSessionRow(
     session: ChatSession,
     onResumeSession: (String) -> Unit,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isHovered by interactionSource.collectIsHoveredAsState()
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .hoverable(interactionSource)
+            .background(
+                if (isHovered) {
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                } else {
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0f)
+                },
+            )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -447,13 +458,15 @@ private fun recentSessionRow(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(16.dp),
             )
-            Text(
-                text = session.title,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            )
+            themedTooltip(text = session.title) {
+                Text(
+                    text = session.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+            }
         }
         Spacer(modifier = Modifier.width(16.dp))
         Text(

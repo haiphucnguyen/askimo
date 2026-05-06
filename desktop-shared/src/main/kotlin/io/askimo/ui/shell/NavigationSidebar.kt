@@ -621,7 +621,7 @@ private fun pinnedSection(
             label = {
                 Text(
                     stringResource("sidebar.pinned"),
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

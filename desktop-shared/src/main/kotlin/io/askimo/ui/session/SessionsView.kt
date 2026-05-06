@@ -27,16 +27,17 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.outlined.StarOutline
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -65,6 +66,7 @@ import io.askimo.ui.common.components.tablePagination
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.ThemePreferences
+import io.askimo.ui.common.ui.themedTooltip
 
 private enum class SessionSortColumn { UPDATED, CREATED }
 private enum class SortDirection { ASC, DESC }
@@ -73,6 +75,7 @@ private enum class SortDirection { ASC, DESC }
 fun sessionsView(
     viewModel: SessionsViewModel,
     onResumeSession: (String) -> Unit,
+    onNewChat: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
@@ -105,15 +108,13 @@ fun sessionsView(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
-                    IconButton(
-                        onClick = { viewModel.refresh() },
+                    Button(
+                        onClick = onNewChat,
                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                     ) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Refresh sessions",
-                            tint = MaterialTheme.colorScheme.onBackground,
-                        )
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.size(6.dp))
+                        Text(stringResource("chat.new"))
                     }
                 }
 
@@ -430,15 +431,16 @@ private fun sessionRow(
         }
 
         // Title
-        Text(
-            text = session.title,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
+        themedTooltip(text = session.title, modifier = Modifier.weight(1f)) {
+            Text(
+                text = session.title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
 
         // Created date
         Text(

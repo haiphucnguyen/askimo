@@ -111,7 +111,7 @@ fun themedTooltip(
     val windowInfo = LocalWindowInfo.current
     val containerHeight = windowInfo.containerSize.height.toFloat()
 
-    Box {
+    Box(modifier = modifier) {
         TooltipBox(
             positionProvider = remember(containerHeight, placement) {
                 SmartTooltipPositionProvider(maxHeightPx = containerHeight, placement = placement)
@@ -135,7 +135,6 @@ fun themedTooltip(
                 }
             },
             state = tooltipState,
-            modifier = modifier,
         ) {
             Box(
                 modifier = Modifier

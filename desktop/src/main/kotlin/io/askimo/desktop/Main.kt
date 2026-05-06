@@ -1827,6 +1827,7 @@ fun mainContent(
             View.SESSIONS -> sessionsView(
                 viewModel = sessionsViewModel,
                 onResumeSession = onResumeSession,
+                onNewChat = onNavigateToChat,
                 modifier = Modifier.fillMaxSize(),
             )
 
