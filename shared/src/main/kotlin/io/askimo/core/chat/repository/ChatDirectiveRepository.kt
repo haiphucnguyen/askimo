@@ -4,6 +4,10 @@
  */
 package io.askimo.core.chat.repository
 
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
+import com.fasterxml.jackson.module.kotlin.KotlinModule
 import io.askimo.core.chat.domain.ChatDirective
 import io.askimo.core.chat.domain.ChatDirectivesTable
 import io.askimo.core.chat.domain.ChatSessionsTable
@@ -11,6 +15,8 @@ import io.askimo.core.chat.domain.DIRECTIVE_CONTENT_MAX_LENGTH
 import io.askimo.core.chat.domain.DIRECTIVE_NAME_MAX_LENGTH
 import io.askimo.core.db.AbstractSQLiteRepository
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.logging.logger
+import io.askimo.core.util.walkResourceDirectory
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
@@ -23,6 +29,13 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.jdbc.upsert
 import java.time.LocalDateTime
+
+/** Simple DTO for deserializing the bundled directive YAML files. */
+private data class DirectiveYaml(val name: String = "", val content: String = "")
+
+private val directiveYamlMapper: ObjectMapper = ObjectMapper(YAMLFactory())
+    .registerModule(KotlinModule.Builder().build())
+    .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 
 /**
  * Extension function to map an Exposed ResultRow to a ChatDirective object.
@@ -239,5 +252,33 @@ class ChatDirectiveRepository internal constructor(
      */
     fun hardDelete(directiveId: String): Boolean = transaction(database) {
         ChatDirectivesTable.deleteWhere { ChatDirectivesTable.id eq directiveId } > 0
+    }
+
+    /**
+     * Seeds built-in default directives from `/directives/` classpath resources
+     * into the local database. Only runs when the directives table is empty, so it
+     * executes once on first launch and never overwrites user-created directives.
+     */
+    fun seedDefaultDirectives() {
+        val log = logger<ChatDirectiveRepository>()
+        val resourceUrl = ChatDirectiveRepository::class.java.getResource("/directives/")
+        if (resourceUrl == null) {
+            log.debug("No /directives/ resource directory found on classpath — skipping seed")
+            return
+        }
+
+        var seeded = 0
+        walkResourceDirectory(resourceUrl, "/directives/", "yml") { path ->
+            runCatching {
+                val yaml = java.nio.file.Files.readString(path)
+                val dto = directiveYamlMapper.readValue(yaml, DirectiveYaml::class.java)
+                if (dto.name.isBlank() || dto.content.isBlank()) return@runCatching
+                save(ChatDirective(name = dto.name.trim(), content = dto.content.trim()))
+                seeded++
+            }.onFailure { e ->
+                log.warn("Skipped default directive '{}': {}", path.fileName, e.message)
+            }
+        }
+        log.debug("Seeded {} default directive(s)", seeded)
     }
 }

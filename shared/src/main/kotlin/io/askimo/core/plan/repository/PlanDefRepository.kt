@@ -8,6 +8,7 @@ import io.askimo.core.logging.logger
 import io.askimo.core.plan.PlanYamlParser
 import io.askimo.core.plan.domain.PlanDef
 import io.askimo.core.util.AskimoHome
+import io.askimo.core.util.walkResourceDirectory
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.extension
@@ -141,27 +142,7 @@ class PlanDefRepository {
         }
 
         try {
-            val uri = plansUrl.toURI()
-            if (uri.scheme == "jar") {
-                var ownedFs: java.nio.file.FileSystem? = null
-                val fs = try {
-                    java.nio.file.FileSystems.getFileSystem(uri)
-                } catch (_: java.nio.file.FileSystemNotFoundException) {
-                    java.nio.file.FileSystems.newFileSystem(uri, emptyMap<String, Any>())
-                        .also { ownedFs = it }
-                }
-                try {
-                    Files.walk(fs.getPath("/plans/"))
-                        .filter { it.isRegularFile() && it.extension == "yml" }
-                        .forEach { loadPlanFile(it) }
-                } finally {
-                    ownedFs?.close()
-                }
-            } else {
-                Files.walk(Path.of(uri))
-                    .filter { it.isRegularFile() && it.extension == "yml" }
-                    .forEach { loadPlanFile(it) }
-            }
+            walkResourceDirectory(plansUrl, "/plans/", "yml") { loadPlanFile(it) }
         } catch (e: Exception) {
             log.warn("Failed to scan built-in plans: {}", e.message)
         }

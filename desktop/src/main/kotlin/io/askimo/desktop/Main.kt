@@ -300,6 +300,9 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
         // Check if this is the very first launch (language not selected yet)
         if (ApplicationPreferences.isFirstLaunch()) {
             showLanguageSelectionDialog = true
+            withContext(Dispatchers.IO) {
+                DatabaseManager.getInstance().getChatDirectiveRepository().seedDefaultDirectives()
+            }
         } else if (userProfile?.name.isNullOrBlank()) {
             // Language already selected, but profile not completed
             showWelcomeProfileDialog = true
@@ -1820,7 +1823,6 @@ fun mainContent(
                     onNavigateToProject = onSelectProject,
                     onNavigateToMcpSettings = onNavigateToMcpSettings,
                     userAvatarPath = userAvatarPath,
-                    modifier = Modifier.fillMaxSize(),
                 )
             }
 

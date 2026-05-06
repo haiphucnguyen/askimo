@@ -131,7 +131,6 @@ fun chatView(
     onNavigateToMcpSettings: (() -> Unit)? = null,
     userAvatarPath: String? = null,
     serverBaseUrl: String? = null,
-    modifier: Modifier = Modifier,
 ) {
     // Unpack state for internal use
     val messages = state.messages
@@ -340,7 +339,7 @@ fun chatView(
     }
 
     Row(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .background(
                 if (LocalBackgroundActive.current) {
