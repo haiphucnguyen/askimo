@@ -326,6 +326,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
 
     LaunchedEffect(Unit) {
         EventBus.internalEvents.filterIsInstance<RunCodeEvent>().collect { event ->
+            if (!showTerminalPanel) Analytics.track(AnalyticsEvent.TERMINAL_OPENED, mapOf("source" to "run_code"))
             showTerminalPanel = true
             pendingTerminalCommand = PendingTerminalCommand(
                 code = event.code,
@@ -490,6 +491,8 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                 "mode" to "desktop",
                 "has_rag" to hasRag.toString(),
                 "has_mcp" to hasMcp.toString(),
+                "language" to ThemePreferences.locale.value.language.take(5).ifBlank { "unknown" },
+                "theme" to ThemePreferences.themeMode.value.name.lowercase(),
             ),
         )
     }
@@ -614,7 +617,9 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                     showTutorialWizard = true
                 },
                 onOpenTerminal = {
-                    showTerminalPanel = !showTerminalPanel
+                    val opening = !showTerminalPanel
+                    showTerminalPanel = opening
+                    if (opening) Analytics.track(AnalyticsEvent.TERMINAL_OPENED, mapOf("source" to "toolbar"))
                 },
                 onClearPreferences = {
                     showClearPreferencesDialog = true

@@ -109,6 +109,7 @@ class TelemetryChatModelListener(
             AnalyticsEvent.PROVIDER_USED,
             mapOf(
                 "provider" to provider,
+                "model_name" to model,
                 "model_tier" to Analytics.modelTier(provider),
             ),
         )
@@ -157,9 +158,10 @@ class TelemetryChatModelListener(
 
             else -> "provider_error"
         }
+        val sanitisedMessage = error.message?.take(200)?.replace(Regex("[\\r\\n]+"), " ") ?: "unknown"
         Analytics.track(
             AnalyticsEvent.ERROR_OCCURRED,
-            mapOf("error_type" to errorType, "provider" to provider),
+            mapOf("error_type" to errorType, "provider" to provider, "error_message" to sanitisedMessage),
         )
 
         log.warn("LLM error from $provider:$model: ${error.message}", error)

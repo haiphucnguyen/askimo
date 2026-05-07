@@ -104,10 +104,10 @@ enum class AnalyticsEvent(
 ) {
     // ── Session lifecycle ────────────────────────────────────────────────────
 
-    /** Fired once per session start. Properties: `mode=desktop|cli`, `has_mcp`, `has_rag`. */
+    /** Fired once per session start. Properties: `mode=desktop|cli`, `has_mcp`, `has_rag`, `language`, `theme`. */
     APP_STARTED(
         "app_started",
-        "Session started. Properties: mode=desktop|cli, has_mcp=true|false, has_rag=true|false.",
+        "Session started. Properties: mode=desktop|cli, has_mcp=true|false, has_rag=true|false, language=en|de|…, theme=light|dark|system.",
     ),
 
     /**
@@ -121,10 +121,10 @@ enum class AnalyticsEvent(
 
     // ── Provider & model ─────────────────────────────────────────────────────
 
-    /** A provider was actively used for a chat message. Properties: `provider`, `model_tier=cloud|local`. */
+    /** A provider was actively used for a chat message. Properties: `provider`, `model_name`, `model_tier=cloud|local`. */
     PROVIDER_USED(
         "provider_used",
-        "LLM response received. Properties: provider=OPENAI|ANTHROPIC|…, model_tier=cloud|local.",
+        "LLM response received. Properties: provider=OPENAI|ANTHROPIC|…, model_name, model_tier=cloud|local.",
     ),
 
     // ── RAG ──────────────────────────────────────────────────────────────────
@@ -219,6 +219,14 @@ enum class AnalyticsEvent(
         "Plan execution failed. Properties: step_count, error_type.",
     ),
 
+    // ── Terminal ─────────────────────────────────────────────────────────────
+
+    /** User opened the integrated terminal panel. */
+    TERMINAL_OPENED(
+        "terminal_opened",
+        "User opened the integrated terminal panel.",
+    ),
+
     // ── Other features ───────────────────────────────────────────────────────
 
     /**
@@ -241,11 +249,11 @@ enum class AnalyticsEvent(
     /**
      * A categorised error occurred.
      * Properties: `error_type=provider_timeout|rate_limit|auth_error|context_length|…`,
-     * `provider` (when relevant).
+     * `provider` (when relevant), `error_message` (sanitised, no PII).
      */
     ERROR_OCCURRED(
         "error_occurred",
-        "Categorised error. Properties: error_type, provider (optional).",
+        "Categorised error. Properties: error_type, provider (optional), error_message (sanitised).",
     ),
 
     // ── Retention ────────────────────────────────────────────────────────────
