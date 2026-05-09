@@ -210,28 +210,28 @@ private fun statCardsSection(
         statCard(
             label = stringResource("discover.stat.chats"),
             value = totalChats?.toString() ?: "—",
-            icon = { Icon(Icons.Default.ChatBubbleOutline, contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.primary) },
+            icon = { Icon(Icons.Default.ChatBubbleOutline, contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
             onClick = onNavigateToSessions,
             modifier = Modifier.weight(1f),
         )
         statCard(
             label = stringResource("discover.stat.projects"),
             value = totalProjects?.toString() ?: "—",
-            icon = { Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.primary) },
+            icon = { Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
             onClick = onNavigateToProjects,
             modifier = Modifier.weight(1f),
         )
         statCard(
             label = stringResource("discover.stat.mcp"),
             value = totalMcpServers.toString(),
-            icon = { Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.primary) },
+            icon = { Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
             onClick = onNavigateToMcpSettings,
             modifier = Modifier.weight(1f),
         )
         statCard(
             label = stringResource("discover.stat.plans"),
             value = totalPlans?.toString() ?: "—",
-            icon = { Icon(Icons.Default.PlayCircle, contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.primary) },
+            icon = { Icon(Icons.Default.PlayCircle, contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
             onClick = onNavigateToPlans,
             modifier = Modifier.weight(1f),
         )
@@ -301,21 +301,21 @@ private fun exploreFeaturesSection() {
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             exploreCard(
-                icon = { Icon(Icons.Default.Extension, contentDescription = null, modifier = Modifier.size(22.dp), tint = MaterialTheme.colorScheme.primary) },
+                icon = { Icon(Icons.Default.Extension, contentDescription = null, modifier = Modifier.size(22.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                 title = stringResource("discover.explore.mcp.title"),
                 description = stringResource("discover.explore.mcp.desc"),
                 url = "https://askimo.chat/docs/desktop/mcp-integration/",
                 modifier = Modifier.weight(1f),
             )
             exploreCard(
-                icon = { Icon(Icons.AutoMirrored.Filled.LibraryBooks, contentDescription = null, modifier = Modifier.size(22.dp), tint = MaterialTheme.colorScheme.primary) },
+                icon = { Icon(Icons.AutoMirrored.Filled.LibraryBooks, contentDescription = null, modifier = Modifier.size(22.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                 title = stringResource("discover.explore.rag.title"),
                 description = stringResource("discover.explore.rag.desc"),
                 url = "https://askimo.chat/docs/desktop/rag/",
                 modifier = Modifier.weight(1f),
             )
             exploreCard(
-                icon = { Icon(Icons.Default.PlayCircle, contentDescription = null, modifier = Modifier.size(22.dp), tint = MaterialTheme.colorScheme.primary) },
+                icon = { Icon(Icons.Default.PlayCircle, contentDescription = null, modifier = Modifier.size(22.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                 title = stringResource("discover.explore.plans.title"),
                 description = stringResource("discover.explore.plans.desc"),
                 url = "https://askimo.chat/docs/desktop/plans/",

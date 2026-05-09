@@ -169,23 +169,21 @@ fun planDetailView(
                 }
             },
     ) {
-        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+        Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+            // ── Sticky header: nav + plan title/description + action buttons ──
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scrollState),
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(start = 24.dp, end = 36.dp, top = 8.dp, bottom = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Column(
                     modifier = Modifier
                         .widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH)
-                        .fillMaxWidth()
-                        .padding(start = 24.dp, end = 36.dp, top = 16.dp, bottom = 24.dp),
+                        .fillMaxWidth(),
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(bottom = 8.dp),
-                    ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(
                             onClick = onBack,
                             modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
@@ -265,270 +263,300 @@ fun planDetailView(
                             }
                         }
                     }
+                }
+            }
 
-                    var stepsExpanded by remember { mutableStateOf(false) }
-                    Spacer(modifier = Modifier.height(Spacing.small))
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        shape = MaterialTheme.shapes.medium,
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+
+            // ── Scrollable body ───────────────────────────────────────────────
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(scrollState),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH)
+                            .fillMaxWidth()
+                            .padding(start = 24.dp, end = 36.dp, top = 16.dp, bottom = 24.dp),
                     ) {
-                        Column {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .pointerHoverIcon(PointerIcon.Hand)
-                                    .toggleable(
-                                        value = stepsExpanded,
-                                        role = Role.Button,
-                                        onValueChange = { stepsExpanded = it },
-                                    )
-                                    .padding(horizontal = Spacing.large, vertical = Spacing.medium),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    text = stringResource("plans.detail.how.it.works") +
-                                        " (${plan.steps.size} ${if (plan.steps.size == 1) stringResource("plans.detail.step") else stringResource("plans.detail.steps")})",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Icon(
-                                    imageVector = if (stepsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            }
-                            if (stepsExpanded) {
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
-                                Column(
-                                    modifier = Modifier.padding(Spacing.large),
-                                    verticalArrangement = Arrangement.spacedBy(Spacing.medium),
+                        var stepsExpanded by remember { mutableStateOf(false) }
+                        Spacer(modifier = Modifier.height(Spacing.small))
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            shape = MaterialTheme.shapes.medium,
+                        ) {
+                            Column {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .pointerHoverIcon(PointerIcon.Hand)
+                                        .toggleable(
+                                            value = stepsExpanded,
+                                            role = Role.Button,
+                                            onValueChange = { stepsExpanded = it },
+                                        )
+                                        .padding(horizontal = Spacing.large, vertical = Spacing.medium),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    plan.steps.entries.forEachIndexed { index, (stepId, step) ->
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(Spacing.medium),
-                                            verticalAlignment = Alignment.Top,
-                                        ) {
-                                            Surface(
-                                                shape = MaterialTheme.shapes.extraSmall,
-                                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                    Text(
+                                        text = stringResource("plans.detail.how.it.works") +
+                                            " (${plan.steps.size} ${if (plan.steps.size == 1) stringResource("plans.detail.step") else stringResource("plans.detail.steps")})",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Icon(
+                                        imageVector = if (stepsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
+                                if (stepsExpanded) {
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+                                    Column(
+                                        modifier = Modifier.padding(Spacing.large),
+                                        verticalArrangement = Arrangement.spacedBy(Spacing.medium),
+                                    ) {
+                                        plan.steps.entries.forEachIndexed { index, (stepId, step) ->
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(Spacing.medium),
+                                                verticalAlignment = Alignment.Top,
                                             ) {
-                                                Text(
-                                                    text = "${index + 1}",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                                )
-                                            }
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    text = stepId,
-                                                    style = MaterialTheme.typography.labelMedium,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                )
-                                                if (!step.system.isNullOrBlank()) {
+                                                Surface(
+                                                    shape = MaterialTheme.shapes.extraSmall,
+                                                    color = MaterialTheme.colorScheme.secondaryContainer,
+                                                ) {
                                                     Text(
-                                                        text = step.system!!,
-                                                        style = MaterialTheme.typography.bodySmall.copy(
-                                                            fontFamily = FontFamily.Monospace,
-                                                            fontSize = 11.sp,
-                                                        ),
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                                        text = "${index + 1}",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                    )
+                                                }
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = stepId,
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    )
+                                                    if (!step.system.isNullOrBlank()) {
+                                                        Text(
+                                                            text = step.system!!,
+                                                            style = MaterialTheme.typography.bodySmall.copy(
+                                                                fontFamily = FontFamily.Monospace,
+                                                                fontSize = 11.sp,
+                                                            ),
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                                            modifier = Modifier.padding(top = 2.dp),
+                                                        )
+                                                    }
+                                                    Text(
+                                                        text = step.message,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                         modifier = Modifier.padding(top = 2.dp),
                                                     )
                                                 }
-                                                Text(
-                                                    text = step.message,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    modifier = Modifier.padding(top = 2.dp),
+                                            }
+                                            if (index < plan.steps.size - 1) {
+                                                HorizontalDivider(
+                                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
                                                 )
                                             }
                                         }
-                                        if (index < plan.steps.size - 1) {
-                                            HorizontalDivider(
-                                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.1f),
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(Spacing.extraLarge))
+
+                        if (plan.inputs.isNotEmpty()) {
+                            Text(
+                                text = stringResource("plans.detail.inputs"),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.padding(bottom = Spacing.medium),
+                            )
+                            plan.inputs.forEach { input ->
+                                planInputField(
+                                    input = input,
+                                    value = viewModel.inputValues[input.key] ?: input.default,
+                                    onValueChange = { viewModel.updateInput(input.key, it) },
+                                    error = viewModel.inputErrors[input.key],
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.large),
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(Spacing.medium))
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.medium),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            primaryButton(
+                                onClick = {
+                                    viewModel.clearResult()
+                                    viewModel.runPlan()
+                                },
+                                enabled = !viewModel.isRunning,
+                            ) {
+                                if (viewModel.isRunning) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        strokeWidth = 2.dp,
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.PlayArrow,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp),
+                                    )
+                                }
+                                Spacer(modifier = Modifier.size(Spacing.small))
+                                Text(
+                                    text = if (viewModel.isRunning) {
+                                        stringResource("plans.running")
+                                    } else {
+                                        stringResource("plans.run")
+                                    },
+                                )
+                            }
+                            if (!viewModel.isRunning && (viewModel.runResult != null || viewModel.runError != null || viewModel.stepProgress.isNotEmpty())) {
+                                secondaryButton(
+                                    onClick = { viewModel.clearResult() },
+                                ) {
+                                    Text(
+                                        text = stringResource("plans.clear.result"),
+                                    )
+                                }
+                            }
+                        }
+
+                        if (viewModel.stepProgress.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(Spacing.large))
+                            val lastCompletedStepName = if (viewModel.runResult != null) {
+                                viewModel.stepProgress
+                                    .filterIsInstance<PlanStepEvent.Completed>()
+                                    .lastOrNull()
+                                    ?.stepName
+                            } else {
+                                null
+                            }
+                            agenticStepProgressPanel(
+                                steps = viewModel.stepProgress,
+                                suppressOutputForStepName = lastCompletedStepName,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+
+                        // Inline question panel — shown when the executor pauses for user input
+                        viewModel.pendingQuestion?.let { pending ->
+                            Spacer(modifier = Modifier.height(Spacing.medium))
+                            interactiveQuestionPanel(
+                                question = pending.question,
+                                answerText = viewModel.pendingAnswerText,
+                                onAnswerChange = { viewModel.updatePendingAnswer(it) },
+                                onSubmit = { viewModel.answerQuestion() },
+                                onSkip = { viewModel.skipQuestion() },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+
+                        viewModel.runError?.let { error ->
+                            Spacer(modifier = Modifier.height(Spacing.large))
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = MaterialTheme.colorScheme.errorContainer,
+                                shape = MaterialTheme.shapes.medium,
+                            ) {
+                                Column(modifier = Modifier.padding(Spacing.large)) {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(Spacing.medium),
+                                        verticalAlignment = Alignment.Top,
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Close,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.error,
+                                        )
+                                        SelectionContainer {
+                                            Text(
+                                                text = error,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(Spacing.medium))
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(Spacing.small),
+                                    ) {
+                                        secondaryButton(
+                                            onClick = {
+                                                viewModel.clearResult()
+                                                viewModel.runPlan()
+                                            },
+                                        ) {
+                                            Icon(
+                                                Icons.Default.PlayArrow,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(14.dp),
+                                            )
+                                            Spacer(modifier = Modifier.size(Spacing.extraSmall))
+                                            Text(
+                                                text = stringResource("plans.retry"),
+                                                style = MaterialTheme.typography.labelMedium,
                                             )
                                         }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(Spacing.extraLarge))
-
-                    if (plan.inputs.isNotEmpty()) {
-                        Text(
-                            text = stringResource("plans.detail.inputs"),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            modifier = Modifier.padding(bottom = Spacing.medium),
-                        )
-                        plan.inputs.forEach { input ->
-                            planInputField(
-                                input = input,
-                                value = viewModel.inputValues[input.key] ?: input.default,
-                                onValueChange = { viewModel.updateInput(input.key, it) },
-                                error = viewModel.inputErrors[input.key],
-                                modifier = Modifier.fillMaxWidth().padding(bottom = Spacing.large),
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(Spacing.medium))
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(Spacing.medium),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        primaryButton(
-                            onClick = {
-                                viewModel.clearResult()
-                                viewModel.runPlan()
-                            },
-                            enabled = !viewModel.isRunning,
-                        ) {
-                            if (viewModel.isRunning) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    strokeWidth = 2.dp,
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.PlayArrow,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            }
-                            Spacer(modifier = Modifier.size(Spacing.small))
-                            Text(
-                                text = if (viewModel.isRunning) {
-                                    stringResource("plans.running")
-                                } else {
-                                    stringResource("plans.run")
-                                },
-                            )
-                        }
-                        if (!viewModel.isRunning && (viewModel.runResult != null || viewModel.runError != null || viewModel.stepProgress.isNotEmpty())) {
-                            secondaryButton(
-                                onClick = { viewModel.clearResult() },
-                            ) {
-                                Text(
-                                    text = stringResource("plans.clear.result"),
-                                )
-                            }
-                        }
-                    }
-
-                    if (viewModel.stepProgress.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(Spacing.large))
-                        val lastCompletedStepName = if (viewModel.runResult != null) {
-                            viewModel.stepProgress
-                                .filterIsInstance<PlanStepEvent.Completed>()
-                                .lastOrNull()
-                                ?.stepName
-                        } else {
-                            null
-                        }
-                        agenticStepProgressPanel(
-                            steps = viewModel.stepProgress,
-                            suppressOutputForStepName = lastCompletedStepName,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-
-                    // Inline question panel — shown when the executor pauses for user input
-                    viewModel.pendingQuestion?.let { pending ->
-                        Spacer(modifier = Modifier.height(Spacing.medium))
-                        interactiveQuestionPanel(
-                            question = pending.question,
-                            answerText = viewModel.pendingAnswerText,
-                            onAnswerChange = { viewModel.updatePendingAnswer(it) },
-                            onSubmit = { viewModel.answerQuestion() },
-                            onSkip = { viewModel.skipQuestion() },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-
-                    viewModel.runError?.let { error ->
-                        Spacer(modifier = Modifier.height(Spacing.large))
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            color = MaterialTheme.colorScheme.errorContainer,
-                            shape = MaterialTheme.shapes.medium,
-                        ) {
-                            Column(modifier = Modifier.padding(Spacing.large)) {
+                        val currentResult = viewModel.runResult
+                        val pinned = viewModel.pinnedResult
+                        if (currentResult != null || pinned != null) {
+                            Spacer(modifier = Modifier.height(Spacing.large))
+                            if (currentResult != null && pinned != null && pinned.executionId != currentResult.executionId) {
+                                // Side-by-side comparison
                                 Row(
+                                    modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(Spacing.medium),
-                                    verticalAlignment = Alignment.Top,
                                 ) {
-                                    Icon(
-                                        Icons.Default.Close,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error,
+                                    resultPanel(
+                                        output = pinned.output,
+                                        title = stringResource("plans.result.pinned"),
+                                        isPinned = true,
+                                        onUnpin = { viewModel.unpinResult() },
+                                        viewModel = viewModel,
+                                        planName = plan.name,
+                                        showExport = false,
+                                        modifier = Modifier.weight(1f),
                                     )
-                                    SelectionContainer {
-                                        Text(
-                                            text = error,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onErrorContainer,
-                                        )
-                                    }
+                                    resultPanel(
+                                        output = currentResult.output,
+                                        title = stringResource("plans.result.title"),
+                                        isPinned = false,
+                                        onUnpin = null,
+                                        viewModel = viewModel,
+                                        planName = plan.name,
+                                        showExport = true,
+                                        modifier = Modifier.weight(1f),
+                                    )
                                 }
-                                Spacer(modifier = Modifier.height(Spacing.medium))
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(Spacing.small),
-                                ) {
-                                    secondaryButton(
-                                        onClick = {
-                                            viewModel.clearResult()
-                                            viewModel.runPlan()
-                                        },
-                                    ) {
-                                        Icon(
-                                            Icons.Default.PlayArrow,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(14.dp),
-                                        )
-                                        Spacer(modifier = Modifier.size(Spacing.extraSmall))
-                                        Text(
-                                            text = stringResource("plans.retry"),
-                                            style = MaterialTheme.typography.labelMedium,
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    val currentResult = viewModel.runResult
-                    val pinned = viewModel.pinnedResult
-                    if (currentResult != null || pinned != null) {
-                        Spacer(modifier = Modifier.height(Spacing.large))
-                        if (currentResult != null && pinned != null && pinned.executionId != currentResult.executionId) {
-                            // Side-by-side comparison
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(Spacing.medium),
-                            ) {
-                                resultPanel(
-                                    output = pinned.output,
-                                    title = stringResource("plans.result.pinned"),
-                                    isPinned = true,
-                                    onUnpin = { viewModel.unpinResult() },
-                                    viewModel = viewModel,
-                                    planName = plan.name,
-                                    showExport = false,
-                                    modifier = Modifier.weight(1f),
-                                )
+                            } else if (currentResult != null) {
                                 resultPanel(
                                     output = currentResult.output,
                                     title = stringResource("plans.result.title"),
@@ -537,46 +565,35 @@ fun planDetailView(
                                     viewModel = viewModel,
                                     planName = plan.name,
                                     showExport = true,
-                                    modifier = Modifier.weight(1f),
+                                    modifier = Modifier.fillMaxWidth(),
                                 )
                             }
-                        } else if (currentResult != null) {
-                            resultPanel(
-                                output = currentResult.output,
-                                title = stringResource("plans.result.title"),
-                                isPinned = false,
-                                onUnpin = null,
-                                viewModel = viewModel,
-                                planName = plan.name,
-                                showExport = true,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
 
-                        if (currentResult != null && !viewModel.isRunning) {
-                            Spacer(modifier = Modifier.height(Spacing.medium))
-                            followUpPanel(
-                                viewModel = viewModel,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
+                            if (currentResult != null && !viewModel.isRunning) {
+                                Spacer(modifier = Modifier.height(Spacing.medium))
+                                followUpPanel(
+                                    viewModel = viewModel,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            VerticalScrollbar(
-                adapter = rememberScrollbarAdapter(scrollState),
-                modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().padding(end = 4.dp),
-                style = ScrollbarStyle(
-                    minimalHeight = 16.dp,
-                    thickness = 8.dp,
-                    shape = MaterialTheme.shapes.small,
-                    hoverDurationMillis = 300,
-                    unhoverColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                    hoverColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.50f),
-                ),
-            )
-        }
+                VerticalScrollbar(
+                    adapter = rememberScrollbarAdapter(scrollState),
+                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight().padding(end = 4.dp),
+                    style = ScrollbarStyle(
+                        minimalHeight = 16.dp,
+                        thickness = 8.dp,
+                        shape = MaterialTheme.shapes.small,
+                        hoverDurationMillis = 300,
+                        unhoverColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                        hoverColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.50f),
+                    ),
+                )
+            } // close scrollable Box
+        } // close outer Column(weight(1f))
 
         planHistorySidePanel(
             executions = viewModel.executions,

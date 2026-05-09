@@ -6,6 +6,7 @@ package io.askimo.core.skills.agent
 
 import io.askimo.core.logging.logger
 import io.askimo.core.util.ProcessBuilderExt
+import java.io.File
 
 /**
  * External agent implementation for [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
@@ -74,7 +75,7 @@ class ClaudeAgent : ExternalAgent {
     override fun run(
         systemPrompt: String,
         userInput: String,
-        workDir: java.io.File?,
+        workDir: File?,
         onToken: (String) -> Unit,
         onStatus: (String) -> Unit,
     ): Result<String> = runCatching {
@@ -83,7 +84,7 @@ class ClaudeAgent : ExternalAgent {
 
         log.debug("Starting claude --print for skill execution ({} chars, workDir={})", combinedPrompt.length, workDir)
 
-        val process = ProcessBuilderExt(claudePath, "--print", "-")
+        val process = ProcessBuilderExt(claudePath, "--print", "--verbose", "--output-format", "stream-json")
             .apply {
                 if (workDir != null) {
                     workDir.mkdirs()
@@ -108,10 +109,53 @@ class ClaudeAgent : ExternalAgent {
             it.start()
         }
 
+        // Parse stream-json events and stream content tokens to caller in real-time.
         val output = StringBuilder()
         process.inputStream.bufferedReader().forEachLine { line ->
-            output.appendLine(line)
-            onToken(line)
+            if (line.isBlank()) return@forEachLine
+            val event = ClaudeStreamJsonEventParser.parse(line)
+            if (event == null) {
+                log.debug("claude unparseable line: {}", line)
+                return@forEachLine
+            }
+            log.debug("claude event: type={} line {}", event.type, line)
+            when (event.type) {
+                "content_block_delta" -> {
+                    @Suppress("UNCHECKED_CAST")
+                    val delta = event.fields["delta"] as? Map<String, Any>
+                    val text = delta?.get("text") as? String ?: return@forEachLine
+                    if (text.isNotBlank()) {
+                        output.append(text)
+                        onToken(text)
+                    }
+                }
+
+                "message_delta" -> {
+                    @Suppress("UNCHECKED_CAST")
+                    val usage = event.fields["usage"] as? Map<String, Any>
+                    val inputTokens = usage?.get("input_tokens")
+                    val outputTokens = usage?.get("output_tokens")
+                    val stopReason = event.fields["stop_reason"] as? String
+                    val summary = buildString {
+                        if (stopReason != null) append("stop: $stopReason")
+                        if (inputTokens != null) append(" | input tokens: $inputTokens")
+                        if (outputTokens != null) append(" | output tokens: $outputTokens")
+                    }
+                    if (summary.isNotBlank()) onStatus(summary)
+                }
+
+                "tool_use" -> {
+                    val toolName = event.fields["name"] as? String ?: "tool"
+                    val input = event.fields["input"]
+                    onStatus("tool: $toolName${if (input != null) " $input" else ""}")
+                }
+
+                else -> {
+                    val rendered = event.fields.entries
+                        .joinToString(", ") { "${it.key}=${it.value}" }
+                    if (rendered.isNotBlank()) log.debug("claude {}: {}", event.type, rendered)
+                }
+            }
         }
 
         val exitCode = process.waitFor()

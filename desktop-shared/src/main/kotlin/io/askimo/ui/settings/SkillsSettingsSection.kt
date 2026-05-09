@@ -365,7 +365,7 @@ private fun skillsMainContent(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.weight(1f),
                                 ) {
-                                    Icon(Icons.Default.FolderOpen, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    Icon(Icons.Default.FolderOpen, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Column {
                                         Text(
                                             text = stringResource("settings.skills.directory"),
@@ -579,7 +579,7 @@ private fun skillEditorContent(
                             onClick = { commitName() },
                             modifier = Modifier.size(28.dp).pointerHoverIcon(PointerIcon.Hand),
                         ) {
-                            Icon(Icons.Default.Check, contentDescription = "Confirm", modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+                            Icon(Icons.Default.Check, contentDescription = "Confirm", modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurface)
                         }
                         IconButton(
                             onClick = {
@@ -628,7 +628,7 @@ private fun skillEditorContent(
                             onClick = { commitDesc() },
                             modifier = Modifier.size(28.dp).pointerHoverIcon(PointerIcon.Hand),
                         ) {
-                            Icon(Icons.Default.Check, contentDescription = "Confirm", modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+                            Icon(Icons.Default.Check, contentDescription = "Confirm", modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurface)
                         }
                         IconButton(
                             onClick = {
@@ -822,7 +822,7 @@ private fun fileEditorContent(
                             Icons.Default.Check,
                             contentDescription = "Confirm rename",
                             modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
                     // Cancel rename — discard without saving
@@ -1107,7 +1107,7 @@ private fun skillTreeNodeItem(
                             if (isExpanded) Icons.Default.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = if (isExpanded) "Collapse" else "Expand",
                             modifier = Modifier.size(14.dp).clickable { isExpanded = !isExpanded },
-                            tint = if (isSkillFolder) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     } else {
                         Spacer(Modifier.size(14.dp))
@@ -1116,12 +1116,12 @@ private fun skillTreeNodeItem(
                         if (isSkillFolder) Icons.Default.Extension else Icons.Default.FolderOpen,
                         contentDescription = null,
                         modifier = Modifier.size(14.dp),
-                        tint = if (isSkillFolder) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
                         text = node.name,
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (isSkillFolder) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary,
+                        color = if (isSkillFolder) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = if (isSkillFolder) FontWeight.SemiBold else FontWeight.Normal,
                         modifier = Modifier.weight(1f),
                     )
@@ -1207,7 +1207,7 @@ private fun skillTreeNodeItem(
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = if (isSelected || node.isSkillEntry) FontWeight.SemiBold else FontWeight.Normal,
                             color = when {
-                                node.isSkillEntry -> MaterialTheme.colorScheme.secondary
+                                node.isSkillEntry -> MaterialTheme.colorScheme.onSurface
                                 else -> MaterialTheme.colorScheme.onSurface
                             },
                         )

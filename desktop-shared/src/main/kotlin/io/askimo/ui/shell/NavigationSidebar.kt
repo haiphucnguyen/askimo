@@ -9,7 +9,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -421,8 +420,7 @@ private fun collapsedNavigationSidebar(
         modifier = Modifier
             .width(animatedWidth)
             .fillMaxHeight()
-            .background(AppComponents.sidebarSurfaceColor())
-            .border(width = 1.dp, color = MaterialTheme.colorScheme.outlineVariant),
+            .background(AppComponents.sidebarSurfaceColor()),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // Header — logo swaps to expand icon on hover
@@ -615,7 +613,6 @@ private fun pinnedSection(
                 Icon(
                     Icons.Default.Star,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
                 )
             },
             label = {

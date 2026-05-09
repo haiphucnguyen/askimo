@@ -368,7 +368,7 @@ private fun projectSortableHeader(
             Icon(
                 imageVector = if (direction == ProjectSortDirection.DESC) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(12.dp),
             )
         }
@@ -427,7 +427,7 @@ private fun projectRow(
                 imageVector = if (project.isStarred) Icons.Default.Star else Icons.Outlined.StarOutline,
                 contentDescription = if (project.isStarred) "Unstar project" else "Star project",
                 tint = if (project.isStarred) {
-                    MaterialTheme.colorScheme.primary
+                    MaterialTheme.colorScheme.onSurface
                 } else {
                     MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                 },
@@ -493,7 +493,7 @@ private fun projectRow(
                         Icon(
                             if (project.isStarred) Icons.Default.StarBorder else Icons.Default.Star,
                             contentDescription = null,
-                            tint = if (project.isStarred) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     },
                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
