@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.outlined.Cable
+import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Keyboard
 import androidx.compose.material.icons.outlined.NetworkCheck
 import androidx.compose.material.icons.outlined.Tune
@@ -57,6 +58,7 @@ import io.askimo.ui.common.theme.ThemePreferences
 import io.askimo.ui.settings.appearanceSettingsSection
 import io.askimo.ui.settings.generalSettingsSection
 import io.askimo.ui.settings.shortcutsSettingsSection
+import io.askimo.ui.settings.skillsSettingsSection
 import org.jetbrains.skia.Image
 import java.awt.Cursor
 
@@ -67,6 +69,7 @@ enum class SettingsSection {
     NETWORK,
     SHORTCUTS,
     MCP_SERVERS,
+    SKILLS,
     ADVANCED,
     ABOUT,
 }
@@ -203,6 +206,12 @@ fun settingsViewWithSidebar(
                         onClick = { onSectionChange(SettingsSection.MCP_SERVERS) },
                     )
                     settingsSidebarItem(
+                        title = stringResource("settings.skills"),
+                        icon = Icons.Outlined.Extension,
+                        isSelected = selectedSection == SettingsSection.SKILLS,
+                        onClick = { onSectionChange(SettingsSection.SKILLS) },
+                    )
+                    settingsSidebarItem(
                         title = stringResource("settings.advanced"),
                         icon = Icons.Outlined.Tune,
                         isSelected = selectedSection == SettingsSection.ADVANCED,
@@ -268,6 +277,7 @@ fun settingsViewWithSidebar(
                         SettingsSection.NETWORK -> networkSettingsSection()
                         SettingsSection.SHORTCUTS -> shortcutsSettingsSection()
                         SettingsSection.MCP_SERVERS -> mcpServerTemplatesSection()
+                        SettingsSection.SKILLS -> skillsSettingsSection()
                         SettingsSection.ADVANCED -> advancedSettingsSection()
                         SettingsSection.ABOUT -> aboutSettingsSection()
                     }

@@ -155,6 +155,7 @@ import io.askimo.ui.shell.rememberPersistedWindowState
 import io.askimo.ui.shell.rememberThemeState
 import io.askimo.ui.shell.splashScreen
 import io.askimo.ui.shell.starPromptDialog
+import io.askimo.ui.skills.skillsView
 import io.askimo.ui.terminal.PendingTerminalCommand
 import io.askimo.ui.terminal.terminalPanel
 import kotlinx.coroutines.Dispatchers
@@ -904,6 +905,9 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                             currentView = View.PLANS
                                                             Analytics.track(AnalyticsEvent.PLAN_VIEW_OPENED)
                                                         },
+                                                        onNavigateToSkills = {
+                                                            currentView = View.SKILLS
+                                                        },
                                                         onNavigateToDiscover = {
                                                             currentView = View.DISCOVER
                                                         },
@@ -993,6 +997,9 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                         onNavigateToPlans = {
                                                             currentView = View.PLANS
                                                             Analytics.track(AnalyticsEvent.PLAN_VIEW_OPENED)
+                                                        },
+                                                        onNavigateToSkills = {
+                                                            currentView = View.SKILLS
                                                         },
                                                         onNavigateToPlanDetail = {
                                                             currentView = View.PLAN_DETAIL
@@ -1759,6 +1766,7 @@ fun mainContent(
     onNewProject: () -> Unit = {},
     onNavigateToProjects: () -> Unit = {},
     onNavigateToPlans: () -> Unit = {},
+    onNavigateToSkills: () -> Unit = {},
     onNavigateToPlanDetail: () -> Unit = {},
     onNavigateToPlanEditor: () -> Unit = {},
     onNavigateToMcpSettings: () -> Unit = {},
@@ -1952,6 +1960,8 @@ fun mainContent(
                 onBack = onNavigateToPlans,
                 modifier = Modifier.fillMaxSize(),
             )
+
+            View.SKILLS -> skillsView()
         }
     }
 }

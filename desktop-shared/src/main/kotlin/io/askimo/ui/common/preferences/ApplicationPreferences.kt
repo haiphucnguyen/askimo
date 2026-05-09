@@ -221,6 +221,10 @@ object ApplicationPreferences {
     private const val DEFAULT_PLAN_HISTORY_SIDE_PANEL_WIDTH = 320
     private const val PLAN_HISTORY_SIDE_PANEL_EXPANDED_KEY = "ui.plan_history_side_panel_expanded"
 
+    private const val SKILLS_SIDE_PANEL_WIDTH_KEY = "ui.skills_side_panel_width"
+    private const val DEFAULT_SKILLS_SIDE_PANEL_WIDTH = 300
+    private const val SKILLS_SIDE_PANEL_EXPANDED_KEY = "ui.skills_side_panel_expanded"
+
     /**
      * Get the project side panel width in pixels.
      */
@@ -281,6 +285,18 @@ object ApplicationPreferences {
      */
     fun setPlanHistorySidePanelExpanded(expanded: Boolean) {
         safePutBoolean(PLAN_HISTORY_SIDE_PANEL_EXPANDED_KEY, expanded)
+    }
+
+    fun getSkillsSidePanelWidth(): Int = safeGetInt(SKILLS_SIDE_PANEL_WIDTH_KEY, DEFAULT_SKILLS_SIDE_PANEL_WIDTH)
+
+    fun setSkillsSidePanelWidth(width: Int) {
+        safePutInt(SKILLS_SIDE_PANEL_WIDTH_KEY, width)
+    }
+
+    fun getSkillsSidePanelExpanded(): Boolean = safeGetBoolean(SKILLS_SIDE_PANEL_EXPANDED_KEY, true)
+
+    fun setSkillsSidePanelExpanded(expanded: Boolean) {
+        safePutBoolean(SKILLS_SIDE_PANEL_EXPANDED_KEY, expanded)
     }
 
     private const val DISMISSED_UPDATE_VERSION_KEY = "update.dismissed_version"

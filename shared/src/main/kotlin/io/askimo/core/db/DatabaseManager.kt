@@ -15,6 +15,7 @@ import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.chat.repository.ResourceSegmentRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
 import io.askimo.core.plan.repository.PlanExecutionRepository
+import io.askimo.core.skills.repository.SkillRunHistoryRepository
 import io.askimo.core.user.repository.UserProfileRepository
 import io.askimo.core.util.AskimoHome
 import java.sql.Connection
@@ -108,6 +109,7 @@ class DatabaseManager private constructor(
         createModelClassificationsTable(connection)
         createIndexFileStateTable(connection)
         createPlanExecutionsTable(connection)
+        createSkillRunHistoryTable(connection)
     }
 
     private fun createUserProfilesTable(conn: Connection) {
@@ -577,6 +579,31 @@ class DatabaseManager private constructor(
         }
     }
 
+    private fun createSkillRunHistoryTable(conn: Connection) {
+        conn.createStatement().use { stmt ->
+            stmt.executeUpdate(
+                """
+                CREATE TABLE IF NOT EXISTS skill_run_history (
+                    id           TEXT PRIMARY KEY,
+                    skill_path   TEXT NOT NULL,
+                    user_input   TEXT NOT NULL DEFAULT '',
+                    response     TEXT NOT NULL DEFAULT '',
+                    error        TEXT,
+                    activity_log TEXT NOT NULL DEFAULT '',
+                    created_at   TEXT NOT NULL
+                )
+                """.trimIndent(),
+            )
+
+            stmt.executeUpdate(
+                """
+                CREATE INDEX IF NOT EXISTS idx_skill_run_history_skill_path
+                ON skill_run_history (skill_path, created_at)
+                """.trimIndent(),
+            )
+        }
+    }
+
     private val _chatSessionRepository: ChatSessionRepository by lazy {
         ChatSessionRepository(this)
     }
@@ -615,6 +642,10 @@ class DatabaseManager private constructor(
 
     private val _planExecutionRepository: PlanExecutionRepository by lazy {
         PlanExecutionRepository(this)
+    }
+
+    private val _skillRunHistoryRepository: SkillRunHistoryRepository by lazy {
+        SkillRunHistoryRepository(this)
     }
 
     /**
@@ -676,6 +707,12 @@ class DatabaseManager private constructor(
      * All access to plan execution records should go through this repository.
      */
     fun getPlanExecutionRepository(): PlanExecutionRepository = _planExecutionRepository
+
+    /**
+     * Get the singleton SkillRunHistoryRepository instance.
+     * All access to skill run history should go through this repository.
+     */
+    fun getSkillRunHistoryRepository(): SkillRunHistoryRepository = _skillRunHistoryRepository
 
     /**
      * Get the singleton FileSegmentRepository instance (deprecated - use getResourceSegmentRepository).
