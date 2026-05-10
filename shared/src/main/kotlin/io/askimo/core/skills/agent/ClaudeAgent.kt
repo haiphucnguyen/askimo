@@ -13,19 +13,14 @@ import java.io.File
  *
  * Invocation:
  * ```
- * claude --print -
+ * claude --print --dangerously-skip-permissions --append-system-prompt "<systemPrompt>"
  * ```
- * - `--print`  Non-interactive mode: print the response to stdout and exit.
- * - `-`        Read the prompt from stdin.
+ * - `--print`                        Non-interactive mode: print the response to stdout and exit.
+ * - `--dangerously-skip-permissions` Auto-approve all tool actions (no interactive confirmation).
+ * - `--append-system-prompt`         Appends text to Claude's built-in system prompt at the API level,
+ *                                    without touching any files on disk.
  *
- * The combined prompt written to stdin:
- * ```
- * <system prompt>
- *
- * ---
- *
- * <user input>
- * ```
+ * Only [userInput] is written to stdin.
  */
 class ClaudeAgent : ExternalAgent {
 
@@ -79,23 +74,36 @@ class ClaudeAgent : ExternalAgent {
         onToken: (String) -> Unit,
         onStatus: (String) -> Unit,
     ): Result<String> = runCatching {
-        val combinedPrompt = buildPrompt(systemPrompt, userInput)
         val claudePath = resolveClaudePath() ?: error("claude CLI not found on PATH")
+        val effectiveWorkDir = workDir ?: File(System.getProperty("user.home"))
 
-        log.debug("Starting claude --print for skill execution ({} chars, workDir={})", combinedPrompt.length, workDir)
+        log.debug("Starting claude --print for skill execution ({} chars systemPrompt, workDir={})", systemPrompt.length, effectiveWorkDir)
 
-        val process = ProcessBuilderExt(claudePath, "--print", "--verbose", "--output-format", "stream-json")
+        val cmd = buildList {
+            add(claudePath)
+            add("--print")
+            add("--dangerously-skip-permissions")
+            add("--verbose")
+            add("--output-format")
+            add("stream-json")
+            if (systemPrompt.isNotBlank()) {
+                add("--append-system-prompt")
+                add(systemPrompt.trim())
+            }
+        }
+
+        val process = ProcessBuilderExt(*cmd.toTypedArray())
             .apply {
-                if (workDir != null) {
-                    workDir.mkdirs()
-                    directory(workDir)
-                }
+                effectiveWorkDir.mkdirs()
+                directory(effectiveWorkDir)
                 environment()["HOME"] = System.getProperty("user.home")
             }
             .start()
 
-        // Write prompt to stdin then close so claude sees EOF
-        process.outputStream.bufferedWriter().use { it.write(combinedPrompt) }
+        // Write only user input to stdin
+        process.outputStream.bufferedWriter().use { writer ->
+            if (userInput.isNotBlank()) writer.write(userInput.trim() + "\n")
+        }
 
         // Drain stderr in background to prevent blocking
         val stderrOutput = StringBuilder()
@@ -120,46 +128,110 @@ class ClaudeAgent : ExternalAgent {
             }
             log.debug("claude event: type={} line {}", event.type, line)
             when (event.type) {
-                "content_block_delta" -> {
-                    @Suppress("UNCHECKED_CAST")
-                    val delta = event.fields["delta"] as? Map<String, Any>
-                    val text = delta?.get("text") as? String ?: return@forEachLine
-                    if (text.isNotBlank()) {
-                        output.append(text)
-                        onToken(text)
+                "system" -> {
+                    val subtype = event.fields["subtype"] as? String
+                    if (subtype == "init") {
+                        val model = event.fields["model"] as? String
+                        val permissionMode = event.fields["permissionMode"] as? String
+                        val version = event.fields["claude_code_version"] as? String
+                        val summary = buildString {
+                            append("claude init")
+                            if (model != null) append(" | model: $model")
+                            if (version != null) append(" | v$version")
+                            if (permissionMode != null) append(" | permissions: $permissionMode")
+                        }
+                        onStatus(summary)
                     }
                 }
 
-                "message_delta" -> {
-                    @Suppress("UNCHECKED_CAST")
-                    val usage = event.fields["usage"] as? Map<String, Any>
-                    val inputTokens = usage?.get("input_tokens")
-                    val outputTokens = usage?.get("output_tokens")
-                    val stopReason = event.fields["stop_reason"] as? String
-                    val summary = buildString {
-                        if (stopReason != null) append("stop: $stopReason")
-                        if (inputTokens != null) append(" | input tokens: $inputTokens")
-                        if (outputTokens != null) append(" | output tokens: $outputTokens")
+                "assistant" -> {
+                    val blocks = ClaudeStreamJsonEventParser.extractContentBlocks(event.fields)
+                    for (block in blocks) {
+                        when (block.type) {
+                            "text" -> {
+                                val text = block.fields["text"] as? String ?: continue
+                                if (text.isNotBlank()) onToken(text)
+                            }
+
+                            "tool_use" -> {
+                                val toolName = block.fields["name"] as? String ?: "tool"
+
+                                @Suppress("UNCHECKED_CAST")
+                                val input = block.fields["input"] as? Map<String, Any>
+                                val summary = buildString {
+                                    append("tool: $toolName")
+                                    if (input != null) {
+                                        // Show the most useful key: file_path, command, or first key
+                                        val detail = (input["file_path"] ?: input["command"] ?: input.values.firstOrNull())
+                                            ?.toString()?.let {
+                                                if (it.length > 80) it.take(77) + "…" else it
+                                            }
+                                        if (detail != null) append(" → $detail")
+                                    }
+                                }
+                                onStatus(summary)
+                            }
+
+                            "thinking" -> {
+                                val thinking = block.fields["thinking"] as? String ?: continue
+                                log.debug("claude thinking: {}", thinking.take(200))
+                            }
+                        }
                     }
-                    if (summary.isNotBlank()) onStatus(summary)
                 }
 
-                "tool_use" -> {
-                    val toolName = event.fields["name"] as? String ?: "tool"
-                    val input = event.fields["input"]
-                    onStatus("tool: $toolName${if (input != null) " $input" else ""}")
+                "user" -> {
+                    // tool_use_result can be a Map (file op) or String (error/plain result)
+                    when (val toolResult = ClaudeStreamJsonEventParser.extractToolUseResult(event.fields)) {
+                        is Map<*, *> -> {
+                            @Suppress("UNCHECKED_CAST")
+                            val resultMap = toolResult as Map<String, Any>
+                            val opType = resultMap["type"] as? String
+                            val filePath = resultMap["filePath"] as? String
+                            if (opType != null && filePath != null) {
+                                val shortPath = filePath.substringAfterLast("/")
+                                onStatus("✓ $opType: $shortPath")
+                            }
+                        }
+
+                        is String -> {
+                            // Errors like "Answer questions?" from AskUserQuestion — debug only
+                            log.debug("claude tool_use_result: {}", toolResult.take(200))
+                        }
+                    }
                 }
 
-                else -> {
-                    val rendered = event.fields.entries
-                        .joinToString(", ") { "${it.key}=${it.value}" }
-                    if (rendered.isNotBlank()) log.debug("claude {}: {}", event.type, rendered)
+                "result" -> {
+                    val subtype = event.fields["subtype"] as? String
+                    if (subtype == "success") {
+                        val result = event.fields["result"] as? String ?: return@forEachLine
+                        if (result.isNotBlank()) {
+                            output.append(result)
+                            onToken(result)
+                        }
+                        val costUsd = event.fields["total_cost_usd"]
+                        val durationMs = event.fields["duration_ms"]
+                        val numTurns = event.fields["num_turns"]
+                        val stopReason = event.fields["stop_reason"] as? String
+                        val summary = buildString {
+                            append("result: success")
+                            if (stopReason != null) append(" | stop: $stopReason")
+                            if (numTurns != null) append(" | turns: $numTurns")
+                            if (durationMs != null) {
+                                val secs = (durationMs.toString().toDoubleOrNull() ?: 0.0) / 1000.0
+                                append(" | duration: ${"%.1f".format(secs)}s")
+                            }
+                            if (costUsd != null) append(" | cost: \$$costUsd")
+                        }
+                        onStatus(summary)
+                    }
                 }
             }
         }
 
         val exitCode = process.waitFor()
         stderrThread.join(2_000)
+
         if (exitCode != 0) {
             val errMsg = stderrOutput.toString().trim()
             log.warn("claude exited with code {} — stderr: {}", exitCode, errMsg)
@@ -169,16 +241,5 @@ class ClaudeAgent : ExternalAgent {
         output.toString().trimEnd()
     }.onFailure { e ->
         log.error("ClaudeAgent run failed: {}", e.message, e)
-    }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private fun buildPrompt(systemPrompt: String, userInput: String): String = buildString {
-        append(systemPrompt.trim())
-        if (userInput.isNotBlank()) {
-            append("\n\n---\n\n")
-            append(userInput.trim())
-        }
-        append("\n")
     }
 }

@@ -46,6 +46,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
@@ -100,6 +101,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.Cursor
 import java.awt.Desktop
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -240,6 +242,12 @@ fun skillsSettingsSection() {
                     onAddFolderInFolder = { parentPath ->
                         addItemParentPath = parentPath
                         showAddFolderDialog = true
+                    },
+                    onDeleteAll = {
+                        skillRepository.deleteAll()
+                        selectedSkill = null
+                        selectedLeaf = null
+                        refresh()
                     },
                 )
             } else {
@@ -400,6 +408,18 @@ private fun skillsMainContent(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         )
+                    }
+                    themedTooltip(text = stringResource("skills.view.docs.tooltip")) {
+                        IconButton(
+                            onClick = { runCatching { Desktop.getDesktop().browse(URI("https://askimo.chat/docs/desktop/skills/")) } },
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = stringResource("skills.view.docs.tooltip"),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
 
@@ -994,9 +1014,11 @@ private fun skillsTreePanel(
     onImportFromGitHub: () -> Unit = {},
     onAddFileInFolder: (folderRelativePath: String) -> Unit = {},
     onAddFolderInFolder: (folderRelativePath: String) -> Unit = {},
+    onDeleteAll: () -> Unit = {},
 ) {
     val scrollState = rememberScrollState()
     var showAddMenu by remember { mutableStateOf(false) }
+    var showDeleteAllConfirm by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Panel header
@@ -1046,6 +1068,13 @@ private fun skillsTreePanel(
                         )
                     }
                 }
+                // Delete all button
+                IconButton(
+                    onClick = { showDeleteAllConfirm = true },
+                    modifier = Modifier.size(28.dp).pointerHoverIcon(PointerIcon.Hand),
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete all skills", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
+                }
                 // Collapse button
                 IconButton(
                     onClick = onCollapse,
@@ -1056,6 +1085,16 @@ private fun skillsTreePanel(
             }
         }
         HorizontalDivider()
+
+        if (showDeleteAllConfirm) {
+            deleteAllSkillsDialog(
+                onDismiss = { showDeleteAllConfirm = false },
+                onConfirm = {
+                    showDeleteAllConfirm = false
+                    onDeleteAll()
+                },
+            )
+        }
 
         // Tree content
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -1675,6 +1714,29 @@ private fun deleteFolderConfirmDialog(
             TextButton(onClick = onDismiss, modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)) {
                 Text(stringResource("action.cancel"))
             }
+        },
+    )
+}
+
+@Composable
+private fun deleteAllSkillsDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource("settings.skills.delete.all.title")) },
+        text = {
+            Text(
+                text = stringResource("settings.skills.delete.all.confirm"),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        },
+        confirmButton = {
+            dangerButton(onClick = onConfirm) { Text(stringResource("action.delete")) }
+        },
+        dismissButton = {
+            linkButton(onClick = onDismiss) { Text(stringResource("action.cancel")) }
         },
     )
 }

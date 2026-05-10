@@ -926,7 +926,11 @@
   "name": "com.github.dockerjava.api.model.PeerNode",
   "allDeclaredFields": true,
   "queryAllDeclaredMethods": true,
-  "queryAllDeclaredConstructors": true
+  "queryAllDeclaredConstructors": true,
+  "methods": [ {
+    "name": "<init>",
+    "parameterTypes": [ ]
+  } ]
 }, {
   "name": "com.github.dockerjava.api.model.Ports",
   "allDeclaredFields": true,
@@ -1579,7 +1583,7 @@
   "queryAllDeclaredConstructors": true,
   "methods": [ {
     "name": "<init>",
-    "parameterTypes": [ "java.lang.Integer", "java.lang.Integer", "java.lang.Integer" ]
+    "parameterTypes": [ "java.lang.Integer", "java.lang.Integer", "java.lang.Integer", "java.lang.Integer", "java.lang.Integer" ]
   } ]
 }, {
   "name": "dev.langchain4j.model.googleai.GeminiGenerationConfig",
@@ -1799,6 +1803,9 @@
   }, {
     "name": "index",
     "parameterTypes": [ "java.lang.Integer" ]
+  }, {
+    "name": "logprobs",
+    "parameterTypes": [ "dev.langchain4j.model.openai.internal.chat.LogProbs" ]
   } ]
 }, {
   "name": "dev.langchain4j.model.openai.internal.chat.ChatCompletionRequest",
@@ -1891,6 +1898,16 @@
     "name": "name",
     "parameterTypes": [ "java.lang.String" ]
   } ]
+}, {
+  "name": "dev.langchain4j.model.openai.internal.chat.LogProb$Builder",
+  "allDeclaredFields": true,
+  "queryAllDeclaredMethods": true,
+  "queryAllDeclaredConstructors": true
+}, {
+  "name": "dev.langchain4j.model.openai.internal.chat.LogProbs$Builder",
+  "allDeclaredFields": true,
+  "queryAllDeclaredMethods": true,
+  "queryAllDeclaredConstructors": true
 }, {
   "name": "dev.langchain4j.model.openai.internal.chat.Message",
   "queryAllDeclaredMethods": true
@@ -4956,7 +4973,7 @@
     "parameterTypes": [ "dev.langchain4j.data.message.UserMessage", "dev.langchain4j.model.chat.request.ChatRequestParameters" ]
   } ]
 }, {
-  "name": "io.askimo.core.providers.ChatClient$MockitoMock$IuSXTOm9",
+  "name": "io.askimo.core.providers.ChatClient$MockitoMock$x58T8imA",
   "queryAllDeclaredConstructors": true,
   "methods": [ {
     "name": "<init>",
@@ -5840,6 +5857,274 @@
   "allDeclaredClasses": true,
   "queryAllDeclaredMethods": true,
   "queryAllPublicMethods": true
+}, {
+  "name": "io.askimo.core.skills.SkillRepositoryTest",
+  "allDeclaredFields": true,
+  "allDeclaredClasses": true,
+  "queryAllDeclaredMethods": true,
+  "queryAllPublicMethods": true,
+  "queryAllDeclaredConstructors": true,
+  "methods": [ {
+    "name": "<init>",
+    "parameterTypes": [ ]
+  } ]
+}, {
+  "name": "io.askimo.core.skills.SkillRepositoryTest$CountSkills",
+  "allDeclaredFields": true,
+  "allDeclaredClasses": true,
+  "queryAllDeclaredMethods": true,
+  "queryAllPublicMethods": true,
+  "queryAllDeclaredConstructors": true,
+  "methods": [ {
+    "name": "<init>",
+    "parameterTypes": [ "io.askimo.core.skills.SkillRepositoryTest" ]
+  }, {
+    "name": "category folder without skills returns 0",
+    "parameterTypes": [ ]
+  }, {
+    "name": "deeply nested category structure counts correctly",
+    "parameterTypes": [ ]
+  }, {
+    "name": "empty directory returns 0",
+    "parameterTypes": [ ]
+  }, {
+    "name": "git directory is excluded",
+    "parameterTypes": [ ]
+  }, {
+    "name": "hidden directories are skipped",
+    "parameterTypes": [ ]
+  }, {
+    "name": "multiple root-level skill folders count individually",
+    "parameterTypes": [ ]
+  }, {
+    "name": "multiple skills across categories",
+    "parameterTypes": [ ]
+  }, {
+    "name": "reserved files alone do not count as skills",
+    "parameterTypes": [ ]
+  }, {
+    "name": "single root-level skill folder counts as 1",
+    "parameterTypes": [ ]
+  }, {
+    "name": "skill nested inside category folder is counted",
+    "parameterTypes": [ ]
+  }, {
+    "name": "skill-md matching is case-insensitive",
+    "parameterTypes": [ ]
+  }, {
+    "name": "sub-folder inside a skill folder is NOT a separate skill",
+    "parameterTypes": [ ]
+  }, {
+    "name": "sub-folder with skill-md inside a skill folder is NOT counted separately",
+    "parameterTypes": [ ]
+  } ]
+}, {
+  "name": "io.askimo.core.skills.SkillRepositoryTest$GetAll",
+  "allDeclaredFields": true,
+  "allDeclaredClasses": true,
+  "queryAllDeclaredMethods": true,
+  "queryAllPublicMethods": true,
+  "queryAllDeclaredConstructors": true,
+  "methods": [ {
+    "name": "<init>",
+    "parameterTypes": [ "io.askimo.core.skills.SkillRepositoryTest" ]
+  }, {
+    "name": "reserved filenames and entry point are excluded",
+    "parameterTypes": [ ]
+  } ]
+}, {
+  "name": "io.askimo.core.skills.SkillRepositoryTest$GetSkillsOnly",
+  "allDeclaredFields": true,
+  "allDeclaredClasses": true,
+  "queryAllDeclaredMethods": true,
+  "queryAllPublicMethods": true,
+  "queryAllDeclaredConstructors": true,
+  "methods": [ {
+    "name": "<init>",
+    "parameterTypes": [ "io.askimo.core.skills.SkillRepositoryTest" ]
+  }, {
+    "name": "empty skills dir returns empty list",
+    "parameterTypes": [ ]
+  }, {
+    "name": "multiple skill folders across categories",
+    "parameterTypes": [ ]
+  }, {
+    "name": "plain category folder is transparent - skills inside are found",
+    "parameterTypes": [ ]
+  }, {
+    "name": "plain folder without skill dot md is NOT a skill",
+    "parameterTypes": [ ]
+  }, {
+    "name": "reserved files inside skill folder are NOT merged as context",
+    "parameterTypes": [ ]
+  }, {
+    "name": "root-level skill folder has empty category",
+    "parameterTypes": [ ]
+  }, {
+    "name": "skill folder category is the parent folder not the skill folder itself",
+    "parameterTypes": [ ]
+  }, {
+    "name": "skill folder entry point is case-insensitive",
+    "parameterTypes": [ ]
+  }, {
+    "name": "skill folder name comes from folder when frontmatter name is blank",
+    "parameterTypes": [ ]
+  }, {
+    "name": "skill folder sibling md files are NOT listed as separate skills",
+    "parameterTypes": [ ]
+  }, {
+    "name": "skill folder structure section lists all files",
+    "parameterTypes": [ ]
+  }, {
+    "name": "skill folder supplemental content is merged into skill content",
+    "parameterTypes": [ ]
+  }, {
+    "name": "skill folder with non-md supplemental files includes them in content",
+    "parameterTypes": [ ]
+  }, {
+    "name": "skill folder with skill dot md is returned as single skill",
+    "parameterTypes": [ ]
+  }, {
+    "name": "standalone md file is NOT a skill",
+    "parameterTypes": [ ]
+  }, {
+    "name": "sub-folder of skill folder is NOT a separate skill",
+    "parameterTypes": [ ]
+  }, {
+    "name": "supplemental md files have frontmatter stripped in content",
+    "parameterTypes": [ ]
+  } ]
+}, {
+  "name": "io.askimo.core.skills.SkillRepositoryTest$GetTree",
+  "allDeclaredFields": true,
+  "allDeclaredClasses": true,
+  "queryAllDeclaredMethods": true,
+  "queryAllPublicMethods": true,
+  "queryAllDeclaredConstructors": true,
+  "methods": [ {
+    "name": "<init>",
+    "parameterTypes": [ "io.askimo.core.skills.SkillRepositoryTest" ]
+  }, {
+    "name": "root-level skill folder has no category wrapper",
+    "parameterTypes": [ ]
+  }, {
+    "name": "skill deeply nested - only immediate parent shown as category",
+    "parameterTypes": [ ]
+  }, {
+    "name": "skill folder children include sibling md files as Leaf nodes",
+    "parameterTypes": [ ]
+  }, {
+    "name": "skill folder children include sub-directories",
+    "parameterTypes": [ ]
+  }, {
+    "name": "skill one level deep - direct parent shown as category",
+    "parameterTypes": [ ]
+  }, {
+    "name": "two skills under same immediate parent grouped under one category",
+    "parameterTypes": [ ]
+  } ]
+}, {
+  "name": "io.askimo.core.skills.SkillRepositoryTest$HiddenDirectoryFiltering",
+  "allDeclaredFields": true,
+  "allDeclaredClasses": true,
+  "queryAllDeclaredMethods": true,
+  "queryAllPublicMethods": true,
+  "queryAllDeclaredConstructors": true,
+  "methods": [ {
+    "name": "<init>",
+    "parameterTypes": [ "io.askimo.core.skills.SkillRepositoryTest" ]
+  }, {
+    "name": "getAll - files inside dot-git are excluded",
+    "parameterTypes": [ ]
+  }, {
+    "name": "getAll - files inside dot-github are excluded",
+    "parameterTypes": [ ]
+  }, {
+    "name": "getSkillsOnly - skills in dot-hidden dirs are excluded",
+    "parameterTypes": [ ]
+  }, {
+    "name": "getTree - dot-git directory does not appear as Category node",
+    "parameterTypes": [ ]
+  } ]
+}, {
+  "name": "io.askimo.core.skills.SkillRepositoryTest$ImportFromDirectory",
+  "allDeclaredFields": true,
+  "allDeclaredClasses": true,
+  "queryAllDeclaredMethods": true,
+  "queryAllPublicMethods": true,
+  "queryAllDeclaredConstructors": true,
+  "methods": [ {
+    "name": "<init>",
+    "parameterTypes": [ "io.askimo.core.skills.SkillRepositoryTest" ]
+  }, {
+    "name": "case-insensitive entry point detection on import",
+    "parameterTypes": [ ]
+  }, {
+    "name": "directories with no skills are excluded",
+    "parameterTypes": [ ]
+  }, {
+    "name": "dot git directory is excluded",
+    "parameterTypes": [ ]
+  }, {
+    "name": "multiple skill folders all imported",
+    "parameterTypes": [ ]
+  }, {
+    "name": "reserved files at root are excluded (not skill folders)",
+    "parameterTypes": [ ]
+  }, {
+    "name": "returns correct skill count - only skill folders counted",
+    "parameterTypes": [ ]
+  }, {
+    "name": "skill folder sibling non-md files are imported",
+    "parameterTypes": [ ]
+  }, {
+    "name": "skill folder subdirectory files are imported",
+    "parameterTypes": [ ]
+  }, {
+    "name": "skill folder with skill dot md is imported",
+    "parameterTypes": [ ]
+  }, {
+    "name": "standalone md file is NOT imported (not a skill)",
+    "parameterTypes": [ ]
+  }, {
+    "name": "sub-skill-folder inside skill folder is NOT imported as separate skill",
+    "parameterTypes": [ ]
+  } ]
+}, {
+  "name": "io.askimo.core.skills.SkillRepositoryTest$SaveAndDelete",
+  "allDeclaredFields": true,
+  "allDeclaredClasses": true,
+  "queryAllDeclaredMethods": true,
+  "queryAllPublicMethods": true,
+  "queryAllDeclaredConstructors": true,
+  "methods": [ {
+    "name": "<init>",
+    "parameterTypes": [ "io.askimo.core.skills.SkillRepositoryTest" ]
+  }, {
+    "name": "delete does NOT prune category parent when sibling skill still exists",
+    "parameterTypes": [ ]
+  }, {
+    "name": "delete partially prunes deep category chain up to surviving sibling",
+    "parameterTypes": [ ]
+  }, {
+    "name": "delete prunes empty category parent after last skill removed",
+    "parameterTypes": [ ]
+  }, {
+    "name": "delete prunes skill folder together with supplemental files",
+    "parameterTypes": [ ]
+  }, {
+    "name": "delete prunes the skill folder itself",
+    "parameterTypes": [ ]
+  }, {
+    "name": "delete removes file",
+    "parameterTypes": [ ]
+  }, {
+    "name": "delete returns false for non-existent file and does not prune",
+    "parameterTypes": [ ]
+  }, {
+    "name": "save persists file and findByPath retrieves the skill",
+    "parameterTypes": [ ]
+  } ]
 }, {
   "name": "io.askimo.core.util.AskimoHome",
   "fields": [ {
@@ -7433,7 +7718,7 @@
     "parameterTypes": [ ]
   } ]
 }, {
-  "name": "org.jline.reader.ParsedLine$MockitoMock$GRAXfBY0",
+  "name": "org.jline.reader.ParsedLine$MockitoMock$ldNa7zx3",
   "queryAllDeclaredConstructors": true,
   "methods": [ {
     "name": "<init>",

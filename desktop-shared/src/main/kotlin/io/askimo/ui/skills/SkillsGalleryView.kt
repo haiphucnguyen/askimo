@@ -34,9 +34,11 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -63,12 +65,15 @@ import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 import io.askimo.ui.common.theme.ThemePreferences
 import io.askimo.ui.common.ui.themedTooltip
+import java.awt.Desktop
+import java.net.URI
 
 @Composable
 internal fun skillsListContent(
     skills: List<SkillDefinition>,
     onSelectSkill: (SkillDefinition) -> Unit,
     onRefresh: () -> Unit,
+    onNavigateToSkillsSettings: () -> Unit = {},
 ) {
     val scrollState = rememberScrollState()
     var searchQuery by remember { mutableStateOf("") }
@@ -128,12 +133,43 @@ internal fun skillsListContent(
                             modifier = Modifier.padding(top = 4.dp),
                         )
                     }
-                    IconButton(onClick = onRefresh, modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = stringResource("action.refresh"),
-                            tint = MaterialTheme.colorScheme.onBackground,
-                        )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.small),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        themedTooltip(text = stringResource("skills.view.docs.tooltip")) {
+                            IconButton(
+                                onClick = { runCatching { Desktop.getDesktop().browse(URI("https://askimo.chat/docs/desktop/skills/")) } },
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Icon(
+                                    Icons.Default.Info,
+                                    contentDescription = stringResource("skills.view.docs.tooltip"),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        themedTooltip(text = stringResource("skills.view.settings.tooltip")) {
+                            IconButton(
+                                onClick = onNavigateToSkillsSettings,
+                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Icon(
+                                    Icons.Default.Settings,
+                                    contentDescription = stringResource("skills.view.settings.tooltip"),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        themedTooltip(text = stringResource("action.refresh")) {
+                            IconButton(onClick = onRefresh, modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)) {
+                                Icon(
+                                    Icons.Default.Refresh,
+                                    contentDescription = stringResource("action.refresh"),
+                                    tint = MaterialTheme.colorScheme.onBackground,
+                                )
+                            }
+                        }
                     }
                 }
 

@@ -994,6 +994,11 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                         onNavigateToSkills = {
                                                             currentView = View.SKILLS
                                                         },
+                                                        onNavigateToSkillsSettings = {
+                                                            settingsSection = SettingsSection.SKILLS
+                                                            previousView = currentView
+                                                            currentView = View.SETTINGS
+                                                        },
                                                         onNavigateToPlanDetail = {
                                                             currentView = View.PLAN_DETAIL
                                                         },
@@ -1702,6 +1707,7 @@ fun mainContent(
     onNavigateToProjects: () -> Unit = {},
     onNavigateToPlans: () -> Unit = {},
     onNavigateToSkills: () -> Unit = {},
+    onNavigateToSkillsSettings: () -> Unit = {},
     onNavigateToPlanDetail: () -> Unit = {},
     onNavigateToPlanEditor: () -> Unit = {},
     onNavigateToMcpSettings: () -> Unit = {},
@@ -1896,7 +1902,9 @@ fun mainContent(
                 modifier = Modifier.fillMaxSize(),
             )
 
-            View.SKILLS -> skillsView()
+            View.SKILLS -> skillsView(
+                onNavigateToSkillsSettings = onNavigateToSkillsSettings,
+            )
         }
     }
 }

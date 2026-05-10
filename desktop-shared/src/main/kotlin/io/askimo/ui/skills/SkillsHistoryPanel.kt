@@ -58,6 +58,7 @@ import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.preferences.ApplicationPreferences
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
+import io.askimo.ui.common.ui.TooltipPlacement
 import io.askimo.ui.common.ui.themedTooltip
 import java.awt.Cursor
 import java.time.format.DateTimeFormatter
@@ -69,6 +70,7 @@ internal val RUN_TIME_FMT: DateTimeFormatter =
 private fun skillRunHistoryPanelRow(
     record: SkillRunRecord,
     onClick: () -> Unit,
+    onDelete: () -> Unit,
     showSkillName: Boolean = true,
 ) {
     val isError = record.error != null
@@ -76,56 +78,86 @@ private fun skillRunHistoryPanelRow(
     val skillDisplayName = remember(record.skillPath) {
         record.skillPath.substringAfterLast('/').substringAfterLast('\\').substringBeforeLast('.')
     }
+    val tooltipText = remember(record) {
+        buildString {
+            append(skillDisplayName)
+            append(" · ")
+            append(timeLabel)
+            if (record.userInput.isNotBlank()) {
+                append("\n")
+                append(record.userInput)
+            }
+            if (isError) {
+                append("\n⚠ ")
+                append(record.error)
+            }
+        }
+    }
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered by interactionSource.collectIsHoveredAsState()
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pointerHoverIcon(PointerIcon.Hand)
-            .hoverable(interactionSource)
-            .clickable(onClick = onClick)
-            .background(
-                if (isHovered) {
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
-                } else {
-                    androidx.compose.ui.graphics.Color.Transparent
-                },
-            )
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Spacing.small),
-    ) {
-        Icon(
-            if (isError) Icons.Default.Close else Icons.Default.CheckCircle,
-            contentDescription = null,
-            modifier = Modifier.size(12.dp),
-            tint = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            if (showSkillName) {
-                Text(
-                    skillDisplayName,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isHovered) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+    themedTooltip(text = tooltipText, placement = TooltipPlacement.LEFT) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .pointerHoverIcon(PointerIcon.Hand)
+                .hoverable(interactionSource)
+                .clickable(onClick = onClick)
+                .background(
+                    if (isHovered) {
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)
+                    } else {
+                        androidx.compose.ui.graphics.Color.Transparent
+                    },
                 )
+                .padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Spacing.small),
+        ) {
+            Icon(
+                if (isError) Icons.Default.Close else Icons.Default.CheckCircle,
+                contentDescription = null,
+                modifier = Modifier.size(12.dp),
+                tint = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                if (showSkillName) {
+                    Text(
+                        skillDisplayName,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Text(
+                    timeLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (record.userInput.isNotBlank()) {
+                    Text(
+                        record.userInput.take(50) + if (record.userInput.length > 50) "…" else "",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
-            Text(
-                timeLabel,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
-            )
-            if (record.userInput.isNotBlank()) {
-                Text(
-                    record.userInput.take(50) + if (record.userInput.length > 50) "…" else "",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            if (isHovered) {
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(28.dp).pointerHoverIcon(PointerIcon.Hand),
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Delete record",
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
             }
         }
     }
@@ -138,6 +170,7 @@ internal fun skillsHistoryPanel(
     runHistory: List<SkillRunRecord> = emptyList(),
     filterSkillName: String? = null,
     onSelectRecord: (SkillRunRecord) -> Unit = {},
+    onDeleteRecord: (SkillRunRecord) -> Unit = {},
 ) {
     var panelWidth by remember {
         mutableStateOf(ApplicationPreferences.getSkillsSidePanelWidth().dp)
@@ -238,6 +271,7 @@ internal fun skillsHistoryPanel(
                                         record = record,
                                         showSkillName = filterSkillName == null,
                                         onClick = { onSelectRecord(record) },
+                                        onDelete = { onDeleteRecord(record) },
                                     )
                                     HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.08f))
                                 }

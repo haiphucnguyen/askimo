@@ -441,6 +441,30 @@ class SkillRepository {
         return true
     }
 
+    /**
+     * Deletes all top-level entries (files and folders) inside the skills directory,
+     * effectively removing all skills.
+     *
+     * @return Number of top-level entries deleted.
+     */
+    fun deleteAll(): Int {
+        val skillsDir = AskimoHome.skillsDir()
+        if (!Files.isDirectory(skillsDir)) return 0
+        var count = 0
+        Files.list(skillsDir).use { stream ->
+            stream.forEach { entry ->
+                if (Files.isDirectory(entry)) {
+                    Files.walk(entry).sorted(Comparator.reverseOrder()).forEach { Files.deleteIfExists(it) }
+                } else {
+                    Files.deleteIfExists(entry)
+                }
+                count++
+            }
+        }
+        log.debug("Deleted all skills ({} top-level entries)", count)
+        return count
+    }
+
     // ── Import ───────────────────────────────────────────────────────────────
 
     /**

@@ -90,6 +90,16 @@ class SkillRunHistoryRepository internal constructor(
     }
 
     /**
+     * Deletes a single run record by [id].
+     */
+    fun deleteById(id: String) {
+        transaction(database) {
+            SkillRunHistoryTable.deleteWhere { SkillRunHistoryTable.id eq id }
+        }
+        log.debug("Deleted skill run record '{}'", id)
+    }
+
+    /**
      * Deletes all run records for the given [skillPath].
      */
     fun deleteBySkillPath(skillPath: String) {

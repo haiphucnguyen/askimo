@@ -194,7 +194,7 @@ object GeminiStreamJsonEventParser {
      * Reads a JSON value (string, object, boolean, array, or number) starting at [pos].
      * Arrays and numbers are returned as raw strings.
      */
-    private fun readValue(s: String, pos: Int): Pair<Any, Int>? {
+    internal fun readValue(s: String, pos: Int): Pair<Any, Int>? {
         if (pos >= s.length) return null
         return when (s[pos]) {
             '"' -> {
