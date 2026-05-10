@@ -6,26 +6,18 @@ package io.askimo.ui.common.preferences
 
 import io.askimo.core.logging.logger
 import io.askimo.core.util.MachineId
-import java.time.Duration
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.util.UUID
 import java.util.prefs.Preferences
 import kotlin.jvm.java
 
 /**
- * Centralized application preferences management.
- * Combines tutorial, star prompt, and version tracking preferences.
+ * Resettable application preferences — UI layout, onboarding state, and device identity.
  */
 object ApplicationPreferences {
     private val prefs = Preferences.userNodeForPackage(ApplicationPreferences::class.java)
-    private val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
     private val log = logger<ApplicationPreferences>()
 
     // ── Safe preference accessors ─────────────────────────────────────────────
-    // All reads/writes are wrapped so that any IllegalArgumentException (e.g. a value
-    // containing U+0000) or BackingStoreException is caught silently. On read failure
-    // the supplied default is returned; on write failure the value is simply not stored.
 
     private fun safePut(key: String, value: String) {
         runCatching { prefs.put(key, value) }
@@ -54,161 +46,52 @@ object ApplicationPreferences {
         .onFailure { log.warn("Preferences.getInt failed for key='$key': ${it.message}") }
         .getOrDefault(default)
 
-    private fun safePutLong(key: String, value: Long) {
-        runCatching { prefs.putLong(key, value) }
-            .onFailure { log.warn("Preferences.putLong failed for key='$key': ${it.message}") }
-    }
-
-    private fun safeGetLong(key: String, default: Long): Long = runCatching { prefs.getLong(key, default) }
-        .onFailure { log.warn("Preferences.getLong failed for key='$key': ${it.message}") }
-        .getOrDefault(default)
-
     // ============================================================
-    // TUTORIAL & ONBOARDING
+    // TUTORIAL & ONBOARDING  (resettable — re-shows on clearAll)
     // ============================================================
 
     private const val TUTORIAL_COMPLETED_KEY = "tutorial_completed"
     private const val LANGUAGE_SELECTED_KEY = "language_selected"
+    private const val ONBOARDING_COMPLETED_KEY = "onboarding_completed"
 
-    /**
-     * Check if this is the first time the application is launched.
-     * Returns true if language has not been selected yet.
-     */
+    /** Returns true if language has not been selected yet (first launch). */
     fun isFirstLaunch(): Boolean = !safeGetBoolean(LANGUAGE_SELECTED_KEY, false)
 
-    /**
-     * Mark language as selected (after first-time language selection).
-     */
-    fun markLanguageSelected() {
-        safePutBoolean(LANGUAGE_SELECTED_KEY, true)
-    }
+    /** Mark language as selected after the first-time language selection screen. */
+    fun markLanguageSelected() = safePutBoolean(LANGUAGE_SELECTED_KEY, true)
 
-    /**
-     * Check if the tutorial has been completed.
-     */
+    /** Returns true if the in-app tutorial has been completed. */
     fun isTutorialCompleted(): Boolean = safeGetBoolean(TUTORIAL_COMPLETED_KEY, false)
 
-    /**
-     * Mark the tutorial as completed.
-     */
-    fun markTutorialCompleted() {
-        safePutBoolean(TUTORIAL_COMPLETED_KEY, true)
-    }
+    /** Mark the tutorial as completed. */
+    fun markTutorialCompleted() = safePutBoolean(TUTORIAL_COMPLETED_KEY, true)
+
+    /** Returns true if the onboarding wizard has been completed or skipped. */
+    fun isOnboardingCompleted(): Boolean = safeGetBoolean(ONBOARDING_COMPLETED_KEY, false)
+
+    /** Mark the onboarding wizard as completed (or skipped). */
+    fun markOnboardingCompleted() = safePutBoolean(ONBOARDING_COMPLETED_KEY, true)
 
     // ============================================================
-    // STAR PROMPT (GitHub)
+    // DEVICE IDENTITY  (machine-level, survives user resets)
     // ============================================================
 
-    private const val HAS_BEEN_PROMPTED_KEY = "star_prompt_has_been_prompted"
-    private const val FIRST_USE_DATE_KEY = "star_prompt_first_use_date"
-    private const val MINIMUM_DAYS_BEFORE_PROMPT = 7L
-
-    /**
-     * Initialize first use date if not already set.
-     * Should be called once when the app starts.
-     */
-    fun recordFirstUseIfNeeded() {
-        if (getFirstUseDate() == null) {
-            setFirstUseDate(LocalDateTime.now())
-        }
-    }
-
-    /**
-     * Check if the user has been prompted to star.
-     */
-    fun hasBeenPrompted(): Boolean = safeGetBoolean(HAS_BEEN_PROMPTED_KEY, false)
-
-    /**
-     * Mark that the user has been prompted.
-     */
-    fun markAsPrompted() {
-        safePutBoolean(HAS_BEEN_PROMPTED_KEY, true)
-    }
-
-    /**
-     * Get the first use date.
-     */
-    private fun getFirstUseDate(): LocalDateTime? {
-        val dateString = safeGet(FIRST_USE_DATE_KEY, null)
-        return dateString?.let { runCatching { LocalDateTime.parse(it, dateFormatter) }.getOrNull() }
-    }
-
-    /**
-     * Set the first use date.
-     */
-    private fun setFirstUseDate(date: LocalDateTime) {
-        safePut(FIRST_USE_DATE_KEY, date.format(dateFormatter))
-    }
-
-    /**
-     * Get days since first use.
-     */
-    fun getDaysSinceFirstUse(): Long {
-        val firstUse = getFirstUseDate() ?: return 0
-        return Duration.between(firstUse, LocalDateTime.now()).toDays()
-    }
-
-    /**
-     * Check if the user should be prompted to star.
-     * Shows the prompt after MINIMUM_DAYS_BEFORE_PROMPT days of use.
-     */
-    fun shouldShowStarPrompt(): Boolean {
-        if (hasBeenPrompted()) return false
-        return getDaysSinceFirstUse() >= MINIMUM_DAYS_BEFORE_PROMPT
-    }
-
-    // ============================================================
-    // LAUNCH COUNT — retention milestones
-    // ============================================================
-
-    private const val LAUNCH_COUNT_KEY = "launch_count"
-
-    /**
-     * Increments the persistent launch counter and returns the new value.
-     * Call once per app startup, before reading [getLaunchCount].
-     */
-    fun incrementLaunchCount(): Int {
-        val next = safeGetInt(LAUNCH_COUNT_KEY, 0) + 1
-        safePutInt(LAUNCH_COUNT_KEY, next)
-        return next
-    }
-
-    /** Returns the total number of times the app has been launched on this device. */
-    fun getLaunchCount(): Int = safeGetInt(LAUNCH_COUNT_KEY, 0)
-
-    // ============================================================
-    // ANALYTICS CONSENT
-    // ============================================================
-    private const val ANALYTICS_CONSENT_ASKED_KEY = "analytics_consent_asked"
-
-    /** True once the consent dialog has been shown (regardless of the user's answer). */
-    fun isAnalyticsConsentAsked(): Boolean = safeGetBoolean(ANALYTICS_CONSENT_ASKED_KEY, false)
-
-    /** Mark that the consent dialog has been shown so it is never shown again. */
-    fun markAnalyticsConsentAsked() {
-        safePutBoolean(ANALYTICS_CONSENT_ASKED_KEY, true)
-    }
-
-    // ============================================================
-    // CONVERSATION SYNC — machine-level only
-    // ============================================================
     private const val DEVICE_ID_KEY = "sync.device_id"
 
     /**
      * Returns a stable device identifier used for echo suppression during sync pull.
-     * This is machine-level (shared across accounts) — a single device sends one ID.
+     * Machine-level (shared across accounts on the same machine).
      */
     fun getOrCreateDeviceId(): String {
         val cached = safeGet(DEVICE_ID_KEY, null)
         if (cached != null) return cached
-
         val id = MachineId.resolve() ?: UUID.randomUUID().toString()
         safePut(DEVICE_ID_KEY, id)
         return id
     }
 
     // ============================================================
-    // UI PREFERENCES
+    // UI PREFERENCES  (resettable — safe to clear)
     // ============================================================
 
     private const val PROJECT_SIDE_PANEL_WIDTH_KEY = "ui.project_side_panel_width"
@@ -220,109 +103,55 @@ object ApplicationPreferences {
     private const val PLAN_HISTORY_SIDE_PANEL_WIDTH_KEY = "ui.plan_history_side_panel_width"
     private const val DEFAULT_PLAN_HISTORY_SIDE_PANEL_WIDTH = 320
     private const val PLAN_HISTORY_SIDE_PANEL_EXPANDED_KEY = "ui.plan_history_side_panel_expanded"
-
     private const val SKILLS_SIDE_PANEL_WIDTH_KEY = "ui.skills_side_panel_width"
     private const val DEFAULT_SKILLS_SIDE_PANEL_WIDTH = 300
     private const val SKILLS_SIDE_PANEL_EXPANDED_KEY = "ui.skills_side_panel_expanded"
+    private const val SHOW_PLANS_IN_SIDEBAR_KEY = "ui.show_plans_in_sidebar"
+    private const val SHOW_SKILLS_IN_SIDEBAR_KEY = "ui.show_skills_in_sidebar"
 
-    /**
-     * Get the project side panel width in pixels.
-     */
     fun getProjectSidePanelWidth(): Int = safeGetInt(PROJECT_SIDE_PANEL_WIDTH_KEY, DEFAULT_PROJECT_SIDE_PANEL_WIDTH)
+    fun setProjectSidePanelWidth(width: Int) = safePutInt(PROJECT_SIDE_PANEL_WIDTH_KEY, width)
 
-    /**
-     * Set the project side panel width in pixels.
-     */
-    fun setProjectSidePanelWidth(width: Int) {
-        safePutInt(PROJECT_SIDE_PANEL_WIDTH_KEY, width)
-    }
-
-    /**
-     * Get the project side panel expanded state.
-     */
     fun getProjectSidePanelExpanded(): Boolean = safeGetBoolean(PROJECT_SIDE_PANEL_EXPANDED_KEY, DEFAULT_PROJECT_SIDE_PANEL_EXPANDED)
+    fun setProjectSidePanelExpanded(expanded: Boolean) = safePutBoolean(PROJECT_SIDE_PANEL_EXPANDED_KEY, expanded)
 
     /**
-     * Set the project side panel expanded state.
-     */
-    fun setProjectSidePanelExpanded(expanded: Boolean) {
-        safePutBoolean(PROJECT_SIDE_PANEL_EXPANDED_KEY, expanded)
-    }
-
-    /**
-     * Get the file viewer height as a fraction of the RAG sources tab height (0.0–1.0).
-     * Stored as an integer percentage to avoid floating-point serialisation issues.
-     * Defaults to 0.5 (50 % of the tab height).
+     * File viewer height as a fraction of the RAG sources tab height (0.0–1.0).
+     * Stored as an integer percentage.
      */
     fun getFileViewerHeightRatio(): Float = safeGetInt(FILE_VIEWER_HEIGHT_RATIO_KEY, DEFAULT_FILE_VIEWER_HEIGHT_RATIO) / 100f
+    fun setFileViewerHeightRatio(ratio: Float) = safePutInt(FILE_VIEWER_HEIGHT_RATIO_KEY, (ratio * 100).toInt().coerceIn(20, 80))
 
-    /**
-     * Persist the file viewer height ratio (0.0–1.0).
-     */
-    fun setFileViewerHeightRatio(ratio: Float) {
-        safePutInt(FILE_VIEWER_HEIGHT_RATIO_KEY, (ratio * 100).toInt().coerceIn(20, 80))
-    }
-
-    /**
-     * Get the plan history side panel width in pixels.
-     */
     fun getPlanHistorySidePanelWidth(): Int = safeGetInt(PLAN_HISTORY_SIDE_PANEL_WIDTH_KEY, DEFAULT_PLAN_HISTORY_SIDE_PANEL_WIDTH)
+    fun setPlanHistorySidePanelWidth(width: Int) = safePutInt(PLAN_HISTORY_SIDE_PANEL_WIDTH_KEY, width)
 
-    /**
-     * Set the plan history side panel width in pixels.
-     */
-    fun setPlanHistorySidePanelWidth(width: Int) {
-        safePutInt(PLAN_HISTORY_SIDE_PANEL_WIDTH_KEY, width)
-    }
-
-    /**
-     * Get the plan history side panel expanded state.
-     */
     fun getPlanHistorySidePanelExpanded(): Boolean = safeGetBoolean(PLAN_HISTORY_SIDE_PANEL_EXPANDED_KEY, true)
-
-    /**
-     * Set the plan history side panel expanded state.
-     */
-    fun setPlanHistorySidePanelExpanded(expanded: Boolean) {
-        safePutBoolean(PLAN_HISTORY_SIDE_PANEL_EXPANDED_KEY, expanded)
-    }
+    fun setPlanHistorySidePanelExpanded(expanded: Boolean) = safePutBoolean(PLAN_HISTORY_SIDE_PANEL_EXPANDED_KEY, expanded)
 
     fun getSkillsSidePanelWidth(): Int = safeGetInt(SKILLS_SIDE_PANEL_WIDTH_KEY, DEFAULT_SKILLS_SIDE_PANEL_WIDTH)
-
-    fun setSkillsSidePanelWidth(width: Int) {
-        safePutInt(SKILLS_SIDE_PANEL_WIDTH_KEY, width)
-    }
+    fun setSkillsSidePanelWidth(width: Int) = safePutInt(SKILLS_SIDE_PANEL_WIDTH_KEY, width)
 
     fun getSkillsSidePanelExpanded(): Boolean = safeGetBoolean(SKILLS_SIDE_PANEL_EXPANDED_KEY, true)
+    fun setSkillsSidePanelExpanded(expanded: Boolean) = safePutBoolean(SKILLS_SIDE_PANEL_EXPANDED_KEY, expanded)
 
-    fun setSkillsSidePanelExpanded(expanded: Boolean) {
-        safePutBoolean(SKILLS_SIDE_PANEL_EXPANDED_KEY, expanded)
-    }
+    fun getShowPlansInSidebar(): Boolean = safeGetBoolean(SHOW_PLANS_IN_SIDEBAR_KEY, true)
+    fun setShowPlansInSidebar(show: Boolean) = safePutBoolean(SHOW_PLANS_IN_SIDEBAR_KEY, show)
 
-    private const val DISMISSED_UPDATE_VERSION_KEY = "update.dismissed_version"
+    fun getShowSkillsInSidebar(): Boolean = safeGetBoolean(SHOW_SKILLS_IN_SIDEBAR_KEY, true)
+    fun setShowSkillsInSidebar(show: Boolean) = safePutBoolean(SHOW_SKILLS_IN_SIDEBAR_KEY, show)
 
-    /**
-     * Returns the latest version string the user has already dismissed,
-     * or null if they have never dismissed an update notification.
-     */
-    fun getDismissedUpdateVersion(): String? = safeGet(DISMISSED_UPDATE_VERSION_KEY, null)
-
-    /**
-     * Persists [version] so the update popup is not auto-shown again for this release.
-     * Call this when the user dismisses the notification popup or banner.
-     */
-    fun setDismissedUpdateVersion(version: String) {
-        safePut(DISMISSED_UPDATE_VERSION_KEY, version)
-    }
+    // ============================================================
+    // LIFECYCLE
+    // ============================================================
 
     /**
-     * Clears ALL application preferences, effectively resetting the app to a
-     * fresh-install state. Useful for testing onboarding flows and first-launch
-     * behaviour without uninstalling. The running process is NOT restarted.
+     * Clears ALL resettable application preferences (UI layout, onboarding state).
+     * Non-resettable fields (launch count, first-use date, analytics consent,
+     * update dismissals) are stored in [AccountPreferences] and are NOT affected.
      */
     fun clearAll() {
         runCatching { prefs.clear() }
             .onFailure { log.warn("Preferences.clear() failed: ${it.message}") }
-        log.info("All application preferences cleared")
+        log.info("All resettable application preferences cleared")
     }
 }

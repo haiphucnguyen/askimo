@@ -28,7 +28,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -78,6 +77,7 @@ import io.askimo.core.logging.LogbackConfigurator
 import io.askimo.core.logging.currentFileLogger
 import io.askimo.core.mcp.McpInstanceService
 import io.askimo.core.providers.ModelProvider
+import io.askimo.core.user.domain.UserProfile
 import io.askimo.core.util.AskimoHome
 import io.askimo.core.util.AskimoHomeMigration
 import io.askimo.core.util.PersonalAskimoHome
@@ -91,10 +91,7 @@ import io.askimo.desktop.settings.providerSelectionDialog
 import io.askimo.desktop.settings.settingsViewWithSidebar
 import io.askimo.desktop.shell.footerBar
 import io.askimo.desktop.shell.navigationSidebar
-import io.askimo.desktop.tutorial.languageSelectionDialog
-import io.askimo.desktop.tutorial.tutorialWizardDialog
 import io.askimo.desktop.user.userProfileDialog
-import io.askimo.desktop.user.welcomeProfileDialog
 import io.askimo.ui.chat.ChatViewModel
 import io.askimo.ui.chat.chatView
 import io.askimo.ui.common.components.dangerButton
@@ -106,6 +103,7 @@ import io.askimo.ui.common.i18n.provideLocalization
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.keymap.KeyMapManager
 import io.askimo.ui.common.keymap.KeyMapManager.AppShortcut
+import io.askimo.ui.common.preferences.AccountPreferences
 import io.askimo.ui.common.preferences.ApplicationPreferences
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.BackgroundImage
@@ -126,6 +124,7 @@ import io.askimo.ui.common.theme.createCustomTypography
 import io.askimo.ui.common.ui.util.CustomUriHandler
 import io.askimo.ui.common.ui.util.FileDialogUtils
 import io.askimo.ui.discover.discoverView
+import io.askimo.ui.onboarding.onboardingWizardDialog
 import io.askimo.ui.plan.PlansViewModel
 import io.askimo.ui.plan.planDetailView
 import io.askimo.ui.plan.plansGalleryView
@@ -146,7 +145,6 @@ import io.askimo.ui.shell.ErrorDialogState
 import io.askimo.ui.shell.EventLogDockPosition
 import io.askimo.ui.shell.NativeMenuBar
 import io.askimo.ui.shell.UpdateViewModel
-import io.askimo.ui.shell.analyticsConsentDialog
 import io.askimo.ui.shell.eventLogPanel
 import io.askimo.ui.shell.eventLogWindow
 import io.askimo.ui.shell.globalErrorHandler
@@ -177,17 +175,10 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
-import java.util.concurrent.atomic.AtomicInteger
 import kotlin.system.exitProcess
 import kotlin.time.Duration.Companion.milliseconds
 
 private val log = currentFileLogger()
-
-/** Show the analytics consent dialog after this many completed LLM responses. */
-private const val ANALYTICS_CONSENT_THRESHOLD = 5
-
-/** Tracks total LLM responses in this session; read by onCloseRequest for session-end analytics. */
-private val sessionMessageCount = AtomicInteger(0)
 
 fun main() {
     AskimoHome.register(PersonalAskimoHome)
@@ -223,7 +214,10 @@ fun main() {
         Window(
             icon = icon,
             onCloseRequest = {
-                Analytics.trackSessionEnd(sessionMessageCount.get())
+                val messageCount = runCatching {
+                    AppContext.getInstance().telemetry.metricsFlow.value.llmCallsByProvider.values.sum()
+                }.getOrDefault(0)
+                Analytics.trackSessionEnd(messageCount)
                 Analytics.shutdown()
                 exitApplication()
             },
@@ -248,6 +242,8 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     var isSidebarExpanded by remember { mutableStateOf(true) }
     var isProjectsExpanded by remember { mutableStateOf(true) }
     var isSessionsExpanded by remember { mutableStateOf(true) }
+    var showPlansInSidebar by remember { mutableStateOf(ApplicationPreferences.getShowPlansInSidebar()) }
+    var showSkillsInSidebar by remember { mutableStateOf(ApplicationPreferences.getShowSkillsInSidebar()) }
     var selectedProjectId by remember { mutableStateOf<String?>(null) }
     // Sidebar width as a fraction of screen width (0.0 to 1.0) - load from preferences
     var sidebarWidthFraction by remember { mutableStateOf(ThemePreferences.getMainSidebarWidthFraction()) }
@@ -265,7 +261,6 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     var terminalPanelSize by remember { mutableStateOf(300.dp) } // Default size
     var pendingTerminalCommand by remember { mutableStateOf<PendingTerminalCommand?>(null) }
     var showStarPromptDialog by remember { mutableStateOf(false) }
-    var showAnalyticsConsentDialog by remember { mutableStateOf(false) }
     var showNewProjectDialog by remember { mutableStateOf(false) }
     var showEditProjectDialog by remember { mutableStateOf(false) }
     var showGlobalSearchDialog by remember { mutableStateOf(false) }
@@ -279,13 +274,11 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     var pendingImportBackupPath by remember { mutableStateOf<Path?>(null) }
 
     // User Profile
-    var userProfile by remember { mutableStateOf<io.askimo.core.user.domain.UserProfile?>(null) }
+    var userProfile by remember { mutableStateOf<UserProfile?>(null) }
     var showUserProfileDialog by remember { mutableStateOf(false) }
-    var showWelcomeProfileDialog by remember { mutableStateOf(false) }
 
-    // Tutorial
-    var showLanguageSelectionDialog by remember { mutableStateOf(false) }
-    var showTutorialWizard by remember { mutableStateOf(false) }
+    // Onboarding
+    var showOnboardingWizard by remember { mutableStateOf(false) }
 
     // Store chat state per session for restoration when switching
     val sessionChatStates = remember { mutableStateMapOf<String, ChatViewState>() }
@@ -298,15 +291,12 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
             profileRepo.getProfile()
         }
 
-        // Check if this is the very first launch (language not selected yet)
-        if (ApplicationPreferences.isFirstLaunch()) {
-            showLanguageSelectionDialog = true
+        if (!ApplicationPreferences.isOnboardingCompleted()) {
+            // Seed default directives on first launch
             withContext(Dispatchers.IO) {
                 DatabaseManager.getInstance().getChatDirectiveRepository().seedDefaultDirectives()
             }
-        } else if (userProfile?.name.isNullOrBlank()) {
-            // Language already selected, but profile not completed
-            showWelcomeProfileDialog = true
+            showOnboardingWizard = true
         }
 
         // Set user profile directive in AppContext for AI personalization
@@ -468,10 +458,10 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
 
     // Check if we should show star prompt (once on startup)
     LaunchedEffect(Unit) {
-        ApplicationPreferences.recordFirstUseIfNeeded()
-        val launchCount = ApplicationPreferences.incrementLaunchCount()
+        AccountPreferences.device().recordFirstUseIfNeeded()
+        val launchCount = AccountPreferences.device().incrementLaunchCount()
         Analytics.trackRetentionMilestone(launchCount)
-        if (ApplicationPreferences.shouldShowStarPrompt()) {
+        if (AccountPreferences.device().shouldShowStarPrompt()) {
             showStarPromptDialog = true
             Analytics.track(AnalyticsEvent.STAR_PROMPT_SHOWN)
         }
@@ -500,17 +490,6 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
 
     // Watch LLM call count from the user-facing telemetry — show the consent dialog once
     // after ANALYTICS_CONSENT_THRESHOLD completed responses.
-    val telemetryMetrics by appContext.telemetry.metricsFlow.collectAsState()
-    LaunchedEffect(telemetryMetrics.llmCallsByProvider) {
-        val totalCalls = telemetryMetrics.llmCallsByProvider.values.sum()
-        sessionMessageCount.set(totalCalls)
-        if (totalCalls >= ANALYTICS_CONSENT_THRESHOLD &&
-            !ApplicationPreferences.isAnalyticsConsentAsked() &&
-            !Analytics.isEnabled
-        ) {
-            showAnalyticsConsentDialog = true
-        }
-    }
 
     // Theme state
     val themeState = rememberThemeState()
@@ -614,8 +593,8 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                 onImportBackup = {
                     importBackup()
                 },
-                onShowTutorial = {
-                    showTutorialWizard = true
+                onShowGettingStarted = {
+                    showOnboardingWizard = true
                 },
                 onOpenTerminal = {
                     val opening = !showTerminalPanel
@@ -625,6 +604,18 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                 onClearPreferences = {
                     showClearPreferencesDialog = true
                 },
+                onTogglePlans = {
+                    showPlansInSidebar = !showPlansInSidebar
+                    ApplicationPreferences.setShowPlansInSidebar(showPlansInSidebar)
+                    NativeMenuBar.updatePlansMenuLabel(showPlansInSidebar)
+                },
+                onToggleSkills = {
+                    showSkillsInSidebar = !showSkillsInSidebar
+                    ApplicationPreferences.setShowSkillsInSidebar(showSkillsInSidebar)
+                    NativeMenuBar.updateSkillsMenuLabel(showSkillsInSidebar)
+                },
+                isPlansVisible = showPlansInSidebar,
+                isSkillsVisible = showSkillsInSidebar,
             )
         }
     }
@@ -846,6 +837,8 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                         currentSessionId = activeSessionId,
                                                         currentProjectId = selectedProjectId,
                                                         userProfile = userProfile,
+                                                        showPlansInSidebar = showPlansInSidebar,
+                                                        showSkillsInSidebar = showSkillsInSidebar,
                                                         onToggleExpand = { isSidebarExpanded = !isSidebarExpanded },
                                                         onNewChat = {
                                                             chatViewModel?.clearChat()
@@ -1358,76 +1351,33 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                         }
                     }
 
-                    // Welcome Profile Dialog (First Run)
-                    if (showWelcomeProfileDialog) {
-                        welcomeProfileDialog(
-                            onComplete = { newProfile ->
+                    // Onboarding Wizard Dialog
+                    if (showOnboardingWizard) {
+                        onboardingWizardDialog(
+                            initialName = userProfile?.name ?: "",
+                            initialOccupation = userProfile?.occupation ?: "",
+                            onComplete = { locale, analyticsAccepted, name, occupation ->
                                 scope.launch {
-                                    val profileRepo = DatabaseManager.getInstance().getUserProfileRepository()
-                                    withContext(Dispatchers.IO) {
-                                        profileRepo.saveProfile(newProfile)
+                                    ThemePreferences.setLocale(locale)
+                                    if (analyticsAccepted) Analytics.optIn() else Analytics.optOut()
+                                    if (name.isNotBlank() || occupation.isNotBlank()) {
+                                        val profileRepo = DatabaseManager.getInstance().getUserProfileRepository()
+                                        val updated = (
+                                            userProfile ?: UserProfile(
+                                                id = UUID.randomUUID().toString(),
+                                            )
+                                            ).copy(
+                                            name = name.takeIf { it.isNotBlank() },
+                                            occupation = occupation.takeIf { it.isNotBlank() },
+                                        )
+                                        withContext(Dispatchers.IO) { profileRepo.saveProfile(updated) }
+                                        userProfile = updated
+                                        val ctx = withContext(Dispatchers.IO) { profileRepo.getPersonalizationContext() }
+                                        AppContext.getInstance().setUserProfileDirective(ctx)
                                     }
-                                    userProfile = newProfile
-
-                                    // Update AppContext with personalization directive
-                                    val personalizationContext = withContext(Dispatchers.IO) {
-                                        profileRepo.getPersonalizationContext()
-                                    }
-                                    AppContext.getInstance().setUserProfileDirective(personalizationContext)
-
-                                    showWelcomeProfileDialog = false
-
-                                    // Show tutorial after profile setup (only if not completed yet)
-                                    if (!ApplicationPreferences.isTutorialCompleted()) {
-                                        showTutorialWizard = true
-                                    }
+                                    ApplicationPreferences.markOnboardingCompleted()
+                                    showOnboardingWizard = false
                                 }
-                            },
-                            onSkip = {
-                                // User chose to skip - create default profile with no name
-                                showWelcomeProfileDialog = false
-
-                                // Show tutorial even if profile was skipped (only if not completed yet)
-                                if (!ApplicationPreferences.isTutorialCompleted()) {
-                                    showTutorialWizard = true
-                                }
-                            },
-                        )
-                    }
-
-                    // Language Selection Dialog (First Launch Only)
-                    if (showLanguageSelectionDialog) {
-                        languageSelectionDialog(
-                            onLanguageSelected = { locale ->
-                                ThemePreferences.setLocale(locale)
-                                ApplicationPreferences.markLanguageSelected()
-                                showLanguageSelectionDialog = false
-
-                                // After language selection, check if we need to show profile dialog
-                                scope.launch {
-                                    val profileRepo = DatabaseManager.getInstance().getUserProfileRepository()
-                                    val profile = withContext(Dispatchers.IO) {
-                                        profileRepo.getProfile()
-                                    }
-
-                                    if (profile.name.isNullOrBlank()) {
-                                        showWelcomeProfileDialog = true
-                                    }
-                                }
-                            },
-                        )
-                    }
-
-                    // Tutorial Wizard Dialog
-                    if (showTutorialWizard) {
-                        tutorialWizardDialog(
-                            onComplete = {
-                                ApplicationPreferences.markTutorialCompleted()
-                                showTutorialWizard = false
-                            },
-                            onSkip = {
-                                ApplicationPreferences.markTutorialCompleted()
-                                showTutorialWizard = false
                             },
                         )
                     }
@@ -1608,12 +1558,12 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                         starPromptDialog(
                             onDismiss = {
                                 Analytics.track(AnalyticsEvent.STAR_PROMPT_DISMISSED)
-                                ApplicationPreferences.markAsPrompted()
+                                AccountPreferences.device().markAsPrompted()
                                 showStarPromptDialog = false
                             },
                             onStar = {
                                 Analytics.track(AnalyticsEvent.STAR_PROMPT_ACCEPTED)
-                                ApplicationPreferences.markAsPrompted()
+                                AccountPreferences.device().markAsPrompted()
                                 showStarPromptDialog = false
                                 runCatching {
                                     if (Desktop.isDesktopSupported()) {
@@ -1622,21 +1572,6 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                         )
                                     }
                                 }.onFailure { log.error("Can not open the browser", it) }
-                            },
-                        )
-                    }
-
-                    // Analytics Consent Dialog (One-time after meaningful usage)
-                    if (showAnalyticsConsentDialog) {
-                        analyticsConsentDialog(
-                            onDecline = {
-                                ApplicationPreferences.markAnalyticsConsentAsked()
-                                showAnalyticsConsentDialog = false
-                            },
-                            onAccept = {
-                                ApplicationPreferences.markAnalyticsConsentAsked()
-                                showAnalyticsConsentDialog = false
-                                Analytics.optIn()
                             },
                         )
                     }
@@ -1775,7 +1710,7 @@ fun mainContent(
     onChatStateChange: (TextFieldValue, List<FileAttachmentDTO>, ChatMessageDTO?) -> Unit,
     selectedProjectId: String?,
     userAvatarPath: String? = null,
-    userProfile: io.askimo.core.user.domain.UserProfile? = null,
+    userProfile: UserProfile? = null,
     totalMcpServers: Int = 0,
     chatSessionRepository: io.askimo.core.chat.repository.ChatSessionRepository,
     projectRepository: io.askimo.core.chat.repository.ProjectRepository,

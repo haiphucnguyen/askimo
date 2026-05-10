@@ -9,7 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.askimo.core.logging.logger
 import io.askimo.core.service.UpdateInfo
-import io.askimo.ui.common.preferences.ApplicationPreferences
+import io.askimo.ui.common.preferences.AccountPreferences
 import io.askimo.ui.service.UpdateService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -92,7 +92,7 @@ class UpdateViewModel(
      * auto-popup never appears again for this specific release.
      */
     fun skipThisVersion() {
-        releaseInfo?.latestVersion?.let { ApplicationPreferences.setDismissedUpdateVersion(it) }
+        releaseInfo?.latestVersion?.let { AccountPreferences.device().setDismissedUpdateVersion(it) }
         showUpdateDialog = false
     }
 

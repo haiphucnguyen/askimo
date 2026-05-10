@@ -110,6 +110,9 @@ fun navigationSidebar(
     isSkillsSelected: Boolean = false,
     isProjectsSelected: Boolean = false,
     isSessionsSelected: Boolean = false,
+    // Visibility toggles controlled from View menu
+    showPlansInSidebar: Boolean = true,
+    showSkillsInSidebar: Boolean = true,
     // Session/project state
     isSessionsExpanded: Boolean,
     projectsViewModel: ProjectsViewModel,
@@ -149,6 +152,8 @@ fun navigationSidebar(
             isSkillsSelected = isSkillsSelected,
             isProjectsSelected = isProjectsSelected,
             isSessionsSelected = isSessionsSelected,
+            showPlansInSidebar = showPlansInSidebar,
+            showSkillsInSidebar = showSkillsInSidebar,
             isSessionsExpanded = isSessionsExpanded,
             projectsViewModel = projectsViewModel,
             sessionsViewModel = sessionsViewModel,
@@ -179,6 +184,8 @@ fun navigationSidebar(
             isSkillsSelected = isSkillsSelected,
             isProjectsSelected = isProjectsSelected,
             isSessionsSelected = isSessionsSelected,
+            showPlansInSidebar = showPlansInSidebar,
+            showSkillsInSidebar = showSkillsInSidebar,
             onToggleExpand = onToggleExpand,
             onNewChat = onNewChat,
             onToggleProjects = onToggleProjects,
@@ -201,6 +208,8 @@ private fun expandedNavigationSidebar(
     isSkillsSelected: Boolean,
     isProjectsSelected: Boolean,
     isSessionsSelected: Boolean,
+    showPlansInSidebar: Boolean,
+    showSkillsInSidebar: Boolean,
     isSessionsExpanded: Boolean,
     projectsViewModel: ProjectsViewModel,
     sessionsViewModel: SessionsViewModel,
@@ -291,28 +300,32 @@ private fun expandedNavigationSidebar(
             )
 
             // Plans
-            NavigationDrawerItem(
-                icon = { Icon(Icons.Default.PlayCircle, contentDescription = null) },
-                label = { Text(stringResource("plans.nav.title"), style = MaterialTheme.typography.labelLarge) },
-                selected = isPlansSelected,
-                onClick = onNavigateToPlans,
-                modifier = Modifier
-                    .padding(horizontal = (12 * fontScale).dp)
-                    .pointerHoverIcon(PointerIcon.Hand),
-                colors = AppComponents.navigationDrawerItemColors(),
-            )
+            if (showPlansInSidebar) {
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.PlayCircle, contentDescription = null) },
+                    label = { Text(stringResource("plans.nav.title"), style = MaterialTheme.typography.labelLarge) },
+                    selected = isPlansSelected,
+                    onClick = onNavigateToPlans,
+                    modifier = Modifier
+                        .padding(horizontal = (12 * fontScale).dp)
+                        .pointerHoverIcon(PointerIcon.Hand),
+                    colors = AppComponents.navigationDrawerItemColors(),
+                )
+            }
 
             // Skills
-            NavigationDrawerItem(
-                icon = { Icon(Icons.Default.Extension, contentDescription = null) },
-                label = { Text(stringResource("skills.nav.title"), style = MaterialTheme.typography.labelLarge) },
-                selected = isSkillsSelected,
-                onClick = onNavigateToSkills,
-                modifier = Modifier
-                    .padding(horizontal = (12 * fontScale).dp)
-                    .pointerHoverIcon(PointerIcon.Hand),
-                colors = AppComponents.navigationDrawerItemColors(),
-            )
+            if (showSkillsInSidebar) {
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.Extension, contentDescription = null) },
+                    label = { Text(stringResource("skills.nav.title"), style = MaterialTheme.typography.labelLarge) },
+                    selected = isSkillsSelected,
+                    onClick = onNavigateToSkills,
+                    modifier = Modifier
+                        .padding(horizontal = (12 * fontScale).dp)
+                        .pointerHoverIcon(PointerIcon.Hand),
+                    colors = AppComponents.navigationDrawerItemColors(),
+                )
+            }
 
             // Pinned section (starred projects + starred sessions)
             pinnedSection(
@@ -406,6 +419,8 @@ private fun collapsedNavigationSidebar(
     isSkillsSelected: Boolean,
     isProjectsSelected: Boolean,
     isSessionsSelected: Boolean,
+    showPlansInSidebar: Boolean,
+    showSkillsInSidebar: Boolean,
     onToggleExpand: () -> Unit,
     onNewChat: () -> Unit,
     onToggleProjects: () -> Unit,
@@ -481,25 +496,29 @@ private fun collapsedNavigationSidebar(
             }
 
             themedTooltip(text = stringResource("plans.nav.title")) {
-                NavigationRailItem(
-                    icon = { Icon(Icons.Default.PlayCircle, contentDescription = stringResource("plans.nav.title")) },
-                    label = null,
-                    selected = isPlansSelected,
-                    onClick = onNavigateToPlans,
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    colors = AppComponents.navigationRailItemColors(),
-                )
+                if (showPlansInSidebar) {
+                    NavigationRailItem(
+                        icon = { Icon(Icons.Default.PlayCircle, contentDescription = stringResource("plans.nav.title")) },
+                        label = null,
+                        selected = isPlansSelected,
+                        onClick = onNavigateToPlans,
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        colors = AppComponents.navigationRailItemColors(),
+                    )
+                }
             }
 
             themedTooltip(text = stringResource("skills.nav.title")) {
-                NavigationRailItem(
-                    icon = { Icon(Icons.Default.Extension, contentDescription = stringResource("skills.nav.title")) },
-                    label = null,
-                    selected = isSkillsSelected,
-                    onClick = onNavigateToSkills,
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    colors = AppComponents.navigationRailItemColors(),
-                )
+                if (showSkillsInSidebar) {
+                    NavigationRailItem(
+                        icon = { Icon(Icons.Default.Extension, contentDescription = stringResource("skills.nav.title")) },
+                        label = null,
+                        selected = isSkillsSelected,
+                        onClick = onNavigateToSkills,
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        colors = AppComponents.navigationRailItemColors(),
+                    )
+                }
             }
 
             themedTooltip(text = stringResource("project.title")) {

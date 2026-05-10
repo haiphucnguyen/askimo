@@ -34,6 +34,17 @@ object NativeMenuBar {
         updateSidebarMenuItem?.invoke(isSidebarExpanded)
     }
 
+    private var updatePlansMenuItem: ((Boolean) -> Unit)? = null
+    private var updateSkillsMenuItem: ((Boolean) -> Unit)? = null
+
+    fun updatePlansMenuLabel(isVisible: Boolean) {
+        updatePlansMenuItem?.invoke(isVisible)
+    }
+
+    fun updateSkillsMenuLabel(isVisible: Boolean) {
+        updateSkillsMenuItem?.invoke(isVisible)
+    }
+
     fun setup(
         frameWindowScope: FrameWindowScope,
         onShowAbout: () -> Unit,
@@ -51,15 +62,19 @@ object NativeMenuBar {
         onInvalidateCaches: () -> Unit,
         onExportBackup: () -> Unit,
         onImportBackup: () -> Unit,
-        onShowTutorial: () -> Unit,
+        onShowGettingStarted: () -> Unit,
         onOpenTerminal: () -> Unit,
         onClearPreferences: () -> Unit = {},
         onClearAccountPreferences: () -> Unit = {},
+        onTogglePlans: (() -> Unit)? = null,
+        onToggleSkills: (() -> Unit)? = null,
+        isPlansVisible: Boolean = true,
+        isSkillsVisible: Boolean = true,
     ) {
         val window = frameWindowScope.window
 
         // Setup AWT menu bar for all platforms (includes Documentation)
-        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates, onEnterFullScreen, onNavigateToSessions, onNavigateToProjects, onNavigateToDiscover, onToggleSidebar, onInvalidateCaches, onExportBackup, onImportBackup, onShowTutorial, onOpenTerminal, onClearPreferences, onClearAccountPreferences)
+        setupAWTMenuBar(window, onShowAbout, onNewChat, onNewProject, onSearchInSessions, onShowSettings, onShowEventLog, onCheckForUpdates, onEnterFullScreen, onNavigateToSessions, onNavigateToProjects, onNavigateToDiscover, onToggleSidebar, onInvalidateCaches, onExportBackup, onImportBackup, onShowGettingStarted, onOpenTerminal, onClearPreferences, onClearAccountPreferences, onTogglePlans, onToggleSkills, isPlansVisible, isSkillsVisible)
 
         // On macOS, also register the About handler for the app menu
         if (Platform.isMac) {
@@ -98,10 +113,14 @@ object NativeMenuBar {
         onInvalidateCaches: () -> Unit,
         onExportBackup: () -> Unit,
         onImportBackup: () -> Unit,
-        onShowTutorial: () -> Unit,
+        onShowGettingStarted: () -> Unit,
         onOpenTerminal: () -> Unit,
         onClearPreferences: () -> Unit,
         onClearAccountPreferences: () -> Unit,
+        onTogglePlans: (() -> Unit)?,
+        onToggleSkills: (() -> Unit)?,
+        isPlansVisible: Boolean,
+        isSkillsVisible: Boolean,
     ) {
         if (window is Frame) {
             val menuBar = MenuBar()
@@ -322,17 +341,35 @@ object NativeMenuBar {
             // Separator after Appearance group
             viewMenu.addSeparator()
 
-            // Discover View
-            val discoverViewItem = MenuItem(
+            // Discover — standalone menu item
+            val discoverItemGo = MenuItem(
                 LocalizationManager.getString("menu.view.discover"),
-                MenuShortcut(KeyEvent.VK_D), // Ctrl+D (or Cmd+D on Mac)
+                MenuShortcut(KeyEvent.VK_D),
             )
-            discoverViewItem.addActionListener(
-                ActionListener {
-                    onNavigateToDiscover()
-                },
-            )
-            viewMenu.add(discoverViewItem)
+            discoverItemGo.addActionListener(ActionListener { onNavigateToDiscover() })
+            viewMenu.add(discoverItemGo)
+
+            // Plans toggle
+            val plansToggleItem = MenuItem("")
+            val updatePlansMenuItemFunc: (Boolean) -> Unit = { visible ->
+                plansToggleItem.label = (if (visible) "✓ " else "  ") +
+                    LocalizationManager.getString("menu.view.discover.plans")
+            }
+            updatePlansMenuItem = updatePlansMenuItemFunc
+            updatePlansMenuItemFunc(isPlansVisible)
+            plansToggleItem.addActionListener(ActionListener { onTogglePlans?.invoke() })
+            viewMenu.add(plansToggleItem)
+
+            // Skills toggle
+            val skillsToggleItem = MenuItem("")
+            val updateSkillsMenuItemFunc: (Boolean) -> Unit = { visible ->
+                skillsToggleItem.label = (if (visible) "✓ " else "  ") +
+                    LocalizationManager.getString("menu.view.discover.skills")
+            }
+            updateSkillsMenuItem = updateSkillsMenuItemFunc
+            updateSkillsMenuItemFunc(isSkillsVisible)
+            skillsToggleItem.addActionListener(ActionListener { onToggleSkills?.invoke() })
+            viewMenu.add(skillsToggleItem)
 
             viewMenu.addSeparator()
 
@@ -423,14 +460,14 @@ object NativeMenuBar {
             )
             helpMenu.add(docsItem)
 
-            // Tutorial
-            val tutorialItem = MenuItem(LocalizationManager.getString("menu.help.tutorial"))
-            tutorialItem.addActionListener(
+            // Getting started
+            val gettingStartedItem = MenuItem(LocalizationManager.getString("menu.help.gettingstarted"))
+            gettingStartedItem.addActionListener(
                 ActionListener {
-                    onShowTutorial()
+                    onShowGettingStarted()
                 },
             )
-            helpMenu.add(tutorialItem)
+            helpMenu.add(gettingStartedItem)
 
             helpMenu.addSeparator()
 

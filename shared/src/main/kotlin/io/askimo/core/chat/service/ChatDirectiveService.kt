@@ -14,37 +14,6 @@ class ChatDirectiveService(
     private val repository: ChatDirectiveRepository,
 ) {
     /**
-     * Build a system prompt by combining selected directives.
-     * @param directiveIds List of directive IDs to include
-     * @return Combined system prompt text
-     */
-    fun buildSystemPrompt(
-        directiveIds: List<String> = emptyList(),
-    ): String {
-        val selected = if (directiveIds.isNotEmpty()) {
-            repository.getByIds(directiveIds)
-        } else {
-            emptyList()
-        }
-
-        if (selected.isEmpty()) {
-            return "You are a helpful AI assistant."
-        }
-
-        return buildString {
-            appendLine("You are a helpful AI assistant. Follow these session directives:")
-            appendLine()
-            selected.forEach { directive ->
-                appendLine("## ${directive.name}")
-                appendLine(directive.content.trim())
-                appendLine()
-            }
-            appendLine("---")
-            appendLine("Apply the above directives consistently throughout this conversation.")
-        }.trim()
-    }
-
-    /**
      * Create a new directive.
      */
     fun createDirective(

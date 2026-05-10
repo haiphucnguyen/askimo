@@ -59,7 +59,7 @@ import io.askimo.core.util.TimeUtil.formatInstantDisplay
 import io.askimo.ui.common.components.linkButton
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.i18n.stringResource
-import io.askimo.ui.common.preferences.ApplicationPreferences
+import io.askimo.ui.common.preferences.AccountPreferences
 import io.askimo.ui.common.theme.AppComponents
 import java.awt.Desktop
 import java.net.URI
@@ -100,7 +100,7 @@ fun notificationIcon(onShowUpdateDetails: () -> Unit) {
             // Auto-open the notification popup when a new version is detected,
             // unless the user has already dismissed this exact version.
             if (event is UpdateAvailableEvent &&
-                ApplicationPreferences.getDismissedUpdateVersion() != event.latestVersion
+                AccountPreferences.device().getDismissedUpdateVersion() != event.latestVersion
             ) {
                 showEventPopup = true
             }
@@ -114,7 +114,7 @@ fun notificationIcon(onShowUpdateDetails: () -> Unit) {
                     // Closing — persist dismissed version
                     val latestUpdate = events.firstNotNullOfOrNull { it.event as? UpdateAvailableEvent }
                     if (latestUpdate != null) {
-                        ApplicationPreferences.setDismissedUpdateVersion(latestUpdate.latestVersion)
+                        AccountPreferences.device().setDismissedUpdateVersion(latestUpdate.latestVersion)
                     }
                 }
                 showEventPopup = !showEventPopup
@@ -161,7 +161,7 @@ fun notificationIcon(onShowUpdateDetails: () -> Unit) {
                     // Persist the latest update version so the popup won't auto-reopen for it
                     val latestUpdate = events.mapNotNull { it.event as? UpdateAvailableEvent }.firstOrNull()
                     if (latestUpdate != null) {
-                        ApplicationPreferences.setDismissedUpdateVersion(latestUpdate.latestVersion)
+                        AccountPreferences.device().setDismissedUpdateVersion(latestUpdate.latestVersion)
                     }
                 },
             ) {
