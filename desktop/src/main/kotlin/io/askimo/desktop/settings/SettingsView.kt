@@ -54,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
+import io.askimo.ui.common.theme.LocalBackgroundActive
 import io.askimo.ui.common.theme.ThemePreferences
 import io.askimo.ui.settings.appearanceSettingsSection
 import io.askimo.ui.settings.generalSettingsSection
@@ -83,12 +84,13 @@ fun settingsViewWithSidebar(
 ) {
     // Sidebar width as a fraction of screen width (0.0 to 1.0) - load from preferences
     var sidebarWidthFraction by remember { mutableStateOf(ThemePreferences.getSettingsSidebarWidthFraction()) }
+    val backgroundActive = LocalBackgroundActive.current
 
     // Settings view - full screen replacement with top header bar
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(if (backgroundActive) Transparent else MaterialTheme.colorScheme.background),
     ) {
         // Top Header Bar (full width)
         Row(

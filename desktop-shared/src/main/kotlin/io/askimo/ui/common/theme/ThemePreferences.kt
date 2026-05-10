@@ -23,7 +23,7 @@ object ThemePreferences {
      * Maximum width for the main content area (chat messages, settings panels, etc.).
      * Keeping this consistent prevents lines from becoming too long on wide displays.
      */
-    val CONTENT_MAX_WIDTH = 900.dp
+    val CONTENT_MAX_WIDTH = 1200.dp
 
     private const val THEME_MODE_KEY = "theme_mode"
     private const val FONT_FAMILY_KEY = "font_family"
