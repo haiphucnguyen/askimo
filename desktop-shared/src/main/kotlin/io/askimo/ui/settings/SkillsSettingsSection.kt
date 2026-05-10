@@ -6,6 +6,7 @@ package io.askimo.ui.settings
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ScrollbarStyle
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
@@ -130,6 +131,9 @@ fun skillsSettingsSection() {
     var newItemParentPath by remember { mutableStateOf("") } // context path for in-folder creation
     var showNewSkillInFolderDialog by remember { mutableStateOf(false) }
     var showImportGitHubDialog by remember { mutableStateOf(false) }
+    var showAddFileDialog by remember { mutableStateOf(false) }
+    var showAddFolderDialog by remember { mutableStateOf(false) }
+    var addItemParentPath by remember { mutableStateOf("") }
 
     Row(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
@@ -229,6 +233,14 @@ fun skillsSettingsSection() {
                         showNewSkillInFolderDialog = true
                     },
                     onImportFromGitHub = { showImportGitHubDialog = true },
+                    onAddFileInFolder = { parentPath ->
+                        addItemParentPath = parentPath
+                        showAddFileDialog = true
+                    },
+                    onAddFolderInFolder = { parentPath ->
+                        addItemParentPath = parentPath
+                        showAddFolderDialog = true
+                    },
                 )
             } else {
                 Column(
@@ -271,6 +283,51 @@ fun skillsSettingsSection() {
                     selectedLeaf = null
                 }
                 showNewSkillInFolderDialog = false
+            },
+        )
+    }
+
+    // Add file inside a folder
+    if (showAddFileDialog) {
+        addFileInFolderDialog(
+            parentPath = addItemParentPath,
+            onDismiss = { showAddFileDialog = false },
+            onConfirm = { fileName ->
+                if (fileName.isNotBlank()) {
+                    val absoluteDir = AskimoHome.skillsDir().resolve(addItemParentPath)
+                    val absoluteFile = absoluteDir.resolve(fileName)
+                    Files.createDirectories(absoluteDir)
+                    if (!Files.exists(absoluteFile)) Files.createFile(absoluteFile)
+                    refresh()
+                    // Select the newly created leaf
+                    val relativePath = "$addItemParentPath/$fileName"
+                    val leaf = SkillTreeNode.Leaf(
+                        name = fileName,
+                        path = relativePath,
+                        absolutePath = absoluteFile,
+                        skill = null,
+                        isSkillEntry = false,
+                    )
+                    selectedLeaf = leaf
+                    selectedSkill = null
+                }
+                showAddFileDialog = false
+            },
+        )
+    }
+
+    // Add sub-folder inside a folder
+    if (showAddFolderDialog) {
+        addFolderInFolderDialog(
+            parentPath = addItemParentPath,
+            onDismiss = { showAddFolderDialog = false },
+            onConfirm = { folderName ->
+                if (folderName.isNotBlank()) {
+                    val absoluteDir = AskimoHome.skillsDir().resolve(addItemParentPath).resolve(folderName)
+                    Files.createDirectories(absoluteDir)
+                    refresh()
+                }
+                showAddFolderDialog = false
             },
         )
     }
@@ -693,7 +750,7 @@ private fun skillEditorContent(
                     .fillMaxWidth()
                     .heightIn(min = 260.dp),
                 shape = MaterialTheme.shapes.medium,
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                 color = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface,
             ) {
@@ -748,7 +805,8 @@ private fun fileEditorContent(
     }
     var body by remember(leaf.path) { mutableStateOf(initialContent) }
     val isMarkdown = leaf.name.endsWith(".md")
-    var isPreviewMode by remember(leaf.path) { mutableStateOf(isMarkdown) }
+    // Start in edit mode for new/empty files; preview mode only for markdown with existing content
+    var isPreviewMode by remember(leaf.path) { mutableStateOf(false) }
     val lineCount = body.lines().size
 
     // Inline rename state
@@ -879,11 +937,11 @@ private fun fileEditorContent(
                 .fillMaxWidth()
                 .heightIn(min = 320.dp),
             shape = MaterialTheme.shapes.medium,
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
             color = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface,
         ) {
-            Box(modifier = Modifier.padding(16.dp)) {
+            Box(modifier = Modifier.padding(16.dp).fillMaxSize()) {
                 if (isMarkdown && isPreviewMode) {
                     markdownText(
                         markdown = body.ifBlank { "*${stringResource("settings.skills.editor.empty.file")}*" },
@@ -893,7 +951,7 @@ private fun fileEditorContent(
                     BasicTextField(
                         value = body,
                         onValueChange = { body = it },
-                        modifier = Modifier.fillMaxWidth().onFocusChanged { if (!it.isFocused) saveContent() },
+                        modifier = Modifier.fillMaxSize().onFocusChanged { if (!it.isFocused) saveContent() },
                         textStyle = TextStyle(
                             fontFamily = FontFamily.Monospace,
                             fontSize = 13.sp,
@@ -901,19 +959,6 @@ private fun fileEditorContent(
                             lineHeight = 21.sp,
                         ),
                         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        decorationBox = { innerTextField ->
-                            if (body.isEmpty()) {
-                                Text(
-                                    text = stringResource("settings.skills.editor.empty.file"),
-                                    style = TextStyle(
-                                        fontFamily = FontFamily.Monospace,
-                                        fontSize = 13.sp,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                                    ),
-                                )
-                            }
-                            innerTextField()
-                        },
                     )
                 }
             } // end Box padding
@@ -947,6 +992,8 @@ private fun skillsTreePanel(
     onNewSkill: () -> Unit,
     onNewSkillInFolder: (parentPath: String) -> Unit = {},
     onImportFromGitHub: () -> Unit = {},
+    onAddFileInFolder: (folderRelativePath: String) -> Unit = {},
+    onAddFolderInFolder: (folderRelativePath: String) -> Unit = {},
 ) {
     val scrollState = rememberScrollState()
     var showAddMenu by remember { mutableStateOf(false) }
@@ -1041,6 +1088,8 @@ private fun skillsTreePanel(
                             onDeleteFile = onDeleteFile,
                             onDeleteFolder = onDeleteFolder,
                             onNewSkillInFolder = onNewSkillInFolder,
+                            onAddFileInFolder = onAddFileInFolder,
+                            onAddFolderInFolder = onAddFolderInFolder,
                         )
                     }
                 }
@@ -1073,11 +1122,14 @@ private fun skillTreeNodeItem(
     onDeleteFile: (relativePath: String) -> Unit = {},
     onDeleteFolder: (folderRelativePath: String) -> Unit = {},
     onNewSkillInFolder: (parentPath: String) -> Unit = {},
+    onAddFileInFolder: (folderRelativePath: String) -> Unit = {},
+    onAddFolderInFolder: (folderRelativePath: String) -> Unit = {},
 ) {
     when (node) {
         is SkillTreeNode.Category -> {
             var isExpanded by remember { mutableStateOf(true) }
             var showDeleteConfirm by remember { mutableStateOf(false) }
+            var showAddMenu by remember { mutableStateOf(false) }
             val interactionSource = remember { MutableInteractionSource() }
             val isHovered by interactionSource.collectIsHoveredAsState()
             val isSkillFolder = node.isSkillFolder && node.skill != null
@@ -1125,7 +1177,50 @@ private fun skillTreeNodeItem(
                         fontWeight = if (isSkillFolder) FontWeight.SemiBold else FontWeight.Normal,
                         modifier = Modifier.weight(1f),
                     )
-                    if (isHovered) {
+                    if (isHovered || showAddMenu) {
+                        // + button with dropdown
+                        Box {
+                            IconButton(
+                                onClick = { showAddMenu = true },
+                                modifier = Modifier.size(20.dp).pointerHoverIcon(PointerIcon.Hand),
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Add", modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            AppComponents.dropdownMenu(
+                                expanded = showAddMenu,
+                                onDismissRequest = { showAddMenu = false },
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource("settings.skills.add.file"), style = MaterialTheme.typography.bodyMedium) },
+                                    leadingIcon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp)) },
+                                    onClick = {
+                                        showAddMenu = false
+                                        onAddFileInFolder(node.path)
+                                    },
+                                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource("settings.skills.add.folder"), style = MaterialTheme.typography.bodyMedium) },
+                                    leadingIcon = { Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(14.dp)) },
+                                    onClick = {
+                                        showAddMenu = false
+                                        onAddFolderInFolder(node.path)
+                                    },
+                                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                )
+                            }
+                        }
+                        IconButton(
+                            onClick = {
+                                runCatching {
+                                    val absoluteDir = AskimoHome.skillsDir().resolve(node.path).toFile()
+                                    Desktop.getDesktop().open(absoluteDir.also { it.mkdirs() })
+                                }
+                            },
+                            modifier = Modifier.size(20.dp).pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Icon(Icons.Default.FolderOpen, contentDescription = "Open folder", modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                         IconButton(
                             onClick = { showDeleteConfirm = true },
                             modifier = Modifier.size(20.dp).pointerHoverIcon(PointerIcon.Hand),
@@ -1146,6 +1241,8 @@ private fun skillTreeNodeItem(
                             onDeleteFile = onDeleteFile,
                             onDeleteFolder = onDeleteFolder,
                             onNewSkillInFolder = onNewSkillInFolder,
+                            onAddFileInFolder = onAddFileInFolder,
+                            onAddFolderInFolder = onAddFolderInFolder,
                         )
                     }
                 }
@@ -1435,6 +1532,90 @@ private fun importFromGitHubDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isImporting, modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)) {
+                Text(stringResource("action.cancel"))
+            }
+        },
+    )
+}
+
+@Composable
+private fun addFileInFolderDialog(
+    parentPath: String,
+    onDismiss: () -> Unit,
+    onConfirm: (fileName: String) -> Unit,
+) {
+    var fileName by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource("settings.skills.add.file")) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "📁 $parentPath/",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                )
+                OutlinedTextField(
+                    value = fileName,
+                    onValueChange = { fileName = it },
+                    label = { Text(stringResource("settings.skills.add.file.name")) },
+                    placeholder = { Text("notes.md") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(fileName.trim()) },
+                enabled = fileName.isNotBlank(),
+                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+            ) { Text(stringResource("action.create")) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)) {
+                Text(stringResource("action.cancel"))
+            }
+        },
+    )
+}
+
+@Composable
+private fun addFolderInFolderDialog(
+    parentPath: String,
+    onDismiss: () -> Unit,
+    onConfirm: (folderName: String) -> Unit,
+) {
+    var folderName by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource("settings.skills.add.folder")) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    text = "📁 $parentPath/",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                )
+                OutlinedTextField(
+                    value = folderName,
+                    onValueChange = { folderName = it.replace(" ", "-").lowercase() },
+                    label = { Text(stringResource("settings.skills.add.folder.name")) },
+                    placeholder = { Text("examples") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onConfirm(folderName.trim()) },
+                enabled = folderName.isNotBlank(),
+                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+            ) { Text(stringResource("action.create")) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, modifier = Modifier.pointerHoverIcon(PointerIcon.Hand)) {
                 Text(stringResource("action.cancel"))
             }
         },
