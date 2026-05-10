@@ -543,6 +543,7 @@ fun planDetailView(
                                         viewModel = viewModel,
                                         planName = plan.name,
                                         showExport = false,
+                                        executionId = pinned.executionId,
                                         modifier = Modifier.weight(1f),
                                     )
                                     resultPanel(
@@ -553,6 +554,7 @@ fun planDetailView(
                                         viewModel = viewModel,
                                         planName = plan.name,
                                         showExport = true,
+                                        executionId = currentResult.executionId,
                                         modifier = Modifier.weight(1f),
                                     )
                                 }
@@ -565,6 +567,7 @@ fun planDetailView(
                                     viewModel = viewModel,
                                     planName = plan.name,
                                     showExport = true,
+                                    executionId = currentResult.executionId,
                                     modifier = Modifier.fillMaxWidth(),
                                 )
                             }
@@ -1091,6 +1094,7 @@ private fun resultPanel(
     viewModel: PlansViewModel,
     planName: String,
     showExport: Boolean,
+    executionId: String? = null,
     modifier: Modifier = Modifier,
 ) {
     // Simulate streaming: reveal the output gradually after it arrives.
@@ -1263,6 +1267,7 @@ private fun resultPanel(
                 markdownText(
                     markdown = if (isStreaming) "$displayedOutput▍" else displayedOutput,
                     modifier = Modifier.fillMaxWidth(),
+                    messageId = executionId,
                 )
             }
         }

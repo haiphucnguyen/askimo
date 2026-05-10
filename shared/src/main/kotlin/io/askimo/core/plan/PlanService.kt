@@ -145,6 +145,15 @@ class PlanService(
     fun deleteExecution(executionId: String) = planExecutionRepository.delete(executionId)
 
     /**
+     * Persists an updated [output] string for an existing execution.
+     * Used to save AI-fixed diagram content back to the database.
+     */
+    fun updateExecutionOutput(executionId: String, output: String) {
+        val execution = planExecutionRepository.findById(executionId) ?: return
+        planExecutionRepository.update(execution.copy(output = output))
+    }
+
+    /**
      * Runs a follow-up question against the result of a previous plan execution.
      *
      * The prior plan output is injected as context so the model can refine or extend it

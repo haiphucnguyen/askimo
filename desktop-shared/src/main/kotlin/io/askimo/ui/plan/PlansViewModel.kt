@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.DiagramFixedEvent
 import io.askimo.core.event.internal.PlansRefreshEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.plan.PlanRunResult
@@ -210,6 +211,22 @@ class PlansViewModel(
                 .collect { event ->
                     log.debug("Plans refresh requested: ${event.reason ?: "no reason specified"}")
                     loadPlans()
+                }
+        }
+        scope.launch {
+            EventBus.internalEvents
+                .filterIsInstance<DiagramFixedEvent>()
+                .collect { event ->
+                    val current = runResult ?: return@collect
+                    if (current.executionId != event.entityId) return@collect
+                    val updatedOutput = current.output.replace(event.originalDiagram, event.fixedDiagram)
+                    if (updatedOutput != current.output) {
+                        log.debug("Updating plan result diagram for execution {}", event.entityId)
+                        runResult = current.copy(output = updatedOutput)
+                        withContext(Dispatchers.IO) {
+                            planService.updateExecutionOutput(current.executionId, updatedOutput)
+                        }
+                    }
                 }
         }
     }

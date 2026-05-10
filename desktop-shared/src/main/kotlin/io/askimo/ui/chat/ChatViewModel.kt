@@ -201,7 +201,7 @@ class ChatViewModel(
             EventBus.internalEvents
                 .filterIsInstance<DiagramFixedEvent>()
                 .collect { event ->
-                    val messageId = event.messageId
+                    val messageId = event.entityId
                     val existing = messages.find { it.id == messageId } ?: return@collect
                     val updatedContent = existing.content.replace(event.originalDiagram, event.fixedDiagram)
                     if (updatedContent != existing.content) {

@@ -763,7 +763,7 @@ private fun renderCodeBlock(codeBlock: FencedCodeBlock, viewportTopY: Float? = n
             mermaidChart(
                 data = chartData,
                 modifier = Modifier.padding(16.dp),
-                messageId = messageId,
+                entityId = messageId,
             )
         }
         return

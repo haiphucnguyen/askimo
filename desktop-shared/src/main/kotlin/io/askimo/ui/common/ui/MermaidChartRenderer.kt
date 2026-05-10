@@ -71,6 +71,7 @@ import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.ui.util.FileDialogUtils
 import io.askimo.ui.service.MermaidCliNotAvailableException
 import io.askimo.ui.service.MermaidSvgService
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
@@ -86,6 +87,8 @@ import kotlin.time.Duration.Companion.milliseconds
 import org.jetbrains.skia.Image as SkiaImage
 
 private val log = currentFileLogger()
+
+private const val MAX_AI_RETRIES = 3
 
 /**
  * Cache for rendered Mermaid diagrams.
@@ -155,7 +158,7 @@ private object DiagramCache {
 fun mermaidChart(
     data: MermaidChartData,
     modifier: Modifier = Modifier,
-    messageId: String? = null,
+    entityId: String? = null,
 ) {
     val mermaidService = remember { MermaidSvgService() }
     var imageData by remember { mutableStateOf<ByteArray?>(null) }
@@ -225,28 +228,33 @@ fun mermaidChart(
                     log.debug("✅ Successfully rendered and cached diagram ({} bytes)", rendered.size)
 
                     // If this was an AI-fixed diagram, notify so the message can be persisted
-                    if (fixedDiagram != null && messageId != null) {
+                    if (fixedDiagram != null && entityId != null) {
                         EventBus.post(
                             DiagramFixedEvent(
-                                messageId = messageId,
+                                entityId = entityId,
                                 originalDiagram = data.diagram,
                                 fixedDiagram = fixedDiagram!!,
                             ),
                         )
-                        log.debug("Posted DiagramFixedEvent for message {}", messageId)
+                        log.debug("Posted DiagramFixedEvent for entity {}", entityId)
                     }
                 } catch (_: MermaidCliNotAvailableException) {
                     log.warn("Mermaid CLI became unavailable during conversion")
                     error = "mermaid_cli_not_available"
                     isMermaidCliAvailable = false
+                } catch (e: CancellationException) {
+                    // Composition left — don't treat this as a diagram error, just propagate
+                    log.debug("LaunchedEffect cancelled (composition left), skipping AI fix")
+                    throw e
                 } catch (e: Exception) {
                     val parseError = e.message ?: "Unknown render error"
-                    log.error("Failed to convert diagram (attempt ${retryCount + 1}/1): {}", parseError)
+                    val attemptNum = retryCount + 1
+                    log.error("Failed to convert diagram (attempt {}/{}): {}", attemptNum, MAX_AI_RETRIES + 1, parseError)
 
-                    // Only attempt AI fix on the original diagram, not on already-fixed diagrams
-                    if (retryCount < 1 && fixedDiagram == null) {
+                    // Only attempt AI fix up to MAX_AI_RETRIES times
+                    if (retryCount < MAX_AI_RETRIES) {
                         retryCount++
-                        log.debug("Asking AI to fix diagram (retry $retryCount/1)...")
+                        log.debug("Asking AI to fix diagram (attempt {} of {})...", retryCount, MAX_AI_RETRIES)
                         try {
                             val fixPrompt = """
                                 The following Mermaid diagram failed to render with this error:
@@ -303,12 +311,16 @@ fun mermaidChart(
                         } catch (_: TimeoutCancellationException) {
                             log.warn("AI fix timed out after 30s")
                             error = parseError
+                        } catch (aiEx: CancellationException) {
+                            // Composition left during AI fix — propagate, don't swallow
+                            log.debug("AI fix cancelled (composition left), propagating")
+                            throw aiEx
                         } catch (aiEx: Exception) {
                             log.error("AI fix attempt failed", aiEx)
                             error = parseError
                         }
                     } else {
-                        log.warn("Diagram render failed after AI fix attempt, showing error")
+                        log.warn("Diagram render failed after {} AI fix attempts, showing error", MAX_AI_RETRIES)
                         error = parseError
                     }
                 }

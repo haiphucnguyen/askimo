@@ -14,7 +14,7 @@ import java.time.Instant
  * ChatViewModel subscribes and persists the corrected content to the database.
  */
 data class DiagramFixedEvent(
-    val messageId: String,
+    val entityId: String,
     val originalDiagram: String,
     val fixedDiagram: String,
     override val timestamp: Instant = Instant.now(),
@@ -22,5 +22,5 @@ data class DiagramFixedEvent(
 ) : Event {
     override val type = EventType.INTERNAL
 
-    override fun getDetails() = "Diagram auto-fixed in message $messageId"
+    override fun getDetails() = "Diagram auto-fixed in message $entityId"
 }
