@@ -45,6 +45,7 @@ class GeminiAgent : ExternalAgent {
 
     override val id = "gemini"
     override val name = "Gemini CLI"
+    override val installUrl = "https://github.com/google-gemini/gemini-cli"
 
     override val commands: List<AgentCommand> = listOf(
         AgentCommand(
@@ -120,17 +121,37 @@ class GeminiAgent : ExternalAgent {
         if (proc.waitFor() == 0 && path.isNotBlank()) path else null
     }.getOrNull()
 
-    override fun isAvailable(): Boolean {
-        val geminiPath = resolveGeminiPath()
-        if (geminiPath == null) {
-            log.debug("gemini CLI not found on PATH")
-            return false
-        }
+    override val requiresApiKey = true
 
-        // Also require a configured API key (OAuth not supported in non-interactive mode)
+    override fun isBinaryAvailable(): Boolean {
+        val found = resolveGeminiPath() != null
+        if (!found) log.debug("gemini CLI not found on PATH")
+        return found
+    }
+
+    override fun isConfigured(): Boolean {
+        if (!isBinaryAvailable()) return false
         val hasKey = resolveApiKey()?.isNotBlank() == true
-        if (!hasKey) log.debug("gemini CLI found but no GEMINI_API_KEY configured — agent unavailable")
+        if (!hasKey) log.debug("gemini CLI found but no GEMINI_API_KEY configured")
         return hasKey
+    }
+
+    /**
+     * Stores [key] securely and syncs it to AppContext GeminiSettings so both the
+     * Skills executor and the chat provider share the same key without re-entry.
+     */
+    override fun saveApiKey(key: String) {
+        if (key.isBlank()) return
+        SecureKeyManager.storeSecuredKey(ModelProvider.GEMINI.name.lowercase(), key)
+        // Sync to AppContext so the chat Gemini provider picks it up in the same session
+        runCatching {
+            val ctx = AppContext.getInstance()
+            val settings = ctx.getOrCreateProviderSettings(ModelProvider.GEMINI)
+            if (settings is GeminiSettings) {
+                settings.apiKey = key
+            }
+        }
+        log.debug("Gemini API key saved and synced to provider settings")
     }
 
     override fun run(

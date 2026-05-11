@@ -60,10 +60,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.askimo.core.db.DatabaseManager
@@ -75,6 +77,7 @@ import io.askimo.core.skills.domain.SkillRunRecord
 import io.askimo.core.util.AskimoHome
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.i18n.stringResource
+import io.askimo.ui.common.preferences.ApplicationPreferences
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 import io.askimo.ui.common.theme.ThemePreferences
@@ -88,6 +91,20 @@ import java.awt.Desktop
 import javax.swing.JFileChooser
 import kotlin.time.Duration.Companion.milliseconds
 
+private enum class AgentState {
+    /** Binary not found on PATH. */
+    NOT_INSTALLED,
+
+    /** Binary installed, needs an API key that Askimo can collect. */
+    NEEDS_KEY,
+
+    /** Binary installed, needs external auth (e.g. `claude login`) — nothing Askimo can inject. */
+    NEEDS_EXTERNAL_AUTH,
+
+    /** Binary installed and fully configured. */
+    READY,
+}
+
 @Composable
 internal fun skillExecutionArea(
     skill: SkillDefinition,
@@ -98,6 +115,7 @@ internal fun skillExecutionArea(
 ) {
     val scope = rememberCoroutineScope()
     val clipboardManager = LocalClipboardManager.current
+    val uriHandler = LocalUriHandler.current
     val historyRepo = remember { DatabaseManager.getInstance().getSkillRunHistoryRepository() }
 
     var contextInput by remember(skill.relativePath) { mutableStateOf("") }
@@ -127,9 +145,38 @@ internal fun skillExecutionArea(
         mutableStateOf(AskimoHome.skillsWorkspaceDir().toFile())
     }
 
-    val availableAgents by remember { mutableStateOf(ExternalAgentLoader.available()) }
-    var selectedAgent by remember(availableAgents) { mutableStateOf(availableAgents.firstOrNull()) }
+    val allAgents by remember { mutableStateOf(ExternalAgentLoader.all()) }
+    val availableAgents = remember(allAgents) { allAgents.filter { it.isAvailable() } }
+    var selectedAgent by remember(allAgents) {
+        val savedId = ApplicationPreferences.getSkillsSelectedAgentId()
+        val initial = if (savedId != null) {
+            allAgents.firstOrNull { it.id == savedId }
+        } else {
+            null
+                ?: allAgents.firstOrNull { it.isAvailable() }
+                ?: allAgents.firstOrNull()
+        }
+        mutableStateOf(initial)
+    }
     var agentDropdownExpanded by remember { mutableStateOf(false) }
+
+    // Re-evaluated state for the selected agent — drives hint/key-input rendering.
+    // Use a mutable trigger so saving a key forces recomposition immediately.
+    var agentStateVersion by remember { mutableStateOf(0) }
+    val agentState: AgentState = remember(selectedAgent, agentStateVersion) {
+        val agent = selectedAgent
+        when {
+            agent == null -> AgentState.NOT_INSTALLED
+            !agent.isBinaryAvailable() -> AgentState.NOT_INSTALLED
+            !agent.isConfigured() -> if (agent.requiresApiKey) AgentState.NEEDS_KEY else AgentState.NEEDS_EXTERNAL_AUTH
+            else -> AgentState.READY
+        }
+    }
+    val selectedAgentAvailable = agentState == AgentState.READY
+
+    var apiKeyInput by remember(selectedAgent) { mutableStateOf("") }
+    var apiKeySaving by remember { mutableStateOf(false) }
+    var apiKeySaved by remember { mutableStateOf(false) }
 
     var commandPickerExpanded by remember { mutableStateOf(false) }
     val commandSuggestions: List<AgentCommand> = remember(contextInput, selectedAgent) {
@@ -144,12 +191,12 @@ internal fun skillExecutionArea(
     val isCommandMode = contextInput.trimStart().startsWith("/")
 
     fun execute(agent: ExternalAgent, systemPrompt: String, userInput: String) {
+        isRunning = true
+        responseText = ""
+        runError = null
+        agentStatus = null
+        activityLog = listOf()
         scope.launch {
-            isRunning = true
-            responseText = ""
-            runError = null
-            agentStatus = null
-            activityLog = listOf()
             withContext(Dispatchers.IO) {
                 agent.runTracked(
                     systemPrompt = systemPrompt,
@@ -392,35 +439,45 @@ internal fun skillExecutionArea(
                     // Agent picker + Execute button
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.medium), verticalAlignment = Alignment.CenterVertically) {
                         Box {
+                            // ...existing agent picker Surface + dropdown...
                             Surface(
                                 shape = MaterialTheme.shapes.small,
                                 color = MaterialTheme.colorScheme.surfaceVariant,
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)),
                                 modifier = Modifier
-                                    .clickable(enabled = availableAgents.isNotEmpty(), onClick = { agentDropdownExpanded = true })
-                                    .pointerHoverIcon(if (availableAgents.isNotEmpty()) PointerIcon.Hand else PointerIcon.Default),
+                                    .clickable(enabled = allAgents.isNotEmpty(), onClick = { agentDropdownExpanded = true })
+                                    .pointerHoverIcon(PointerIcon.Hand),
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = Spacing.medium, vertical = 10.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(Spacing.small),
                                 ) {
-                                    Icon(Icons.Default.Extension, contentDescription = null, modifier = Modifier.size(16.dp), tint = if (selectedAgent != null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
-                                    Text(text = selectedAgent?.name ?: stringResource("skills.view.no.agent"), style = MaterialTheme.typography.bodyMedium, color = if (selectedAgent != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
-                                    if (availableAgents.size > 1) Icon(Icons.Default.ExpandMore, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Icon(Icons.Default.Extension, contentDescription = null, modifier = Modifier.size(16.dp), tint = if (selectedAgentAvailable) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
+                                    Text(text = selectedAgent?.name ?: stringResource("skills.view.no.agent"), style = MaterialTheme.typography.bodyMedium, color = if (selectedAgentAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                    if (allAgents.size > 1) Icon(Icons.Default.ExpandMore, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                             AppComponents.dropdownMenu(expanded = agentDropdownExpanded, onDismissRequest = { agentDropdownExpanded = false }) {
-                                availableAgents.forEach { agent ->
+                                allAgents.forEach { agent ->
+                                    val agentAvailable = agent.isAvailable()
                                     DropdownMenuItem(
                                         text = {
                                             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.small), verticalAlignment = Alignment.CenterVertically) {
                                                 Icon(Icons.Default.Extension, contentDescription = null, modifier = Modifier.size(16.dp), tint = if (agent == selectedAgent) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                                                 Text(agent.name, style = MaterialTheme.typography.bodyMedium, fontWeight = if (agent == selectedAgent) FontWeight.SemiBold else FontWeight.Normal)
+                                                if (!agentAvailable) {
+                                                    Text(
+                                                        stringResource("skills.view.agent.not.installed"),
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                                    )
+                                                }
                                             }
                                         },
                                         onClick = {
                                             selectedAgent = agent
+                                            ApplicationPreferences.setSkillsSelectedAgentId(agent.id)
                                             agentDropdownExpanded = false
                                         },
                                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
@@ -438,7 +495,7 @@ internal fun skillExecutionArea(
                                     execute(agent, skill.content, contextInput)
                                 }
                             },
-                            enabled = selectedAgent != null && !isRunning,
+                            enabled = selectedAgentAvailable && !isRunning,
                         ) {
                             Icon(if (isRunning) Icons.Default.Refresh else Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.size(Spacing.small))
@@ -450,12 +507,95 @@ internal fun skillExecutionArea(
                                 },
                             )
                         }
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        TextButton(
+                            onClick = { uriHandler.openUri("https://askimo.chat/docs/desktop/skills/#supported-runtimes-today") },
+                            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Text(
+                                text = stringResource("skills.view.agent.configure"),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
 
-                    if (availableAgents.isEmpty()) {
-                        Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f), shape = MaterialTheme.shapes.small) {
-                            Text(text = stringResource("skills.view.no.agent.hint"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.padding(horizontal = Spacing.medium, vertical = Spacing.small))
+                    when (agentState) {
+                        AgentState.NOT_INSTALLED -> {
+                            Spacer(modifier = Modifier.height(Spacing.small))
+                            Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f), shape = MaterialTheme.shapes.small) {
+                                Text(
+                                    text = stringResource("skills.view.agent.install.hint", selectedAgent?.name ?: ""),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.padding(horizontal = Spacing.medium, vertical = Spacing.small),
+                                )
+                            }
                         }
+
+                        AgentState.NEEDS_KEY -> {
+                            Spacer(modifier = Modifier.height(Spacing.small))
+                            Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f), shape = MaterialTheme.shapes.small) {
+                                Column(modifier = Modifier.padding(Spacing.medium), verticalArrangement = Arrangement.spacedBy(Spacing.small)) {
+                                    Text(
+                                        text = stringResource("skills.view.agent.needs.key", selectedAgent?.name ?: ""),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    )
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.small), verticalAlignment = Alignment.CenterVertically) {
+                                        OutlinedTextField(
+                                            value = apiKeyInput,
+                                            onValueChange = {
+                                                apiKeyInput = it
+                                                apiKeySaved = false
+                                            },
+                                            placeholder = { Text(stringResource("skills.view.agent.key.placeholder")) },
+                                            modifier = Modifier.weight(1f),
+                                            singleLine = true,
+                                            visualTransformation = PasswordVisualTransformation(),
+                                            colors = AppComponents.outlinedTextFieldColors(),
+                                        )
+                                        primaryButton(
+                                            onClick = {
+                                                val agent = selectedAgent ?: return@primaryButton
+                                                val key = apiKeyInput.trim()
+                                                if (key.isBlank()) return@primaryButton
+                                                apiKeySaving = true
+                                                scope.launch {
+                                                    withContext(Dispatchers.IO) { agent.saveApiKey(key) }
+                                                    apiKeySaved = true
+                                                    apiKeySaving = false
+                                                    agentStateVersion++ // force re-evaluation
+                                                }
+                                            },
+                                            enabled = apiKeyInput.isNotBlank() && !apiKeySaving,
+                                        ) {
+                                            if (apiKeySaved) {
+                                                Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
+                                            } else {
+                                                Text(stringResource("action.save"))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        AgentState.NEEDS_EXTERNAL_AUTH -> {
+                            Spacer(modifier = Modifier.height(Spacing.small))
+                            Surface(modifier = Modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f), shape = MaterialTheme.shapes.small) {
+                                Text(
+                                    text = selectedAgent?.configurationHint ?: "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.padding(horizontal = Spacing.medium, vertical = Spacing.small),
+                                )
+                            }
+                        }
+
+                        AgentState.READY -> Unit
                     }
 
                     Spacer(modifier = Modifier.height(Spacing.extraLarge))

@@ -28,6 +28,7 @@ class ClaudeAgent : ExternalAgent {
 
     override val id = "claude"
     override val name = "Claude Code"
+    override val installUrl = "https://docs.anthropic.com/en/docs/claude-code"
 
     override val commands: List<AgentCommand> = listOf(
         AgentCommand(
@@ -57,6 +58,8 @@ class ClaudeAgent : ExternalAgent {
         ),
     )
 
+    override val configurationHint = "Run 'claude login' in a terminal to authenticate with your Anthropic account, then return here."
+
     private fun resolveClaudePath(): String? = runCatching {
         val proc = ProcessBuilderExt("which", "claude")
             .redirectErrorStream(true)
@@ -65,7 +68,7 @@ class ClaudeAgent : ExternalAgent {
         if (proc.waitFor() == 0 && path.isNotBlank()) path else null
     }.getOrNull()
 
-    override fun isAvailable(): Boolean = resolveClaudePath() != null
+    override fun isBinaryAvailable(): Boolean = resolveClaudePath() != null
 
     override fun run(
         systemPrompt: String,

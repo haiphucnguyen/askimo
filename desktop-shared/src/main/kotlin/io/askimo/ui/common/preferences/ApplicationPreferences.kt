@@ -135,6 +135,11 @@ object ApplicationPreferences {
     fun getSkillsSidePanelExpanded(): Boolean = safeGetBoolean(SKILLS_SIDE_PANEL_EXPANDED_KEY, true)
     fun setSkillsSidePanelExpanded(expanded: Boolean) = safePutBoolean(SKILLS_SIDE_PANEL_EXPANDED_KEY, expanded)
 
+    private const val SKILLS_SELECTED_AGENT_KEY = "ui.skills_selected_agent"
+
+    fun getSkillsSelectedAgentId(): String? = safeGet(SKILLS_SELECTED_AGENT_KEY, null)?.takeIf { it.isNotBlank() }
+    fun setSkillsSelectedAgentId(agentId: String) = safePut(SKILLS_SELECTED_AGENT_KEY, agentId)
+
     fun getShowPlansInSidebar(): Boolean = safeGetBoolean(SHOW_PLANS_IN_SIDEBAR_KEY, true)
     fun setShowPlansInSidebar(show: Boolean) = safePutBoolean(SHOW_PLANS_IN_SIDEBAR_KEY, show)
 

@@ -232,7 +232,6 @@ fun main() {
 @Composable
 @Preview
 fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = null) {
-    // Show splash immediately; transition to main app after first composition
     var isReady by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { isReady = true }
 
@@ -246,7 +245,6 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     var showSkillsInSidebar by remember { mutableStateOf(ApplicationPreferences.getShowSkillsInSidebar()) }
     var showProjectsInSidebar by remember { mutableStateOf(ApplicationPreferences.getShowProjectsInSidebar()) }
     var selectedProjectId by remember { mutableStateOf<String?>(null) }
-    // Sidebar width as a fraction of screen width (0.0 to 1.0) - load from preferences
     var sidebarWidthFraction by remember { mutableStateOf(ThemePreferences.getMainSidebarWidthFraction()) }
     var showQuitDialog by remember { mutableStateOf(false) }
     var showInvalidateCacheDialog by remember { mutableStateOf(false) }
@@ -310,8 +308,8 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     LaunchedEffect(Unit) {
         EventBus.developerEvents.collect { event ->
             eventLogEvents.add(0, event)
-            if (eventLogEvents.size > 1000) {
-                eventLogEvents.removeAt(1000)
+            if (eventLogEvents.size > 100) {
+                eventLogEvents.removeAt(100)
             }
         }
     }

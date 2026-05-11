@@ -22,7 +22,14 @@ object ExternalAgentLoader {
     private val ALL: List<ExternalAgent> = listOf(
         ClaudeAgent(),
         GeminiAgent(),
+        CodexAgent(),
     )
+
+    /**
+     * Returns all known agents regardless of whether they are installed.
+     * Use this to show the full list to users so they know what is supported.
+     */
+    fun all(): List<ExternalAgent> = ALL
 
     /**
      * Returns the subset of [ALL] agents that are currently installed.

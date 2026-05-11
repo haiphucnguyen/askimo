@@ -23,6 +23,9 @@ interface ExternalAgent {
     /** Human-readable display name shown in the UI. */
     val name: String
 
+    /** URL to the installation guide for this agent, shown when the agent is not installed. */
+    val installUrl: String
+
     /**
      * Slash-commands supported by this agent, shown in the UI command picker
      * when the user types `/` in the context input field.
@@ -31,11 +34,46 @@ interface ExternalAgent {
     val commands: List<AgentCommand> get() = emptyList()
 
     /**
-     * Returns `true` if the agent binary is installed and reachable on `PATH`.
-     * Implementations should do a cheap existence check (e.g. `which claude`),
-     * not a full API call.
+     * Whether Askimo can collect an API key from the user and inject it into the agent process.
+     * `true`  → show inline API key input when [isConfigured] returns false (e.g. Gemini CLI).
+     * `false` → show [configurationHint] as a read-only banner (e.g. Claude Code uses OAuth login).
      */
-    fun isAvailable(): Boolean
+    val requiresApiKey: Boolean get() = false
+
+    /**
+     * Human-readable hint shown below the agent picker when [isBinaryAvailable] is `true`
+     * but [isConfigured] returns `false`.
+     * Only relevant when [requiresApiKey] is `false`; for key-based agents the UI renders
+     * an inline key input instead.
+     */
+    val configurationHint: String get() = ""
+
+    /**
+     * Returns `true` if the agent binary is installed and reachable on `PATH`.
+     * Cheap check only — no API call.
+     */
+    fun isBinaryAvailable(): Boolean
+
+    /**
+     * Returns `true` if the agent is fully configured and ready to run
+     * (binary installed + any required credentials present).
+     * Defaults to [isBinaryAvailable] — override when credentials are also required.
+     */
+    fun isConfigured(): Boolean = isBinaryAvailable()
+
+    /**
+     * Returns `true` if the agent is both installed and configured.
+     * Convenience combining [isBinaryAvailable] and [isConfigured].
+     */
+    fun isAvailable(): Boolean = isBinaryAvailable() && isConfigured()
+
+    /**
+     * Saves an API key for this agent via [io.askimo.core.security.SecureKeyManager]
+     * and optionally syncs it to the matching chat provider settings in AppContext.
+     * Only called when [requiresApiKey] is `true`.
+     * Default implementation is a no-op — override in agents that need key injection.
+     */
+    fun saveApiKey(key: String) {}
 
     /**
      * Runs the skill non-interactively.
