@@ -4,6 +4,9 @@
  */
 package io.askimo.core.skills.agent
 
+import io.askimo.core.analytics.Analytics
+import io.askimo.core.analytics.AnalyticsEvent
+
 /**
  * Represents an external CLI agent capable of running a skill non-interactively.
  *
@@ -64,4 +67,35 @@ interface ExternalAgent {
         onToken: (String) -> Unit = {},
         onStatus: (String) -> Unit = {},
     ): Result<String>
+
+    /**
+     * Wraps [run] with automatic timing and analytics tracking.
+     * All new agents automatically get tracking without any extra code.
+     */
+    fun runTracked(
+        systemPrompt: String,
+        userInput: String,
+        workDir: java.io.File? = null,
+        onToken: (String) -> Unit = {},
+        onStatus: (String) -> Unit = {},
+    ): Result<String> {
+        val startMs = System.currentTimeMillis()
+        val result = run(systemPrompt, userInput, workDir, onToken, onStatus)
+        val durationMs = System.currentTimeMillis() - startMs
+        Analytics.track(
+            AnalyticsEvent.SKILL_AGENT_RUN,
+            mapOf(
+                "agent" to id,
+                "has_user_input" to (userInput.isNotBlank()).toString(),
+                "success" to result.isSuccess.toString(),
+                "duration_bucket" to when {
+                    durationMs < 5_000 -> "<5s"
+                    durationMs < 30_000 -> "5-30s"
+                    durationMs < 120_000 -> "30-120s"
+                    else -> ">120s"
+                },
+            ),
+        )
+        return result
+    }
 }

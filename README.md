@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  Chat · Search your files · Run scripts · Build multi-step AI workflows - all offline-capable, all on your machine.
+  Chat · Search your files · Run scripts · Build multi-step AI workflows · Execute AI agent skills - all offline-capable, all on your machine.
 </p>
 
 <p align="center">
@@ -52,6 +52,11 @@
   <img src="https://img.shields.io/badge/LocalAI-Supported-00ADD8" alt="LocalAI">
   <img src="https://img.shields.io/badge/LMStudio-Supported-6B46C1" alt="LMStudio">
   <img src="https://img.shields.io/badge/DockerAI-Supported-2496ED" alt="DockerAI">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Skills-Gemini_CLI-4285F4" alt="Gemini CLI Skills">
+  <img src="https://img.shields.io/badge/Skills-Claude_Code-542683" alt="Claude Code Skills">
 </p>
 
 <p align="center">
@@ -126,6 +131,7 @@ You shouldn't have to choose between the best AI model, your privacy, and gettin
 - **Multi-provider** - Switch between OpenAI, Claude, Gemini, Grok, Ollama, LM Studio, LocalAI, Docker AI, or any OpenAI-compatible endpoint per session
 - **Local RAG** - Index local folders, files, and web URLs. Hybrid BM25 + vector retrieval with an AI classifier that skips retrieval when the query doesn't need it. Your data never leaves your machine.
 - **Plans (agentic workflows)** - Chain multi-step AI pipelines from a form UI. Each step builds on the previous; progress shown live. Export as PDF or Word. Define your own plans in YAML or generate them by describing your workflow in plain English.
+- **Skills** - Define reusable AI agents as Markdown files and execute them via [Gemini CLI](https://github.com/google-gemini/gemini-cli) or [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Skills carry a system prompt, run in a sandboxed workspace, stream live activity, and persist a full run history.
 - **Script runner** - Execute Python, Bash, and JavaScript from chat. Python runs in an auto-managed virtualenv with automatic dependency installation.
 - **MCP tool integration** - Connect MCP-compatible servers via stdio or HTTP, scoped globally or per project
 - **Persistent sessions** - Conversations stored in a local SQLite database, restored on restart
@@ -136,24 +142,21 @@ You shouldn't have to choose between the best AI model, your privacy, and gettin
 
 ---
 
-## Plans - Multi-Step AI Workflows
+## Beyond Chat: Skills and Plans
 
-A single prompt cannot reason properly across multiple stages. Ask one prompt to research, analyse, and conclude simultaneously and the AI skips the dependencies between those stages.
+Most AI apps stop at a chat box. Askimo goes further with two automation primitives that turn AI from a conversation tool into a work tool.
 
-Plans mirror how experts actually think: each step has one focused job and one persona - researcher, analyst, strategist, writer. The output of each step feeds into the next as grounded context. No copy-pasting. No re-prompting.
+**Skills** delegate real work to an agent runtime ([Claude Code](https://docs.anthropic.com/en/docs/claude-code) or [Gemini CLI](https://github.com/google-gemini/gemini-cli)) running directly on your machine. The agent reads and writes your files, runs shell commands, and iterates until the job is done, without you copy-pasting anything. Point it at a codebase, describe the task, and the agent handles the rest. More runtimes are planned.
 
-**Built-in plans:**
+**Plans** break complex reasoning into a chain of focused AI steps, each building on the last. Instead of asking a single prompt to research, analyse, and write simultaneously, a Plan assigns each stage its own goal and persona. You fill in a form, click Run, and get a finished deliverable (a report, a cover letter, a blog post) ready to export as PDF or Word.
 
-| Plan | What it does |
-|---|---|
-| 💼 Job Application Writer | Analyses a job description, matches your CV, writes a tailored cover letter and ATS-optimised resume |
-| ✍️ Blog Post Writer | Generates an outline, writes the full draft, adds SEO metadata, outputs the polished post |
-| 🏆 Competitor Analysis | Profiles a competitor, compares against your product, produces a strategic opportunities report |
-| 📋 Meeting Notes Processor | Structures raw notes, extracts action items with owners, produces shareable minutes |
-| 📝 Research Report | Researches a topic and writes a structured report with executive summary and key findings |
-| 📧 Email Writer | Drafts and self-refines a professional email from a one-line description |
+| | Skills | Plans |
+|---|---|---|
+| **Use when** | The task needs to touch files, run commands, or modify code | The task is pure reasoning: text in, polished output out |
+| **Runs via** | Claude Code or Gemini CLI on your machine | Askimo's built-in AI, no extra installs |
+| **Example** | "Refactor my API routes to follow REST conventions" | "Write a competitor analysis report for my product" |
 
-**Create your own:** describe your workflow in plain English - the AI generates valid plan YAML instantly. Fine-tune in the built-in editor or duplicate any built-in plan as a starting point.
+[Skills documentation →](https://askimo.chat/docs/desktop/skills/) · [Plans documentation →](https://askimo.chat/docs/desktop/plans/)
 
 ---
 
@@ -162,20 +165,6 @@ Plans mirror how experts actually think: each step has one focused job and one p
 **Cloud:** OpenAI · Anthropic Claude · Google Gemini · xAI Grok  
 **Local:** Ollama · LM Studio · LocalAI · Docker AI  
 **Custom:** Any OpenAI-compatible endpoint via custom base URL
-
----
-
-## CLI (Optional)
-
-```bash
-# macOS/Linux
-curl -sSL https://raw.githubusercontent.com/haiphucnguyen/askimo/main/tools/installation/install.sh | bash
-
-# Windows (PowerShell)
-iwr -useb https://raw.githubusercontent.com/haiphucnguyen/askimo/main/tools/installation/install.ps1 | iex
-```
-
-[CLI documentation →](https://askimo.chat/cli/)
 
 ---
 
@@ -207,7 +196,7 @@ cd askimo
 | `desktop/` | Compose Multiplatform desktop application |
 | `desktop-shared/` | Shared UI components |
 | `cli/` | JLine3 REPL + GraalVM native image |
-| `shared/` | Core: providers, RAG, MCP, memory, tools, database, plans engine |
+| `shared/` | Core: providers, RAG, MCP, memory, tools, database, plans engine, skills & agent runtimes |
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) for development guidelines and DCO requirements, or the [Development Getting Started Guide](https://askimo.chat/docs/development/getting-started/).
 

@@ -244,6 +244,18 @@ enum class AnalyticsEvent(
         "Image generated via image model.",
     ),
 
+    // ── Skills ───────────────────────────────────────────────────────────────
+
+    /**
+     * A skill was executed via an external agent.
+     * Properties: `agent=gemini|claude`, `has_user_input=true|false`,
+     * `success=true|false`, `duration_bucket=<5s|5-30s|30-120s|>120s`.
+     */
+    SKILL_AGENT_RUN(
+        "skill_agent_run",
+        "Skill executed via external agent. Properties: agent, has_user_input, success, duration_bucket.",
+    ),
+
     // ── Errors ───────────────────────────────────────────────────────────────
 
     /**

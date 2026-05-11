@@ -58,6 +58,7 @@ import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.repository.ChatSessionRepository
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.plan.repository.PlanDefRepository
+import io.askimo.core.skills.SkillRepository
 import io.askimo.core.user.domain.UserProfile
 import io.askimo.core.util.TimeUtil
 import io.askimo.ui.common.components.clickableCard
@@ -83,18 +84,21 @@ fun discoverView(
     onNavigateToSessions: () -> Unit,
     onNavigateToProjects: () -> Unit,
     onNavigateToPlans: () -> Unit,
+    onNavigateToSkills: () -> Unit,
     onNavigateToMcpSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var totalChats by remember { mutableStateOf<Int?>(null) }
     var totalProjects by remember { mutableStateOf<Int?>(null) }
     var totalPlans by remember { mutableStateOf<Int?>(null) }
+    var totalSkills by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             totalChats = chatSessionRepository.countAll()
             totalProjects = projectRepository.countAll()
             totalPlans = planDefRepository.count()
+            totalSkills = SkillRepository.countSkills(io.askimo.core.util.AskimoHome.skillsDir())
         }
     }
 
@@ -124,9 +128,11 @@ fun discoverView(
                     totalProjects = totalProjects,
                     totalMcpServers = totalMcpServers,
                     totalPlans = totalPlans,
+                    totalSkills = totalSkills,
                     onNavigateToSessions = onNavigateToSessions,
                     onNavigateToProjects = onNavigateToProjects,
                     onNavigateToPlans = onNavigateToPlans,
+                    onNavigateToSkills = onNavigateToSkills,
                     onNavigateToMcpSettings = onNavigateToMcpSettings,
                 )
 
@@ -198,9 +204,11 @@ private fun statCardsSection(
     totalProjects: Int?,
     totalMcpServers: Int,
     totalPlans: Int?,
+    totalSkills: Int?,
     onNavigateToSessions: () -> Unit,
     onNavigateToProjects: () -> Unit,
     onNavigateToPlans: () -> Unit,
+    onNavigateToSkills: () -> Unit,
     onNavigateToMcpSettings: () -> Unit,
 ) {
     Row(
@@ -233,6 +241,13 @@ private fun statCardsSection(
             value = totalPlans?.toString() ?: "—",
             icon = { Icon(Icons.Default.PlayCircle, contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
             onClick = onNavigateToPlans,
+            modifier = Modifier.weight(1f),
+        )
+        statCard(
+            label = stringResource("discover.stat.skills"),
+            value = totalSkills?.toString() ?: "—",
+            icon = { Icon(Icons.Default.Extension, contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+            onClick = onNavigateToSkills,
             modifier = Modifier.weight(1f),
         )
     }
@@ -319,6 +334,13 @@ private fun exploreFeaturesSection() {
                 title = stringResource("discover.explore.plans.title"),
                 description = stringResource("discover.explore.plans.desc"),
                 url = "https://askimo.chat/docs/desktop/plans/",
+                modifier = Modifier.weight(1f),
+            )
+            exploreCard(
+                icon = { Icon(Icons.Default.Extension, contentDescription = null, modifier = Modifier.size(22.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                title = stringResource("discover.explore.skills.title"),
+                description = stringResource("discover.explore.skills.desc"),
+                url = "https://askimo.chat/docs/desktop/skills/",
                 modifier = Modifier.weight(1f),
             )
         }

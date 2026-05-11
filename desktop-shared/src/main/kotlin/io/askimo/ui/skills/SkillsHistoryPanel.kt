@@ -30,6 +30,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Card
@@ -46,6 +47,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -146,18 +148,20 @@ private fun skillRunHistoryPanelRow(
                     )
                 }
             }
-            if (isHovered) {
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier.size(28.dp).pointerHoverIcon(PointerIcon.Hand),
-                ) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = "Delete record",
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                        modifier = Modifier.size(14.dp),
-                    )
-                }
+            IconButton(
+                onClick = onDelete,
+                modifier = Modifier
+                    .size(28.dp)
+                    .alpha(if (isHovered) 1f else 0f)
+                    .pointerHoverIcon(PointerIcon.Hand),
+                enabled = isHovered,
+            ) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Delete record",
+                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                    modifier = Modifier.size(14.dp),
+                )
             }
         }
     }

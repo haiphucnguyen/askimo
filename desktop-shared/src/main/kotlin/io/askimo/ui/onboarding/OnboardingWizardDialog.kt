@@ -6,7 +6,11 @@ package io.askimo.ui.onboarding
 
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.defaultScrollbarStyle
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
@@ -58,13 +63,14 @@ import io.askimo.core.i18n.LocalizationManager
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
+import io.askimo.ui.common.preferences.ApplicationPreferences
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
 import io.askimo.ui.common.theme.ThemePreferences
 import io.askimo.ui.common.ui.clickableCard
 import java.util.Locale
 
-private const val TOTAL_STEPS = 8
+private const val TOTAL_STEPS = 7
 
 /**
  * Onboarding wizard shown on first launch.
@@ -75,9 +81,8 @@ private const val TOTAL_STEPS = 8
  *  2 — Welcome
  *  3 — Profile (name + occupation, skippable)
  *  4 — Directives (intro)
- *  5 — Plans (intro)
- *  6 — Skills (intro)
- *  7 — Ready
+ *  5 — Persona (intro)
+ *  6 — Ready
  *
  * @param initialName        Pre-filled name (from existing profile, if any).
  * @param initialOccupation  Pre-filled occupation.
@@ -87,6 +92,7 @@ private const val TOTAL_STEPS = 8
 fun onboardingWizardDialog(
     initialName: String = "",
     initialOccupation: String = "",
+    onPersonaSelected: ((showPlans: Boolean, showSkills: Boolean, showProjects: Boolean) -> Unit)? = null,
     onComplete: (locale: Locale, analyticsAccepted: Boolean, name: String, occupation: String) -> Unit,
 ) {
     var currentStep by remember { mutableStateOf(0) }
@@ -94,6 +100,7 @@ fun onboardingWizardDialog(
     var analyticsAccepted by remember { mutableStateOf(true) }
     var name by remember { mutableStateOf(initialName) }
     var occupation by remember { mutableStateOf(initialOccupation) }
+    var selectedPersona by remember { mutableStateOf("everything") }
 
     // Reset scroll on each step change
     val scrollState = rememberScrollState()
@@ -170,11 +177,24 @@ fun onboardingWizardDialog(
 
                             4 -> onboardingStepDirectives()
 
-                            5 -> onboardingStepPlans()
+                            5 -> onboardingStepPersona(
+                                selectedPersona = selectedPersona,
+                                onPersonaSelected = { persona ->
+                                    selectedPersona = persona
+                                    val (plans, skills, projects) = when (persona) {
+                                        "developer" -> Triple(false, true, true)
+                                        "researcher" -> Triple(true, false, true)
+                                        "manager" -> Triple(true, false, false)
+                                        else -> Triple(true, true, true) // "everything"
+                                    }
+                                    ApplicationPreferences.setShowPlansInSidebar(plans)
+                                    ApplicationPreferences.setShowSkillsInSidebar(skills)
+                                    ApplicationPreferences.setShowProjectsInSidebar(projects)
+                                    onPersonaSelected?.invoke(plans, skills, projects)
+                                },
+                            )
 
-                            6 -> onboardingStepSkills()
-
-                            7 -> onboardingStepReady()
+                            6 -> onboardingStepReady()
                         }
                     }
 
@@ -636,93 +656,150 @@ private fun onboardingStepDirectives() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Step 5: Plans
+// Step 5: Persona
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun onboardingStepPlans() {
+private fun onboardingStepPersona(
+    selectedPersona: String,
+    onPersonaSelected: (String) -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.medium)) {
         Text(
-            text = stringResource("onboarding.step.plans.title"),
+            text = stringResource("onboarding.step.persona.title"),
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
         )
 
         Text(
-            text = stringResource("onboarding.step.plans.description"),
+            text = stringResource("onboarding.step.persona.description"),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         Spacer(modifier = Modifier.height(Spacing.small))
 
-        onboardingFeatureCard(
-            title = stringResource("onboarding.step.plans.feature1.title"),
-            description = stringResource("onboarding.step.plans.feature1.description"),
+        personaCard(
+            emoji = "💻",
+            title = stringResource("persona.developer"),
+            description = stringResource("onboarding.step.persona.developer.description"),
+            features = stringResource("onboarding.step.persona.developer.features"),
+            isSelected = selectedPersona == "developer",
+            onClick = { onPersonaSelected("developer") },
         )
-        onboardingFeatureCard(
-            title = stringResource("onboarding.step.plans.feature2.title"),
-            description = stringResource("onboarding.step.plans.feature2.description"),
+        personaCard(
+            emoji = "🔬",
+            title = stringResource("persona.researcher"),
+            description = stringResource("onboarding.step.persona.researcher.description"),
+            features = stringResource("onboarding.step.persona.researcher.features"),
+            isSelected = selectedPersona == "researcher",
+            onClick = { onPersonaSelected("researcher") },
         )
-        onboardingFeatureCard(
-            title = stringResource("onboarding.step.plans.feature3.title"),
-            description = stringResource("onboarding.step.plans.feature3.description"),
+        personaCard(
+            emoji = "📋",
+            title = stringResource("persona.manager"),
+            description = stringResource("onboarding.step.persona.manager.description"),
+            features = stringResource("onboarding.step.persona.manager.features"),
+            isSelected = selectedPersona == "manager",
+            onClick = { onPersonaSelected("manager") },
         )
-
-        Spacer(modifier = Modifier.height(Spacing.small))
-
-        onboardingDocLink(
-            label = stringResource("onboarding.step.plans.link"),
-            url = "https://askimo.chat/docs/desktop/plans/",
+        personaCard(
+            emoji = "⚡",
+            title = stringResource("persona.everything"),
+            description = stringResource("onboarding.step.persona.everything.description"),
+            features = stringResource("onboarding.step.persona.everything.features"),
+            isSelected = selectedPersona == "everything",
+            onClick = { onPersonaSelected("everything") },
         )
     }
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Step 6: Skills
-// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun onboardingStepSkills() {
-    Column(verticalArrangement = Arrangement.spacedBy(Spacing.medium)) {
-        Text(
-            text = stringResource("onboarding.step.skills.title"),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
-        )
+private fun personaCard(
+    emoji: String,
+    title: String,
+    description: String,
+    features: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isHovered by interactionSource.collectIsHoveredAsState()
+    val highlighted = isSelected || isHovered
 
-        Text(
-            text = stringResource("onboarding.step.skills.description"),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Spacer(modifier = Modifier.height(Spacing.small))
-
-        onboardingFeatureCard(
-            title = stringResource("onboarding.step.skills.feature1.title"),
-            description = stringResource("onboarding.step.skills.feature1.description"),
-        )
-        onboardingFeatureCard(
-            title = stringResource("onboarding.step.skills.feature2.title"),
-            description = stringResource("onboarding.step.skills.feature2.description"),
-        )
-        onboardingFeatureCard(
-            title = stringResource("onboarding.step.skills.feature3.title"),
-            description = stringResource("onboarding.step.skills.feature3.description"),
-        )
-
-        Spacer(modifier = Modifier.height(Spacing.small))
-
-        onboardingDocLink(
-            label = stringResource("onboarding.step.skills.link"),
-            url = "https://askimo.chat/docs/desktop/skills/",
-        )
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .hoverable(interactionSource)
+            .clickableCard { onClick() }
+            .then(
+                if (isSelected) {
+                    Modifier.border(
+                        width = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = MaterialTheme.shapes.medium,
+                    )
+                } else {
+                    Modifier
+                },
+            ),
+        colors = CardDefaults.cardColors(
+            containerColor = if (highlighted) {
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            },
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Spacing.large),
+            horizontalArrangement = Arrangement.spacedBy(Spacing.medium),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = emoji,
+                style = MaterialTheme.typography.headlineMedium,
+            )
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    if (isSelected) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(
+                    text = features,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                )
+            }
+        }
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Step 7: Ready
+// Step 6: Ready
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable

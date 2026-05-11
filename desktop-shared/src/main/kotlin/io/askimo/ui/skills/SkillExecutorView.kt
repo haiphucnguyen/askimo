@@ -151,7 +151,7 @@ internal fun skillExecutionArea(
             agentStatus = null
             activityLog = listOf()
             withContext(Dispatchers.IO) {
-                agent.run(
+                agent.runTracked(
                     systemPrompt = systemPrompt,
                     userInput = userInput,
                     workDir = workDir,

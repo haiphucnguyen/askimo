@@ -11,6 +11,9 @@ import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -256,9 +259,13 @@ private fun planHistoryItem(
     onPin: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isHovered by interactionSource.collectIsHoveredAsState()
+
     themedTooltip(text = stringResource("plans.history.restore")) {
         Surface(
             modifier = modifier
+                .hoverable(interactionSource)
                 .clickable(onClick = onRestoreInputs)
                 .pointerHoverIcon(PointerIcon.Hand),
             shape = MaterialTheme.shapes.small,
@@ -323,31 +330,33 @@ private fun planHistoryItem(
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (onPin != null) {
-                        themedTooltip(text = stringResource(if (isPinned) "plans.result.unpin" else "plans.result.pin")) {
-                            IconButton(
-                                onClick = onPin,
-                                modifier = Modifier.size(28.dp).pointerHoverIcon(PointerIcon.Hand),
-                            ) {
-                                Icon(
-                                    Icons.Default.PushPin,
-                                    contentDescription = stringResource(if (isPinned) "plans.result.unpin" else "plans.result.pin"),
-                                    tint = if (isPinned) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                    modifier = Modifier.size(14.dp),
-                                )
+                    if (isHovered) {
+                        if (onPin != null) {
+                            themedTooltip(text = stringResource(if (isPinned) "plans.result.unpin" else "plans.result.pin")) {
+                                IconButton(
+                                    onClick = onPin,
+                                    modifier = Modifier.size(28.dp).pointerHoverIcon(PointerIcon.Hand),
+                                ) {
+                                    Icon(
+                                        Icons.Default.PushPin,
+                                        contentDescription = stringResource(if (isPinned) "plans.result.unpin" else "plans.result.pin"),
+                                        tint = if (isPinned) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                        modifier = Modifier.size(14.dp),
+                                    )
+                                }
                             }
                         }
-                    }
-                    IconButton(
-                        onClick = onDelete,
-                        modifier = Modifier.size(28.dp).pointerHoverIcon(PointerIcon.Hand),
-                    ) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = stringResource("action.delete"),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                            modifier = Modifier.size(16.dp),
-                        )
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(28.dp).pointerHoverIcon(PointerIcon.Hand),
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = stringResource("action.delete"),
+                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
                     }
                 }
             }

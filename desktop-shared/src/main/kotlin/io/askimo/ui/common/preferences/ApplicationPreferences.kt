@@ -108,6 +108,7 @@ object ApplicationPreferences {
     private const val SKILLS_SIDE_PANEL_EXPANDED_KEY = "ui.skills_side_panel_expanded"
     private const val SHOW_PLANS_IN_SIDEBAR_KEY = "ui.show_plans_in_sidebar"
     private const val SHOW_SKILLS_IN_SIDEBAR_KEY = "ui.show_skills_in_sidebar"
+    private const val SHOW_PROJECTS_IN_SIDEBAR_KEY = "ui.show_projects_in_sidebar"
 
     fun getProjectSidePanelWidth(): Int = safeGetInt(PROJECT_SIDE_PANEL_WIDTH_KEY, DEFAULT_PROJECT_SIDE_PANEL_WIDTH)
     fun setProjectSidePanelWidth(width: Int) = safePutInt(PROJECT_SIDE_PANEL_WIDTH_KEY, width)
@@ -139,6 +140,9 @@ object ApplicationPreferences {
 
     fun getShowSkillsInSidebar(): Boolean = safeGetBoolean(SHOW_SKILLS_IN_SIDEBAR_KEY, true)
     fun setShowSkillsInSidebar(show: Boolean) = safePutBoolean(SHOW_SKILLS_IN_SIDEBAR_KEY, show)
+
+    fun getShowProjectsInSidebar(): Boolean = safeGetBoolean(SHOW_PROJECTS_IN_SIDEBAR_KEY, true)
+    fun setShowProjectsInSidebar(show: Boolean) = safePutBoolean(SHOW_PROJECTS_IN_SIDEBAR_KEY, show)
 
     // ============================================================
     // LIFECYCLE

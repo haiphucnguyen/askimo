@@ -244,6 +244,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     var isSessionsExpanded by remember { mutableStateOf(true) }
     var showPlansInSidebar by remember { mutableStateOf(ApplicationPreferences.getShowPlansInSidebar()) }
     var showSkillsInSidebar by remember { mutableStateOf(ApplicationPreferences.getShowSkillsInSidebar()) }
+    var showProjectsInSidebar by remember { mutableStateOf(ApplicationPreferences.getShowProjectsInSidebar()) }
     var selectedProjectId by remember { mutableStateOf<String?>(null) }
     // Sidebar width as a fraction of screen width (0.0 to 1.0) - load from preferences
     var sidebarWidthFraction by remember { mutableStateOf(ThemePreferences.getMainSidebarWidthFraction()) }
@@ -614,8 +615,14 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                     ApplicationPreferences.setShowSkillsInSidebar(showSkillsInSidebar)
                     NativeMenuBar.updateSkillsMenuLabel(showSkillsInSidebar)
                 },
+                onToggleProjects = {
+                    showProjectsInSidebar = !showProjectsInSidebar
+                    ApplicationPreferences.setShowProjectsInSidebar(showProjectsInSidebar)
+                    NativeMenuBar.updateProjectsMenuLabel(showProjectsInSidebar)
+                },
                 isPlansVisible = showPlansInSidebar,
                 isSkillsVisible = showSkillsInSidebar,
+                isProjectsVisible = showProjectsInSidebar,
             )
         }
     }
@@ -839,6 +846,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                                         userProfile = userProfile,
                                                         showPlansInSidebar = showPlansInSidebar,
                                                         showSkillsInSidebar = showSkillsInSidebar,
+                                                        showProjectsInSidebar = showProjectsInSidebar,
                                                         onToggleExpand = { isSidebarExpanded = !isSidebarExpanded },
                                                         onNewChat = {
                                                             chatViewModel?.clearChat()
@@ -1361,6 +1369,14 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                         onboardingWizardDialog(
                             initialName = userProfile?.name ?: "",
                             initialOccupation = userProfile?.occupation ?: "",
+                            onPersonaSelected = { plans, skills, projects ->
+                                showPlansInSidebar = plans
+                                showSkillsInSidebar = skills
+                                showProjectsInSidebar = projects
+                                NativeMenuBar.updatePlansMenuLabel(plans)
+                                NativeMenuBar.updateSkillsMenuLabel(skills)
+                                NativeMenuBar.updateProjectsMenuLabel(projects)
+                            },
                             onComplete = { locale, analyticsAccepted, name, occupation ->
                                 scope.launch {
                                     ThemePreferences.setLocale(locale)
@@ -1746,6 +1762,7 @@ fun mainContent(
                 onNavigateToSessions = onNavigateToSessions,
                 onNavigateToProjects = onNavigateToProjects,
                 onNavigateToPlans = onNavigateToPlans,
+                onNavigateToSkills = onNavigateToSkills,
                 onNavigateToMcpSettings = onNavigateToMcpSettings,
                 modifier = Modifier.fillMaxSize(),
             )

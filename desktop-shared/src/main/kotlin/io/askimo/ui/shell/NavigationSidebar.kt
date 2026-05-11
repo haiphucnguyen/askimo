@@ -113,6 +113,7 @@ fun navigationSidebar(
     // Visibility toggles controlled from View menu
     showPlansInSidebar: Boolean = true,
     showSkillsInSidebar: Boolean = true,
+    showProjectsInSidebar: Boolean = true,
     // Session/project state
     isSessionsExpanded: Boolean,
     projectsViewModel: ProjectsViewModel,
@@ -154,6 +155,7 @@ fun navigationSidebar(
             isSessionsSelected = isSessionsSelected,
             showPlansInSidebar = showPlansInSidebar,
             showSkillsInSidebar = showSkillsInSidebar,
+            showProjectsInSidebar = showProjectsInSidebar,
             isSessionsExpanded = isSessionsExpanded,
             projectsViewModel = projectsViewModel,
             sessionsViewModel = sessionsViewModel,
@@ -186,6 +188,7 @@ fun navigationSidebar(
             isSessionsSelected = isSessionsSelected,
             showPlansInSidebar = showPlansInSidebar,
             showSkillsInSidebar = showSkillsInSidebar,
+            showProjectsInSidebar = showProjectsInSidebar,
             onToggleExpand = onToggleExpand,
             onNewChat = onNewChat,
             onToggleProjects = onToggleProjects,
@@ -210,6 +213,7 @@ private fun expandedNavigationSidebar(
     isSessionsSelected: Boolean,
     showPlansInSidebar: Boolean,
     showSkillsInSidebar: Boolean,
+    showProjectsInSidebar: Boolean,
     isSessionsExpanded: Boolean,
     projectsViewModel: ProjectsViewModel,
     sessionsViewModel: SessionsViewModel,
@@ -288,16 +292,18 @@ private fun expandedNavigationSidebar(
             }
 
             // Projects
-            NavigationDrawerItem(
-                icon = { Icon(Icons.Default.FolderOpen, contentDescription = null) },
-                label = { Text(stringResource("project.title"), style = MaterialTheme.typography.labelLarge) },
-                selected = isProjectsSelected,
-                onClick = onToggleProjects,
-                modifier = Modifier
-                    .padding(horizontal = (12 * fontScale).dp)
-                    .pointerHoverIcon(PointerIcon.Hand),
-                colors = AppComponents.navigationDrawerItemColors(),
-            )
+            if (showProjectsInSidebar) {
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.FolderOpen, contentDescription = null) },
+                    label = { Text(stringResource("project.title"), style = MaterialTheme.typography.labelLarge) },
+                    selected = isProjectsSelected,
+                    onClick = onToggleProjects,
+                    modifier = Modifier
+                        .padding(horizontal = (12 * fontScale).dp)
+                        .pointerHoverIcon(PointerIcon.Hand),
+                    colors = AppComponents.navigationDrawerItemColors(),
+                )
+            }
 
             // Plans
             if (showPlansInSidebar) {
@@ -421,6 +427,7 @@ private fun collapsedNavigationSidebar(
     isSessionsSelected: Boolean,
     showPlansInSidebar: Boolean,
     showSkillsInSidebar: Boolean,
+    showProjectsInSidebar: Boolean,
     onToggleExpand: () -> Unit,
     onNewChat: () -> Unit,
     onToggleProjects: () -> Unit,
@@ -522,14 +529,16 @@ private fun collapsedNavigationSidebar(
             }
 
             themedTooltip(text = stringResource("project.title")) {
-                NavigationRailItem(
-                    icon = { Icon(Icons.Default.FolderOpen, contentDescription = stringResource("project.title")) },
-                    label = null,
-                    selected = isProjectsSelected,
-                    onClick = onToggleProjects,
-                    modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                    colors = AppComponents.navigationRailItemColors(),
-                )
+                if (showProjectsInSidebar) {
+                    NavigationRailItem(
+                        icon = { Icon(Icons.Default.FolderOpen, contentDescription = stringResource("project.title")) },
+                        label = null,
+                        selected = isProjectsSelected,
+                        onClick = onToggleProjects,
+                        modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                        colors = AppComponents.navigationRailItemColors(),
+                    )
+                }
             }
 
             themedTooltip(text = stringResource("chat.sessions.tooltip")) {
