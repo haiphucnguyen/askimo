@@ -29,7 +29,6 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ExpandLess
@@ -76,6 +75,7 @@ import io.askimo.core.skills.domain.SkillDefinition
 import io.askimo.core.skills.domain.SkillRunRecord
 import io.askimo.core.util.AskimoHome
 import io.askimo.ui.common.components.primaryButton
+import io.askimo.ui.common.components.sendTextField
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.preferences.ApplicationPreferences
 import io.askimo.ui.common.theme.AppComponents
@@ -146,16 +146,11 @@ internal fun skillExecutionArea(
     }
 
     val allAgents by remember { mutableStateOf(ExternalAgentLoader.all()) }
-    val availableAgents = remember(allAgents) { allAgents.filter { it.isAvailable() } }
     var selectedAgent by remember(allAgents) {
         val savedId = ApplicationPreferences.getSkillsSelectedAgentId()
-        val initial = if (savedId != null) {
-            allAgents.firstOrNull { it.id == savedId }
-        } else {
-            null
-                ?: allAgents.firstOrNull { it.isAvailable() }
-                ?: allAgents.firstOrNull()
-        }
+        val initial = allAgents.firstOrNull { it.id == savedId }
+            ?: allAgents.firstOrNull { it.isAvailable() }
+            ?: allAgents.firstOrNull()
         mutableStateOf(initial)
     }
     var agentDropdownExpanded by remember { mutableStateOf(false) }
@@ -711,35 +706,21 @@ internal fun skillExecutionArea(
                             Column(modifier = Modifier.padding(Spacing.large)) {
                                 Text(stringResource("skills.view.followup.label"), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = Spacing.small))
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.small), verticalAlignment = Alignment.Bottom) {
-                                    OutlinedTextField(
+                                    sendTextField(
                                         value = followUpInput,
                                         onValueChange = { followUpInput = it },
-                                        placeholder = { Text(stringResource("skills.view.followup.placeholder")) },
-                                        modifier = Modifier.weight(1f),
-                                        minLines = 1,
-                                        maxLines = 5,
+                                        placeholder = stringResource("skills.view.followup.placeholder"),
                                         enabled = hasResponse && !isRunning,
-                                        colors = AppComponents.outlinedTextFieldColors(),
-                                    )
-                                    IconButton(
-                                        onClick = {
-                                            val agent = selectedAgent ?: return@IconButton
+                                        onSend = {
+                                            val agent = selectedAgent ?: return@sendTextField
                                             if (followUpInput.isNotBlank()) {
                                                 val followUpContext = "$responseText\n\n---\n\n${followUpInput.trim()}"
                                                 followUpInput = ""
                                                 execute(agent, skill.content, followUpContext)
                                             }
                                         },
-                                        enabled = hasResponse && !isRunning && followUpInput.isNotBlank(),
-                                        colors = AppComponents.primaryIconButtonColors(),
-                                        modifier = Modifier.size(48.dp).pointerHoverIcon(PointerIcon.Hand),
-                                    ) {
-                                        Icon(
-                                            Icons.AutoMirrored.Filled.Send,
-                                            contentDescription = stringResource("skills.view.followup.send"),
-                                            tint = if (hasResponse && !isRunning && followUpInput.isNotBlank()) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-                                        )
-                                    }
+                                        sendContentDescription = stringResource("skills.view.followup.send"),
+                                    )
                                 }
                             }
                         }

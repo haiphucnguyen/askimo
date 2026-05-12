@@ -16,13 +16,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Save
@@ -37,24 +34,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isMetaPressed
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.askimo.ui.common.components.linkButton
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
+import io.askimo.ui.common.components.sendTextField
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
 import io.askimo.ui.common.theme.Spacing
@@ -370,76 +359,16 @@ private fun aiGenerationPanel(
                 )
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth()
-                    .onPreviewKeyEvent { keyEvent ->
-                        if (keyEvent.type == KeyEventType.KeyDown &&
-                            keyEvent.key == Key.Enter &&
-                            (keyEvent.isMetaPressed || keyEvent.isCtrlPressed) &&
-                            !isGenerating &&
-                            viewModel.aiPromptText.isNotBlank()
-                        ) {
-                            viewModel.generateYamlFromPrompt()
-                            true
-                        } else {
-                            false
-                        }
-                    },
-                horizontalArrangement = Arrangement.spacedBy(Spacing.small),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedTextField(
-                    value = viewModel.aiPromptText,
-                    onValueChange = { viewModel.updateAiPrompt(it) },
-                    placeholder = { Text(stringResource("plans.editor.ai.placeholder")) },
-                    modifier = Modifier.weight(1f),
-                    minLines = 1,
-                    maxLines = 4,
-                    enabled = !isGenerating,
-                    isError = viewModel.aiGenerateError != null,
-                    supportingText = viewModel.aiGenerateError?.let { err -> { Text(err) } },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Text,
-                        imeAction = ImeAction.Send,
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onSend = {
-                            if (!isGenerating && viewModel.aiPromptText.isNotBlank()) {
-                                viewModel.generateYamlFromPrompt()
-                            }
-                        },
-                    ),
-                    colors = AppComponents.outlinedTextFieldColors(),
-                )
-                val hasPrompt = viewModel.aiPromptText.isNotBlank()
-                IconButton(
-                    onClick = { viewModel.generateYamlFromPrompt() },
-                    enabled = !isGenerating && hasPrompt,
-                    colors = AppComponents.primaryIconButtonColors(),
-                    modifier = Modifier
-                        .size(48.dp)
-                        .pointerHoverIcon(PointerIcon.Hand),
-                ) {
-                    if (isGenerating) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                        )
-                    } else {
-                        Icon(
-                            Icons.AutoMirrored.Filled.Send,
-                            contentDescription = stringResource("plans.editor.ai.generate"),
-                            tint = if (hasPrompt) {
-                                MaterialTheme.colorScheme.onSurface
-                            } else {
-                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            },
-                        )
-                    }
-                }
-            }
+            sendTextField(
+                value = viewModel.aiPromptText,
+                onValueChange = { viewModel.updateAiPrompt(it) },
+                onSend = { viewModel.generateYamlFromPrompt() },
+                placeholder = stringResource("plans.editor.ai.placeholder"),
+                enabled = !isGenerating,
+                isLoading = isGenerating,
+                error = viewModel.aiGenerateError,
+                sendContentDescription = stringResource("plans.editor.ai.generate"),
+            )
 
             if (!isGenerating && viewModel.aiGenerateError == null) {
                 Text(

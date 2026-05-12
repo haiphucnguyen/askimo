@@ -1,0 +1,205 @@
+id: system-design
+name: System Design
+icon: "🏗️"
+description: Walk through a structured system design session — from requirements gathering to deep-dive architecture with diagrams and trade-off analysis.
+built_in: true
+
+inputs:
+  - key: system_name
+    label: System Name
+    type: text
+    required: true
+    hint: e.g. "URL Shortener", "Ride-sharing platform", "Real-time chat"
+  - key: functional_requirements
+    label: Functional Requirements
+    type: multiline
+    required: true
+    hint: |
+      List what the system must do, one per line.
+      e.g.
+      - Users can shorten a URL
+      - Users can retrieve the original URL via the short code
+      - Analytics: track click count per short URL
+  - key: non_functional_requirements
+    label: Non-Functional Requirements
+    type: multiline
+    required: false
+    hint: |
+      Availability, latency, consistency, scalability, security, etc.
+      e.g.
+      - 99.99% availability
+      - Read latency < 10ms (p99)
+      - Handle 10 000 writes/sec at peak
+  - key: scale_hints
+    label: Scale / Traffic Hints (optional)
+    type: multiline
+    required: false
+    hint: |
+      Any known numbers to anchor the back-of-envelope estimate.
+      e.g. 100M registered users, 1B reads/day, data stored 5 years
+
+steps:
+  - id: requirements
+    message: |
+      You are a senior staff engineer conducting a system design session.
+
+      Analyse and consolidate the following inputs for the system: **{{system_name}}**
+
+      ## Functional Requirements (provided)
+      {{functional_requirements}}
+
+      ## Non-Functional Requirements (provided)
+      {{non_functional_requirements}}
+
+      ## Scale Hints (provided)
+      {{scale_hints}}
+
+      Your output must contain:
+      1. **Clarified Functional Requirements** — restate them precisely, remove ambiguity, add implied requirements the user may have missed.
+      2. **Clarified Non-Functional Requirements** — fill in typical industry defaults for anything not specified (availability, consistency model, latency SLA, durability, security).
+      3. **Explicit Assumptions** — anything you are assuming because it was not stated.
+      4. **Out of Scope** — features or concerns explicitly excluded from this design.
+
+      Format as clean markdown with numbered lists under each heading.
+
+  - id: back-of-envelope
+    message: |
+      You are a senior staff engineer.
+
+      Given the requirements and assumptions below, produce a **back-of-envelope estimation** for **{{system_name}}**.
+
+      Requirements & Assumptions:
+      {{requirements}}
+
+      Use the standard back-of-envelope envelope framework:
+      1. **Traffic Estimation** — DAU, read QPS, write QPS (peak and average). Show your arithmetic.
+      2. **Storage Estimation** — per-record size, total records over 5 years, total bytes. Show your arithmetic.
+      3. **Bandwidth Estimation** — ingress MB/s, egress MB/s.
+      4. **Memory / Cache Estimation** — if caching is warranted, estimate cache size using the 80/20 rule.
+
+      Present each section as a small markdown table with columns: **Metric | Estimate | Notes**.
+      End with a one-paragraph **Summary** that names the dominant constraint (read-heavy, write-heavy, storage-bound, compute-bound, etc.).
+
+  - id: architecture-options
+    message: |
+      You are a senior staff engineer designing **{{system_name}}**.
+
+      Context:
+      - Requirements: {{requirements}}
+      - Scale estimates: {{back-of-envelope}}
+
+      Propose **2–3 distinct high-level architecture options** for this system.
+      For each option:
+      - Give it a short name (e.g. "Monolith + CDN", "Microservices + Event Streaming").
+      - List **Pros** (3–5 bullet points).
+      - List **Cons** (3–5 bullet points).
+      - State which scale profile it suits best.
+
+      After listing all options, write a **Recommendation** section that picks one option and justifies the choice based on the stated requirements and scale estimates.
+
+      Finish with a **Mermaid comparison diagram** (use `graph LR` or `flowchart LR`) that shows the top-level components of each option side by side so the reader can see the structural difference at a glance.
+
+      Format: markdown with a `## Option N — <Name>` heading per option.
+
+  - id: high-level
+    message: |
+      You are a senior staff engineer designing **{{system_name}}**.
+
+      Context:
+      - Requirements: {{requirements}}
+      - Scale estimates: {{back-of-envelope}}
+      - Chosen architecture: {{architecture-options}}
+
+      Produce the **High-Level Architecture** for the recommended option.
+
+      Your output must include:
+      1. **Component Overview** — a brief description of each major component (2–3 sentences each).
+      2. **Data Flow** — numbered list describing the end-to-end request/write path through the system.
+      3. **High-Level Architecture Diagram** — a Mermaid `flowchart TB` diagram showing all major components, data stores, queues, CDN, clients, and the connections between them. Label every arrow with the protocol or action (e.g. HTTPS, gRPC, async, SQL).
+      4. **Key Design Decisions** — 3–5 bullet points explaining the most important choices made at this level (e.g. why SQL vs NoSQL, why a message queue, why a CDN).
+
+      Format: clean markdown.
+
+  - id: deep-dive
+    message: |
+      You are a senior staff engineer designing **{{system_name}}**.
+
+      High-level design:
+      {{high-level}}
+
+      Produce a **Deep-Dive Architecture** covering the critical components identified above.
+
+      For each critical component or concern, include:
+
+      ### Data Model
+      - Schema or document structure for the primary entities.
+      - Key indexes and why they are needed.
+      - Partitioning / sharding strategy if applicable.
+
+      ### API Design
+      - The 3–5 most important API endpoints or events.
+      - For each: method, path/topic, request shape, response shape, error codes.
+
+      ### Scalability & Reliability
+      - How each bottleneck identified in the back-of-envelope is addressed.
+      - Caching strategy (what is cached, cache invalidation approach, TTL).
+      - Replication and failover strategy.
+      - Rate limiting and back-pressure mechanisms.
+
+      ### Failure Modes & Mitigations
+      A table with columns: **Failure | Impact | Mitigation | Recovery Time**.
+      Cover at least: single-node failure, network partition, database overload, dependency outage.
+
+      Use Mermaid sequence diagrams (`sequenceDiagram`) for at least one critical flow (e.g. write path, cache miss, failover handoff).
+
+      Format: markdown with `###` sub-headings per concern.
+
+  - id: tradeoffs
+    message: |
+      You are a senior staff engineer summarising the design of **{{system_name}}**.
+
+      Full design context:
+      - Requirements: {{requirements}}
+      - High-level design: {{high-level}}
+      - Deep-dive: {{deep-dive}}
+
+      Produce a **Trade-offs & Limitations** section:
+
+      1. **Trade-off Table** — a markdown table with columns: **Decision | Alternative Considered | Why This Choice | Key Trade-off**.
+         Cover the 4–6 most significant architectural decisions.
+
+      2. **Known Limitations** — bullet list of 3–5 limitations of the chosen design that would need to be revisited as the system grows.
+
+      3. **Future Improvements** — bullet list of 3–5 enhancements that would be natural next steps once the MVP is stable (e.g. ML-based features, multi-region, stronger consistency).
+
+      4. **Intentionally Out of Scope** — restate what was explicitly excluded so the reader knows the boundary.
+
+  - id: final
+    message: |
+      You are a senior staff engineer producing the final system design document for **{{system_name}}**.
+
+      Assemble all prior outputs into a single, clean, well-structured design document.
+
+      Requirements & Assumptions: {{requirements}}
+      Back-of-Envelope: {{back-of-envelope}}
+      Architecture Options: {{architecture-options}}
+      High-Level Design: {{high-level}}
+      Deep-Dive: {{deep-dive}}
+      Trade-offs: {{tradeoffs}}
+
+      Output format — use these top-level `##` sections in order:
+      1. ## Overview
+      2. ## Requirements
+      3. ## Scale Estimates
+      4. ## Architecture Options
+      5. ## High-Level Architecture (include the Mermaid diagram)
+      6. ## Deep-Dive
+      7. ## Trade-offs & Limitations
+      8. ## Future Improvements
+
+      Rules:
+      - Keep all Mermaid diagrams from prior steps.
+      - Remove any redundant repetition between sections — each section should add new information.
+      - Use clear markdown formatting: tables, bullet lists, bold for key terms.
+      - The document should be suitable for sharing with a technical interview panel or engineering team.
+

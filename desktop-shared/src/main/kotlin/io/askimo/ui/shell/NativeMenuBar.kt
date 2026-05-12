@@ -362,7 +362,7 @@ object NativeMenuBar {
             val plansToggleItem = MenuItem("")
             val updatePlansMenuItemFunc: (Boolean) -> Unit = { visible ->
                 plansToggleItem.label = (if (visible) "✓ " else "  ") +
-                    LocalizationManager.getString("menu.view.discover.plans")
+                    LocalizationManager.getString("menu.view.plans")
             }
             updatePlansMenuItem = updatePlansMenuItemFunc
             updatePlansMenuItemFunc(isPlansVisible)
@@ -373,7 +373,7 @@ object NativeMenuBar {
             val skillsToggleItem = MenuItem("")
             val updateSkillsMenuItemFunc: (Boolean) -> Unit = { visible ->
                 skillsToggleItem.label = (if (visible) "✓ " else "  ") +
-                    LocalizationManager.getString("menu.view.discover.skills")
+                    LocalizationManager.getString("menu.view.skills")
             }
             updateSkillsMenuItem = updateSkillsMenuItemFunc
             updateSkillsMenuItemFunc(isSkillsVisible)
@@ -390,32 +390,6 @@ object NativeMenuBar {
             updateProjectsMenuItemFunc(isProjectsVisible)
             projectsToggleItem.addActionListener(ActionListener { onToggleProjects?.invoke() })
             viewMenu.add(projectsToggleItem)
-
-            viewMenu.addSeparator()
-
-            // Session View
-            val sessionViewItem = MenuItem(
-                LocalizationManager.getString("menu.view.session"),
-                MenuShortcut(KeyEvent.VK_E), // Ctrl+E (or Cmd+E on Mac)
-            )
-            sessionViewItem.addActionListener(
-                ActionListener {
-                    onNavigateToSessions()
-                },
-            )
-            viewMenu.add(sessionViewItem)
-
-            // Projects View
-            val projectsViewItem = MenuItem(
-                LocalizationManager.getString("menu.view.projects"),
-                MenuShortcut(KeyEvent.VK_P), // Ctrl+P (or Cmd+P on Mac)
-            )
-            projectsViewItem.addActionListener(
-                ActionListener {
-                    onNavigateToProjects()
-                },
-            )
-            viewMenu.add(projectsViewItem)
 
             viewMenu.addSeparator()
 

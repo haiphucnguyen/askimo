@@ -34,26 +34,34 @@ class MermaidSvgService {
      * Checks if Mermaid CLI is available on the system.
      * This result is cached after the first check to avoid multiple expensive checks.
      *
-     * @return true if mermaid-cli is installed and accessible
+     * Performs two sequential checks so logs clearly distinguish the failure cause:
+     * 1. `node --version` — confirms Node.js is on PATH (enriched by [ProcessBuilderExt])
+     * 2. `mmdc --version` — confirms the Mermaid CLI binary is installed
+     *
+     * PATH is automatically enriched by [ProcessBuilderExt] on all platforms to cover
+     * nvm, Homebrew, and npm global bin directories that are absent in desktop-app PATH.
+     *
+     * @return true if both Node.js and mmdc are installed and accessible
      */
     fun isMermaidCliAvailable(): Boolean {
         cachedAvailability?.let { return it }
 
         val result = try {
-            log.debug("Checking if Mermaid CLI is available...")
-
+            // ── Step 1: check Node.js ─────────────────────────────────────────
+            log.debug("Mermaid check step 1: checking Node.js...")
             val nodeCheck = ProcessBuilderExt("node", "--version")
                 .redirectErrorStream(true)
                 .start()
-
+            val nodeOutput = nodeCheck.inputStream.bufferedReader().readText().trim()
             val nodeAvailable = nodeCheck.waitFor(5, TimeUnit.SECONDS) && nodeCheck.exitValue() == 0
 
             if (!nodeAvailable) {
-                log.debug("Node.js not found - Mermaid CLI unavailable")
+                log.warn("Mermaid check step 1 FAILED: Node.js not found on PATH. Install Node.js to enable Mermaid rendering.")
                 false
             } else {
-                log.debug("Node.js found, checking mmdc (Mermaid CLI)...")
+                log.debug("Mermaid check step 1 OK: Node.js found ({})", nodeOutput)
 
+                log.debug("Mermaid check step 2: checking mmdc (Mermaid CLI)...")
                 val process = ProcessBuilderExt("mmdc", "--version")
                     .redirectErrorStream(true)
                     .start()
@@ -70,10 +78,10 @@ class MermaidSvgService {
                 outputReader.start()
 
                 val completed = process.waitFor(10, TimeUnit.SECONDS)
-                outputReader.join(1000)
+                outputReader.join(1_000)
 
                 if (!completed) {
-                    log.warn("Mermaid CLI check timed out")
+                    log.warn("Mermaid check step 2 FAILED: mmdc timed out")
                     process.destroyForcibly()
                     false
                 } else {
@@ -82,15 +90,20 @@ class MermaidSvgService {
                     val available = exitCode == 0
 
                     if (available) {
-                        log.debug("Mermaid CLI (mmdc) is available. Version: {}", output)
+                        log.debug("Mermaid check step 2 OK: mmdc found ({})", output)
                     } else {
-                        log.warn("Mermaid CLI (mmdc) check failed with exit code: {}. Output: {}", exitCode, output)
+                        log.warn(
+                            "Mermaid check step 2 FAILED: Node.js is present but mmdc not found " +
+                                "(exit={}). Install with: npm install -g @mermaid-js/mermaid-cli. Output: {}",
+                            exitCode,
+                            output,
+                        )
                     }
                     available
                 }
             }
         } catch (e: Exception) {
-            log.debug("Mermaid CLI not available: {}", e.message)
+            log.warn("Mermaid CLI availability check threw an exception: {}", e.message)
             false
         }
 

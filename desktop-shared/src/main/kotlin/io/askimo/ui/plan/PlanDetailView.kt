@@ -23,14 +23,12 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
@@ -64,13 +62,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isMetaPressed
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -78,7 +69,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -87,6 +77,7 @@ import io.askimo.core.plan.domain.PlanInput
 import io.askimo.core.util.TimeUtil
 import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
+import io.askimo.ui.common.components.sendTextField
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.preferences.ApplicationPreferences
 import io.askimo.ui.common.theme.AppComponents
@@ -153,21 +144,7 @@ fun planDetailView(
     }
 
     Row(
-        modifier = modifier.fillMaxSize()
-            .onPreviewKeyEvent { keyEvent ->
-                // ⌘+Enter (macOS) or Ctrl+Enter (Windows/Linux) triggers Run
-                if (keyEvent.type == KeyEventType.KeyDown &&
-                    keyEvent.key == Key.Enter &&
-                    (keyEvent.isMetaPressed || keyEvent.isCtrlPressed) &&
-                    !viewModel.isRunning
-                ) {
-                    viewModel.clearResult()
-                    viewModel.runPlan()
-                    true
-                } else {
-                    false
-                }
-            },
+        modifier = modifier.fillMaxSize(),
     ) {
         Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
             // ── Sticky header: nav + plan title/description + action buttons ──
@@ -948,44 +925,13 @@ private fun interactiveQuestionPanel(
                 color = MaterialTheme.colorScheme.onTertiaryContainer,
                 modifier = Modifier.padding(bottom = Spacing.medium),
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.small),
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                OutlinedTextField(
-                    value = answerText,
-                    onValueChange = onAnswerChange,
-                    placeholder = { Text(stringResource("plans.interactive.answer.placeholder")) },
-                    modifier = Modifier.weight(1f),
-                    minLines = 1,
-                    maxLines = 5,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Text,
-                        imeAction = ImeAction.Send,
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onSend = { if (answerText.isNotBlank()) onSubmit() },
-                    ),
-                    colors = AppComponents.outlinedTextFieldColors(),
-                )
-                IconButton(
-                    onClick = onSubmit,
-                    enabled = answerText.isNotBlank(),
-                    colors = AppComponents.primaryIconButtonColors(),
-                    modifier = Modifier.size(48.dp).pointerHoverIcon(PointerIcon.Hand),
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Send,
-                        contentDescription = stringResource("plans.interactive.send"),
-                        tint = if (answerText.isNotBlank()) {
-                            MaterialTheme.colorScheme.onSurface
-                        } else {
-                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                        },
-                    )
-                }
-            }
+            sendTextField(
+                value = answerText,
+                onValueChange = onAnswerChange,
+                onSend = onSubmit,
+                placeholder = stringResource("plans.interactive.answer.placeholder"),
+                sendContentDescription = stringResource("plans.interactive.send"),
+            )
             TextButton(
                 onClick = onSkip,
                 modifier = Modifier.padding(top = 4.dp).pointerHoverIcon(PointerIcon.Hand),
@@ -1024,63 +970,16 @@ private fun followUpPanel(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = Spacing.small),
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.small),
-                verticalAlignment = Alignment.Bottom,
-            ) {
-                OutlinedTextField(
-                    value = viewModel.followUpText,
-                    onValueChange = { viewModel.updateFollowUpText(it) },
-                    placeholder = { Text(stringResource("plans.followup.placeholder")) },
-                    modifier = Modifier.weight(1f),
-                    minLines = 1,
-                    maxLines = 5,
-                    enabled = !isActive,
-                    isError = viewModel.followUpError != null,
-                    supportingText = viewModel.followUpError?.let { { Text(it) } },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Text,
-                        imeAction = ImeAction.Send,
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onSend = {
-                            if (!isActive && viewModel.followUpText.isNotBlank()) {
-                                viewModel.runFollowUp()
-                            }
-                        },
-                    ),
-                    colors = AppComponents.outlinedTextFieldColors(),
-                )
-                IconButton(
-                    onClick = { viewModel.runFollowUp() },
-                    enabled = !isActive && viewModel.followUpText.isNotBlank(),
-                    colors = AppComponents.primaryIconButtonColors(),
-                    modifier = Modifier
-                        .size(48.dp)
-                        .padding(bottom = if (viewModel.followUpError != null) 24.dp else 0.dp)
-                        .pointerHoverIcon(PointerIcon.Hand),
-                ) {
-                    if (isActive) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                        )
-                    } else {
-                        Icon(
-                            Icons.AutoMirrored.Filled.Send,
-                            contentDescription = stringResource("plans.followup.send"),
-                            tint = if (viewModel.followUpText.isNotBlank()) {
-                                MaterialTheme.colorScheme.onSurface
-                            } else {
-                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                            },
-                        )
-                    }
-                }
-            }
+            sendTextField(
+                value = viewModel.followUpText,
+                onValueChange = { viewModel.updateFollowUpText(it) },
+                onSend = { viewModel.runFollowUp() },
+                placeholder = stringResource("plans.followup.placeholder"),
+                enabled = !isActive,
+                isLoading = isActive,
+                error = viewModel.followUpError,
+                sendContentDescription = stringResource("plans.followup.send"),
+            )
         }
     }
 }
