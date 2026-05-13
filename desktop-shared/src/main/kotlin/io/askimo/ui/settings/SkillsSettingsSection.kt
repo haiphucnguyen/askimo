@@ -1392,56 +1392,81 @@ private fun readEditToggle(
             .clip(MaterialTheme.shapes.small)
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.small),
     ) {
-        listOf(true to "Read", false to "Edit").forEachIndexed { index, (isPreview, label) ->
-            val segIcon = if (isPreview) Icons.Default.Visibility else Icons.Default.Edit
-            val isActive = isPreviewMode == isPreview
-            Box(
-                modifier = Modifier
-                    .background(
-                        if (isActive) {
-                            MaterialTheme.colorScheme.primaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                        },
-                    )
-                    .then(
-                        if (index > 0) {
-                            Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, RectangleShape)
-                        } else {
-                            Modifier
-                        },
-                    )
-                    .clickable { onToggle(isPreview) }
-                    .pointerHoverIcon(PointerIcon.Hand)
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        imageVector = segIcon,
-                        contentDescription = label,
-                        modifier = Modifier.size(13.dp),
-                        tint = if (isActive) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    )
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (isActive) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    )
-                }
-            }
+        // Read (preview) segment
+        previewEditSegmentButton(
+            isPreview = true,
+            label = stringResource("settings.skills.editor.mode.read"),
+            icon = Icons.Default.Visibility,
+            isActive = isPreviewMode,
+            hasBorderStart = false,
+            onToggle = onToggle,
+        )
+        // Edit segment
+        previewEditSegmentButton(
+            isPreview = false,
+            label = stringResource("settings.skills.editor.mode.edit"),
+            icon = Icons.Default.Edit,
+            isActive = !isPreviewMode,
+            hasBorderStart = true,
+            onToggle = onToggle,
+        )
+    }
+}
+
+@Composable
+private fun previewEditSegmentButton(
+    isPreview: Boolean,
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    isActive: Boolean,
+    hasBorderStart: Boolean,
+    onToggle: (Boolean) -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .background(
+                if (isActive) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                },
+            )
+            .then(
+                if (hasBorderStart) {
+                    Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, RectangleShape)
+                } else {
+                    Modifier
+                },
+            )
+            .clickable { onToggle(isPreview) }
+            .pointerHoverIcon(PointerIcon.Hand)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                modifier = Modifier.size(13.dp),
+                tint = if (isActive) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (isActive) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+            )
         }
     }
 }

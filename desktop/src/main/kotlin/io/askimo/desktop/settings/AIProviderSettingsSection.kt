@@ -233,6 +233,7 @@ private fun providerModelConfigCard(provider: ModelProvider) {
         ModelProvider.DOCKER,
         ModelProvider.LOCALAI,
         ModelProvider.LMSTUDIO,
+        ModelProvider.OPENAI_COMPATIBLE,
     )
 
     Card(

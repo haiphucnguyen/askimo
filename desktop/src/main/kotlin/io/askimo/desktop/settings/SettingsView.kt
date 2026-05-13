@@ -153,9 +153,10 @@ fun settingsViewWithSidebar(
             // Min 180dp, max 30% of screen width, default ~18%
             val minSidebarWidth = 180.dp
             val maxSidebarWidthFraction = 0.30f
+            val maxSidebarWidth = (maxWidth * maxSidebarWidthFraction).coerceAtLeast(minSidebarWidth)
             val calculatedWidth = (maxWidth * sidebarWidthFraction).coerceIn(
                 minSidebarWidth,
-                maxWidth * maxSidebarWidthFraction,
+                maxSidebarWidth,
             )
 
             // Capture maxWidth for use in pointerInput
