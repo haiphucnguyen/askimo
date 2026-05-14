@@ -115,7 +115,7 @@ class CliUpdateService {
             "choco upgrade askimo" to ""
 
         InstallMethod.MANUAL ->
-            "Download from GitHub:" to "https://github.com/haiphucnguyen/askimo/releases"
+            "Download from GitHub:" to "https://github.com/askimo-ai/askimo/releases"
 
         InstallMethod.UNKNOWN ->
             "Update using your package manager" to "or download from GitHub releases"

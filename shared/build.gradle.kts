@@ -17,7 +17,7 @@ publishing {
     repositories {
         maven {
             name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/haiphucnguyen/askimo")
+            url = uri("https://maven.pkg.github.com/askimo-ai/askimo")
             credentials {
                 username = System.getenv("GITHUB_ACTOR")
                 password = System.getenv("GITHUB_TOKEN")

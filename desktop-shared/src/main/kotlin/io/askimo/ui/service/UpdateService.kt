@@ -18,7 +18,7 @@ import io.askimo.core.service.UpdateInfo
  * @param githubRepo The GitHub repository to check for releases
  */
 class UpdateService(
-    githubRepo: String = "haiphucnguyen/askimo",
+    githubRepo: String = "askimo-ai/askimo",
 ) {
     private val log = logger<UpdateService>()
     private val updateChecker = UpdateChecker(

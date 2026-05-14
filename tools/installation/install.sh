@@ -11,7 +11,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # GitHub repository
-REPO="haiphucnguyen/askimo"
+REPO="askimo-ai/askimo"
 BINARY_NAME="askimo"
 
 # Function to print colored messages
@@ -178,7 +178,7 @@ main() {
         print_warn "Detected Windows without Git Bash/WSL"
         print_info "For native Windows installation, please use the PowerShell script:"
         echo ""
-        echo "    iwr -useb https://raw.githubusercontent.com/haiphucnguyen/askimo/main/tools/installation/install.ps1 | iex"
+        echo "    iwr -useb https://raw.githubusercontent.com/askimo-ai/askimo/main/tools/installation/install.ps1 | iex"
         echo ""
         print_info "Or install via Scoop: https://askimo.chat/docs/cli/getting-started/"
         exit 0

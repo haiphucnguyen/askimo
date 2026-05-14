@@ -249,19 +249,19 @@ fun aboutSettingsSection() {
                         )
 
                         linkButton(
-                            onClick = { openUrl("https://github.com/haiphucnguyen/askimo") },
+                            onClick = { openUrl("https://github.com/askimo-ai/askimo") },
                         ) {
                             Text("GitHub Repository")
                         }
 
                         linkButton(
-                            onClick = { openUrl("https://github.com/haiphucnguyen/askimo/issues") },
+                            onClick = { openUrl("https://github.com/askimo-ai/askimo/issues") },
                         ) {
                             Text("Report Issues")
                         }
 
                         linkButton(
-                            onClick = { openUrl("https://github.com/haiphucnguyen/askimo/blob/main/LICENSE") },
+                            onClick = { openUrl("https://github.com/askimo-ai/askimo/blob/main/LICENSE") },
                         ) {
                             Text("View License")
                         }

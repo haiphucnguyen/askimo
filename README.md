@@ -14,17 +14,17 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/haiphucnguyen/askimo/actions/workflows/cli-release.yml">
-    <img src="https://github.com/haiphucnguyen/askimo/actions/workflows/cli-release.yml/badge.svg" alt="CLI Build">
+  <a href="https://github.com/askimo-ai/askimo/actions/workflows/cli-release.yml">
+    <img src="https://github.com/askimo-ai/askimo/actions/workflows/cli-release.yml/badge.svg" alt="CLI Build">
   </a>
-  <a href="https://github.com/haiphucnguyen/askimo/actions/workflows/desktop-release.yml">
-    <img src="https://github.com/haiphucnguyen/askimo/actions/workflows/desktop-release.yml/badge.svg" alt="Desktop Build">
+  <a href="https://github.com/askimo-ai/askimo/actions/workflows/desktop-release.yml">
+    <img src="https://github.com/askimo-ai/askimo/actions/workflows/desktop-release.yml/badge.svg" alt="Desktop Build">
   </a>
   <a href="./LICENSE">
     <img src="https://img.shields.io/badge/License-AGPLv3-blue.svg" alt="License">
   </a>
-  <a href="https://github.com/haiphucnguyen/askimo/releases">
-    <img src="https://img.shields.io/github/v/release/haiphucnguyen/askimo" alt="Release">
+  <a href="https://github.com/askimo-ai/askimo/releases">
+    <img src="https://img.shields.io/github/v/release/askimo-ai/askimo" alt="Release">
   </a>
   <a href="./CONTRIBUTING.md#-enforcing-dco">
     <img src="https://img.shields.io/badge/DCO-Signed--off-green.svg" alt="DCO">
@@ -32,11 +32,11 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/haiphucnguyen/askimo/stargazers">
-    <img src="https://img.shields.io/github/stars/haiphucnguyen/askimo?style=social" alt="GitHub Stars">
+  <a href="https://github.com/askimo-ai/askimo/stargazers">
+    <img src="https://img.shields.io/github/stars/askimo-ai/askimo?style=social" alt="GitHub Stars">
   </a>
-  <a href="https://github.com/haiphucnguyen/askimo/releases">
-    <img src="https://img.shields.io/github/downloads/haiphucnguyen/askimo/total" alt="Total Downloads">
+  <a href="https://github.com/askimo-ai/askimo/releases">
+    <img src="https://img.shields.io/github/downloads/askimo-ai/askimo/total" alt="Total Downloads">
   </a>
   <img src="https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white" alt="macOS">
   <img src="https://img.shields.io/badge/Windows-0078D6?logo=windows&logoColor=white" alt="Windows">
@@ -60,10 +60,10 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/haiphucnguyen/askimo/releases/latest"><strong>📥 Download</strong></a> •
+  <a href="https://github.com/askimo-ai/askimo/releases/latest"><strong>📥 Download</strong></a> •
   <a href="https://askimo.chat/docs/"><strong>📖 Documentation</strong></a> •
-  <a href="https://github.com/haiphucnguyen/askimo/discussions"><strong>💬 Discussions</strong></a> •
-  <a href="https://github.com/haiphucnguyen/askimo/stargazers"><strong>⭐ Star on GitHub</strong></a>
+  <a href="https://github.com/askimo-ai/askimo/discussions"><strong>💬 Discussions</strong></a> •
+  <a href="https://github.com/askimo-ai/askimo/stargazers"><strong>⭐ Star on GitHub</strong></a>
 </p>
 
 ---
@@ -176,7 +176,7 @@ Most AI apps stop at a chat box. Askimo goes further with two automation primiti
 - Git
 
 ```bash
-git clone https://github.com/haiphucnguyen/askimo.git
+git clone https://github.com/askimo-ai/askimo.git
 cd askimo
 
 # Run the desktop app
@@ -206,15 +206,15 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for development guidelines and DCO requ
 
 English · 中文 (简体/繁體) · 日本語 · 한국어 · Français · Español · Deutsch · Português · Tiếng Việt
 
-Want to add a language? [Open a discussion](https://github.com/haiphucnguyen/askimo/discussions).
+Want to add a language? [Open a discussion](https://github.com/askimo-ai/askimo/discussions).
 
 ---
 
 ## Getting Help
 
 - [Documentation](https://askimo.chat/docs/)
-- [GitHub Discussions](https://github.com/haiphucnguyen/askimo/discussions)
-- [Issue Tracker](https://github.com/haiphucnguyen/askimo/issues)
+- [GitHub Discussions](https://github.com/askimo-ai/askimo/discussions)
+- [Issue Tracker](https://github.com/askimo-ai/askimo/issues)
 
 ---
 
@@ -234,9 +234,9 @@ AGPLv3. See [LICENSE](./LICENSE).
 
 <a href="https://www.star-history.com/?repos=haiphucnguyen%2Faskimo&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=haiphucnguyen/askimo&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=haiphucnguyen/askimo&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=haiphucnguyen/askimo&type=date&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=askimo-ai/askimo&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=askimo-ai/askimo&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=askimo-ai/askimo&type=date&legend=top-left" />
  </picture>
 </a>
 

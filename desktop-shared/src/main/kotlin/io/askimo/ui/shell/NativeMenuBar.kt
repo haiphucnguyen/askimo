@@ -484,7 +484,7 @@ object NativeMenuBar {
             val starGitHubItem = MenuItem(starGitHubDisplayText)
             starGitHubItem.addActionListener(
                 ActionListener {
-                    runCatching { if (Desktop.isDesktopSupported()) Desktop.getDesktop().browse(URI("https://github.com/haiphucnguyen/askimo")) }
+                    runCatching { if (Desktop.isDesktopSupported()) Desktop.getDesktop().browse(URI("https://github.com/askimo-ai/askimo")) }
                 },
             )
             helpMenu.add(starGitHubItem)

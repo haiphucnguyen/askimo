@@ -45,7 +45,7 @@ data class UpdateInfo(
  * This service is shared across desktop and CLI applications.
  */
 class UpdateChecker(
-    private val githubRepo: String = "haiphucnguyen/askimo",
+    private val githubRepo: String = "askimo-ai/askimo",
     private val userAgent: String = "Askimo/${VersionInfo.version}",
 ) {
     private val log = logger<UpdateChecker>()

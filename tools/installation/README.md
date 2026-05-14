@@ -10,17 +10,17 @@ The `install.sh` script provides a quick and easy way to install Askimo CLI on m
 
 **One-line installation (macOS/Linux):**
 ```bash
-curl -sSL https://raw.githubusercontent.com/haiphucnguyen/askimo/main/tools/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/askimo-ai/askimo/main/tools/install.sh | bash
 ```
 
 **Windows with Git Bash or WSL:**
 ```bash
-curl -sSL https://raw.githubusercontent.com/haiphucnguyen/askimo/main/tools/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/askimo-ai/askimo/main/tools/install.sh | bash
 ```
 
 **Or download and run:**
 ```bash
-wget https://raw.githubusercontent.com/haiphucnguyen/askimo/main/tools/install.sh
+wget https://raw.githubusercontent.com/askimo-ai/askimo/main/tools/install.sh
 chmod +x install.sh
 ./install.sh
 ```
@@ -51,12 +51,12 @@ The `install.ps1` script is designed specifically for native Windows PowerShell 
 
 **One-line installation (PowerShell):**
 ```powershell
-iwr -useb https://raw.githubusercontent.com/haiphucnguyen/askimo/main/tools/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/askimo-ai/askimo/main/tools/install.ps1 | iex
 ```
 
 **Or download and run:**
 ```powershell
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/haiphucnguyen/askimo/main/tools/install.ps1" -OutFile "install.ps1"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/askimo-ai/askimo/main/tools/install.ps1" -OutFile "install.ps1"
 .\install.ps1
 ```
 
@@ -178,7 +178,7 @@ $path = [Environment]::GetEnvironmentVariable("Path", "User")
 **Download fails:**
 - Check your internet connection
 - Verify the GitHub repository is accessible
-- Try downloading manually from the [releases page](https://github.com/haiphucnguyen/askimo/releases)
+- Try downloading manually from the [releases page](https://github.com/askimo-ai/askimo/releases)
 
 **Unsupported OS/Architecture:**
 - Check supported systems above
@@ -215,7 +215,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 If the scripts don't work for your system, you can install manually:
 
-1. Go to the [releases page](https://github.com/haiphucnguyen/askimo/releases)
+1. Go to the [releases page](https://github.com/askimo-ai/askimo/releases)
 2. Download the appropriate archive for your OS and architecture
 3. Extract the archive
 4. Move the binary to a directory in your PATH

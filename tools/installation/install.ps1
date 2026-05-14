@@ -7,7 +7,7 @@
 $ErrorActionPreference = "Stop"
 
 # Configuration
-$REPO = "haiphucnguyen/askimo"
+$REPO = "askimo-ai/askimo"
 $BINARY_NAME = "askimo"
 
 # Color output functions

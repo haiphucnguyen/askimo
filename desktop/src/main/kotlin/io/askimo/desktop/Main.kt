@@ -1587,7 +1587,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                                 runCatching {
                                     if (Desktop.isDesktopSupported()) {
                                         Desktop.getDesktop().browse(
-                                            URI("https://github.com/haiphucnguyen/askimo"),
+                                            URI("https://github.com/askimo-ai/askimo"),
                                         )
                                     }
                                 }.onFailure { log.error("Can not open the browser", it) }

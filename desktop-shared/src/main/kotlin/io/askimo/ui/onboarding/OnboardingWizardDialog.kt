@@ -846,7 +846,7 @@ private fun onboardingStepReady() {
                 HorizontalDivider()
                 onboardingLinkItem(
                     title = stringResource("onboarding.step.ready.link.github"),
-                    onClick = { uriHandler.openUri("https://github.com/haiphucnguyen/askimo") },
+                    onClick = { uriHandler.openUri("https://github.com/askimo-ai/askimo") },
                 )
             }
         }
