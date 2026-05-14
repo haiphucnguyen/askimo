@@ -206,6 +206,8 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [ native, native-arm ]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v8
