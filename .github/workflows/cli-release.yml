@@ -371,7 +371,7 @@ jobs:
 
           class Askimo < Formula
             desc "AI-powered terminal assistant for multiple LLM providers"
-            homepage "https://github.com/haiphucnguyen/askimo"
+            homepage "https://github.com/askimo-ai/askimo"
             license "AGPLv3"
 
             on_macos do
@@ -454,7 +454,7 @@ jobs:
           {
             "version": "${{ steps.meta.outputs.version }}",
             "description": "AI-powered terminal assistant for multiple LLM providers",
-            "homepage": "https://github.com/haiphucnguyen/askimo",
+            "homepage": "https://github.com/askimo-ai/askimo",
             "license": "AGPLv3",
             "architecture": {
               "64bit": {

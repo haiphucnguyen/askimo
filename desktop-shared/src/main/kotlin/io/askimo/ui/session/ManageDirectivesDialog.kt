@@ -4,6 +4,8 @@
  */
 package io.askimo.ui.session
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +22,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -48,7 +54,6 @@ import io.askimo.ui.common.components.primaryButton
 import io.askimo.ui.common.components.secondaryButton
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
-import io.askimo.ui.common.ui.themedTooltip
 
 @Composable
 fun manageDirectivesDialog(
@@ -69,6 +74,9 @@ fun manageDirectivesDialog(
     var newApplyToCurrent by remember { mutableStateOf(false) }
     var newNameError by remember { mutableStateOf<String?>(null) }
     var newContentError by remember { mutableStateOf<String?>(null) }
+
+    // Track which directives have expanded content
+    var expandedDirectives by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     // Pre-load error messages in composable context
     val nameRequiredError = stringResource("directive.edit.name.required")
@@ -128,6 +136,7 @@ fun manageDirectivesDialog(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         items(directives, key = { it.id }) { directive ->
+                            val isExpanded = directive.id in expandedDirectives
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = CardDefaults.cardColors(
@@ -137,20 +146,40 @@ fun manageDirectivesDialog(
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(16.dp),
+                                        .padding(16.dp)
+                                        .animateContentSize(),
                                     verticalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
-                                    // Directive name and action buttons
+                                    // Directive name row with icon badge and action buttons
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.SpaceBetween,
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
-                                        Text(
-                                            text = directive.name,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                        )
+                                        // Icon badge + name
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                            modifier = Modifier.weight(1f),
+                                        ) {
+                                            Surface(
+                                                shape = MaterialTheme.shapes.small,
+                                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                                modifier = Modifier.size(36.dp),
+                                            ) {
+                                                Icon(
+                                                    Icons.Outlined.Description,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                    modifier = Modifier.padding(8.dp),
+                                                )
+                                            }
+                                            Text(
+                                                text = directive.name,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                            )
+                                        }
 
                                         if (editingDirective != directive.id) {
                                             Row(
@@ -257,24 +286,63 @@ fun manageDirectivesDialog(
                                             }
                                         }
                                     } else {
-                                        // Display mode: show truncated content, full text in tooltip
-                                        themedTooltip(text = directive.content) {
+                                        // Display mode: expandable content
+                                        Column(
+                                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                                        ) {
                                             Text(
                                                 text = directive.content,
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                maxLines = 3,
-                                                overflow = TextOverflow.Ellipsis,
-                                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                                maxLines = if (isExpanded) Int.MAX_VALUE else 3,
+                                                overflow = if (isExpanded) TextOverflow.Clip else TextOverflow.Ellipsis,
+                                            )
+                                            // Show more / Show less toggle (only if content is long enough)
+                                            if (directive.content.length > 120 || directive.content.lines().size > 3) {
+                                                Text(
+                                                    text = if (isExpanded) stringResource("action.show.less") else stringResource("action.show.more"),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier
+                                                        .pointerHoverIcon(PointerIcon.Hand)
+                                                        .clickable {
+                                                            expandedDirectives = if (isExpanded) {
+                                                                expandedDirectives - directive.id
+                                                            } else {
+                                                                expandedDirectives + directive.id
+                                                            }
+                                                        },
+                                                )
+                                            }
+
+                                            // Created date as chip
+                                            AssistChip(
+                                                onClick = {},
+                                                label = {
+                                                    Text(
+                                                        text = stringResource("directive.created", TimeUtil.formatDisplay(directive.createdAt)),
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                    )
+                                                },
+                                                leadingIcon = {
+                                                    Icon(
+                                                        Icons.Outlined.Schedule,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(14.dp),
+                                                    )
+                                                },
+                                                modifier = Modifier.height(28.dp),
+                                                colors = AssistChipDefaults.assistChipColors(
+                                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    leadingIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                ),
+                                                border = AssistChipDefaults.assistChipBorder(
+                                                    enabled = true,
+                                                    borderColor = MaterialTheme.colorScheme.outlineVariant,
+                                                ),
                                             )
                                         }
-
-                                        // Created date
-                                        Text(
-                                            text = stringResource("directive.created", TimeUtil.formatDisplay(directive.createdAt)),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
                                     }
                                 }
                             }
