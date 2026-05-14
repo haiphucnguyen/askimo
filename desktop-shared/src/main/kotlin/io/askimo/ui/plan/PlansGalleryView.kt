@@ -35,8 +35,6 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -375,22 +373,22 @@ private fun planCard(
     val isHovered by interactionSource.collectIsHoveredAsState()
     var showMenu by remember { mutableStateOf(false) }
 
-    Card(
-        onClick = onSelect,
+    Surface(
         modifier = modifier
             .hoverable(interactionSource)
+            .clickable(onClick = onSelect)
             .pointerHoverIcon(PointerIcon.Hand),
-        interactionSource = interactionSource,
-        colors = if (isHovered) {
-            AppComponents.primaryCardColors()
-        } else {
-            CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
         shape = MaterialTheme.shapes.medium,
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isHovered) 4.dp else 1.dp),
+        color = if (isHovered) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant
+        },
+        contentColor = if (isHovered) {
+            MaterialTheme.colorScheme.onPrimaryContainer
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(Spacing.large)) {
             Row(

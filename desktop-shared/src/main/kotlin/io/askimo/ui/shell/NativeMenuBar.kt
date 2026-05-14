@@ -20,7 +20,6 @@ import java.awt.Window
 import java.awt.event.ActionListener
 import java.awt.event.KeyEvent
 import java.net.URI
-import java.net.URLEncoder
 
 /**
  * Native menu bar handler that provides OS-specific menu implementations.
@@ -493,42 +492,11 @@ object NativeMenuBar {
             // Share Askimo submenu
             val shareMenu = Menu(LocalizationManager.getString("menu.help.share"))
 
-            val shareText = LocalizationManager.getString("menu.help.share.text")
-            val shareTextEncoded = URLEncoder.encode(shareText, "UTF-8")
-
-            val shareXItem = MenuItem(LocalizationManager.getString("menu.help.share.x"))
-            shareXItem.addActionListener(
-                ActionListener {
-                    runCatching { if (Desktop.isDesktopSupported()) Desktop.getDesktop().browse(URI("https://x.com/intent/tweet?text=$shareTextEncoded")) }
-                },
-            )
-            shareMenu.add(shareXItem)
-
-            val shareLinkedInItem = MenuItem(LocalizationManager.getString("menu.help.share.linkedin"))
-            shareLinkedInItem.addActionListener(
-                ActionListener {
-                    runCatching {
-                        if (Desktop.isDesktopSupported()) {
-                            val url = URLEncoder.encode("https://askimo.chat", "UTF-8")
-                            Desktop.getDesktop().browse(URI("https://www.linkedin.com/sharing/share-offsite/?url=$url"))
-                        }
-                    }
-                },
-            )
-            shareMenu.add(shareLinkedInItem)
-
-            val shareFacebookItem = MenuItem(LocalizationManager.getString("menu.help.share.facebook"))
-            shareFacebookItem.addActionListener(
-                ActionListener {
-                    runCatching {
-                        if (Desktop.isDesktopSupported()) {
-                            val url = URLEncoder.encode("https://askimo.chat", "UTF-8")
-                            Desktop.getDesktop().browse(URI("https://www.facebook.com/sharer/sharer.php?u=$url"))
-                        }
-                    }
-                },
-            )
-            shareMenu.add(shareFacebookItem)
+            ShareTarget.entries.forEach { target ->
+                val item = MenuItem(ShareUtils.labelFor(target))
+                item.addActionListener(ActionListener { ShareUtils.share(target) })
+                shareMenu.add(item)
+            }
 
             helpMenu.add(shareMenu)
 

@@ -347,7 +347,7 @@ jobs:
         if: steps.meta.outputs.mac_arm_url != ''
         uses: actions/checkout@v6
         with:
-          repository: ${{ vars.TAP_REPO || 'haiphucnguyen/homebrew-askimo' }}
+          repository: ${{ vars.TAP_REPO || 'askimo-ai/homebrew-askimo' }}
           token: ${{ secrets.TAP_PUSH_TOKEN }}
           path: tap
           fetch-depth: 0
@@ -438,7 +438,7 @@ jobs:
         if: steps.meta.outputs.win_url != ''
         uses: actions/checkout@v6
         with:
-          repository: haiphucnguyen/scoop-askimo
+          repository: askimo-ai/scoop-askimo
           token: ${{ secrets.TAP_PUSH_TOKEN }}
           ref: main
           path: bucket
@@ -480,7 +480,7 @@ jobs:
           git add bucket/askimo.json
           if ! git diff --cached --quiet; then
             git commit -m "askimo ${{ steps.meta.outputs.tag }}"
-            git remote set-url origin "https://x-access-token:${TOKEN}@github.com/haiphucnguyen/scoop-askimo.git"
+            git remote set-url origin "https://x-access-token:${TOKEN}@github.com/askimo-ai/scoop-askimo.git"
             git push origin HEAD:main
           else
             echo "No changes to commit."
