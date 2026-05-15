@@ -64,6 +64,7 @@ class TokenAwareSummarizingMemoryTest {
         whenever(mockAppContext.getActiveProvider()).thenReturn(io.askimo.core.providers.ModelProvider.OPENAI)
         whenever(mockAppContext.params).thenReturn(mockParams)
         whenever(mockParams.model).thenReturn("gpt-4")
+        whenever(mockAppContext.buildUserMemoryPrefix()).thenReturn("")
 
         // Mock repository to return null (no existing memory)
         whenever(mockRepository.getBySessionId(any())).thenReturn(null)

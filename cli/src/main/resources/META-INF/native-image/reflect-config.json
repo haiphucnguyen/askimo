@@ -270,13 +270,6 @@
     "name": "weightedSize"
   } ]
 }, {
-  "name": "com.github.benmanes.caffeine.cache.SSMSA",
-  "fields": [ {
-    "name": "FACTORY"
-  }, {
-    "name": "expiresAfterAccessNanos"
-  } ]
-}, {
   "name": "com.github.benmanes.caffeine.cache.SSMSW",
   "fields": [ {
     "name": "FACTORY"
@@ -1862,6 +1855,9 @@
     "parameterTypes": [ ]
   }, {
     "name": "content",
+    "parameterTypes": [ "java.lang.String" ]
+  }, {
+    "name": "reasoningContent",
     "parameterTypes": [ "java.lang.String" ]
   }, {
     "name": "role",
@@ -3757,6 +3753,9 @@
     "name": "<init>",
     "parameterTypes": [ "io.askimo.core.context.AppContextParams", "kotlin.jvm.internal.DefaultConstructorMarker" ]
   }, {
+    "name": "buildUserMemoryPrefix",
+    "parameterTypes": [ ]
+  }, {
     "name": "createUtilityClient",
     "parameterTypes": [ ]
   }, {
@@ -4973,7 +4972,7 @@
     "parameterTypes": [ "dev.langchain4j.data.message.UserMessage", "dev.langchain4j.model.chat.request.ChatRequestParameters" ]
   } ]
 }, {
-  "name": "io.askimo.core.providers.ChatClient$MockitoMock$x58T8imA",
+  "name": "io.askimo.core.providers.ChatClient$MockitoMock$ekJcZCLu",
   "queryAllDeclaredConstructors": true,
   "methods": [ {
     "name": "<init>",
@@ -7718,7 +7717,7 @@
     "parameterTypes": [ ]
   } ]
 }, {
-  "name": "org.jline.reader.ParsedLine$MockitoMock$ldNa7zx3",
+  "name": "org.jline.reader.ParsedLine$MockitoMock$wmAVjjco",
   "queryAllDeclaredConstructors": true,
   "methods": [ {
     "name": "<init>",
