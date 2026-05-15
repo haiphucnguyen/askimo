@@ -14,6 +14,7 @@ import io.askimo.core.chat.repository.ModelClassificationRepository
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.chat.repository.ResourceSegmentRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
+import io.askimo.core.chat.repository.UserMemoryRepository
 import io.askimo.core.plan.repository.PlanExecutionRepository
 import io.askimo.core.skills.repository.SkillRunHistoryRepository
 import io.askimo.core.user.repository.UserProfileRepository
@@ -105,6 +106,7 @@ class DatabaseManager private constructor(
         createSummariesTable(connection)
         createDirectivesTable(connection)
         createSessionMemoryTable(connection)
+        createUserMemoryTable(connection)
         createFileSegmentsTable(connection)
         createModelClassificationsTable(connection)
         createIndexFileStateTable(connection)
@@ -438,6 +440,21 @@ class DatabaseManager private constructor(
         }
     }
 
+    private fun createUserMemoryTable(conn: Connection) {
+        conn.createStatement().use { stmt ->
+            stmt.executeUpdate(
+                """
+                CREATE TABLE IF NOT EXISTS user_memory (
+                    id TEXT PRIMARY KEY DEFAULT 'default',
+                    memory_json TEXT NOT NULL,
+                    last_updated TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+                """,
+            )
+        }
+    }
+
     private fun createFileSegmentsTable(conn: Connection) {
         conn.createStatement().use { stmt ->
             stmt.executeUpdate(
@@ -624,6 +641,10 @@ class DatabaseManager private constructor(
         SessionMemoryRepository(this)
     }
 
+    private val _userMemoryRepository: UserMemoryRepository by lazy {
+        UserMemoryRepository(this)
+    }
+
     private val _projectRepository: ProjectRepository by lazy {
         ProjectRepository(this)
     }
@@ -677,6 +698,12 @@ class DatabaseManager private constructor(
      * All access to session memory should go through this repository.
      */
     fun getSessionMemoryRepository(): SessionMemoryRepository = _sessionMemoryRepository
+
+    /**
+     * Get the singleton UserMemoryRepository instance.
+     * Provides access to the persistent cross-session user memory store.
+     */
+    fun getUserMemoryRepository(): UserMemoryRepository = _userMemoryRepository
 
     /**
      * Get the singleton ProjectRepository instance.

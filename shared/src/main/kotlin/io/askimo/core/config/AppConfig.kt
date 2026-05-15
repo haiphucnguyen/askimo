@@ -252,7 +252,7 @@ data class ChatConfig(
     @field:JsonAlias("maxTokens") val maxTokens: Int = 8000,
     @field:JsonAlias("summarizationThreshold") val summarizationThreshold: Double = 0.75,
     @field:JsonAlias("enableAsyncSummarization") val enableAsyncSummarization: Boolean = true,
-    @field:JsonAlias("summarizationTimeoutSeconds") val summarizationTimeoutSeconds: Long = 60,
+    @field:JsonAlias("summarizationTimeoutSeconds") val summarizationTimeoutSeconds: Long = 300,
     @field:JsonAlias("defaultResponseAILocale") val defaultResponseAILocale: String? = null,
 )
 
@@ -934,7 +934,7 @@ object AppConfig {
             ChatConfig(
                 maxTokens = envInt("ASKIMO_CHAT_MAX_TOKENS", 8000),
                 summarizationThreshold = envDouble("ASKIMO_CHAT_SUMMARIZATION_THRESHOLD", 0.75),
-                summarizationTimeoutSeconds = envLong("ASKIMO_CHAT_SUMMARIZATION_TIMEOUT", 60L),
+                summarizationTimeoutSeconds = envLong("ASKIMO_CHAT_SUMMARIZATION_TIMEOUT", 300L),
                 enableAsyncSummarization = System.getenv("ASKIMO_CHAT_ENABLE_ASYNC_SUMMARIZATION")?.toBoolean() ?: true,
                 defaultResponseAILocale = System.getenv("ASKIMO_CHAT_DEFAULT_RESPONSE_LOCALE")?.takeIf { it.isNotBlank() },
             )

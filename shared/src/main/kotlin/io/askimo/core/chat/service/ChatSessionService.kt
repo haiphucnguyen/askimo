@@ -130,6 +130,14 @@ class ChatSessionService(
     private val memoryCache: Cache<String, TokenAwareSummarizingMemory> = Caffeine.newBuilder()
         .maximumSize(10)
         .expireAfterAccess(30.minutes.toJavaDuration())
+        .removalListener<String, TokenAwareSummarizingMemory> { sessionId, memory, _ ->
+            // When a session is evicted (user switched away or cache full), trigger summarization
+            // unconditionally so the next resume loads a compact summary rather than raw messages.
+            if (memory != null && sessionId != null) {
+                log.debug("Memory evicted for session {}, triggering background summarization", sessionId)
+                memory.triggerAsyncSummarization()
+            }
+        }
         .build()
 
     init {
@@ -162,6 +170,7 @@ class ChatSessionService(
             appContext,
             sessionId = sessionId,
             sessionMemoryRepository = sessionMemoryRepository,
+            userMemoryRepository = DatabaseManager.getInstance().getUserMemoryRepository(),
             asyncSummarization = true,
             summarizationTimeoutSeconds = AppConfig.chat.summarizationTimeoutSeconds,
         )
@@ -169,11 +178,9 @@ class ChatSessionService(
 
     /**
      * Get or create a chat context (client + memory) for a session.
-     * If needsVision=true, creates a vision-capable client that can be used alongside the regular client.
      * Both regular and vision clients share the same memory to maintain conversation continuity.
      *
      * @param sessionId The session ID
-     * @param needsVision Whether to create a vision-capable client
      * @return SessionChatContext containing the ChatClient and its associated memory
      */
     private fun getOrCreateContextForSession(

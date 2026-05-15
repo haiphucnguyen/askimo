@@ -12,11 +12,13 @@ import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.memory.ChatMemory
 import io.askimo.core.chat.domain.SessionMemory
 import io.askimo.core.chat.repository.SessionMemoryRepository
+import io.askimo.core.chat.repository.UserMemoryRepository
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.MessageRole
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.ModelCapabilitiesCache
 import io.askimo.core.providers.getSummary
+import io.askimo.core.providers.getUserMemoryFacts
 import io.askimo.core.util.JsonUtils.json
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
@@ -32,11 +34,55 @@ import java.util.concurrent.atomic.AtomicBoolean
  * Structured summary format for conversation analysis
  */
 @Serializable
-data class ConversationSummary(
+data class SessionConversationSummary(
     val keyFacts: Map<String, String> = emptyMap(),
     val mainTopics: List<String> = emptyList(),
     val recentContext: String = "",
 )
+
+/**
+ * Compact summary of stable facts about the user, extracted from conversations.
+ * Accumulated across all sessions — project-agnostic.
+ *
+ * @property facts Stable user facts: role, preferences, tech stack, constraints, etc.
+ *                 Max [MAX_USER_FACTS] entries. Oldest entries are dropped when full.
+ */
+@Serializable
+data class UserMemorySummary(
+    val facts: Map<String, String> = emptyMap(),
+) {
+    /**
+     * Merge [incoming] facts into this summary.
+     *
+     * - New keys are added directly.
+     * - Existing keys always **append** the new value as comma-separated if not already present.
+     * - If total entries exceed [MAX_USER_FACTS], oldest (by insertion order) are dropped.
+     */
+    fun merge(incoming: Map<String, String>): UserMemorySummary {
+        val merged = LinkedHashMap<String, String>(facts)
+        incoming.forEach { (k, v) ->
+            val existing = merged[k]
+            merged[k] = if (existing != null) {
+                val existingItems = existing.split(",").map { it.trim().lowercase() }
+                val newItems = v.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                val toAdd = newItems.filter { it.lowercase() !in existingItems }
+                if (toAdd.isEmpty()) existing else "$existing, ${toAdd.joinToString(", ")}"
+            } else {
+                v
+            }
+        }
+        val trimmed = if (merged.size > MAX_USER_FACTS) {
+            merged.entries.drop(merged.size - MAX_USER_FACTS).associate { it.toPair() }
+        } else {
+            merged
+        }
+        return copy(facts = trimmed)
+    }
+
+    companion object {
+        const val MAX_USER_FACTS = 20
+    }
+}
 
 /**
  * This memory keeps recent messages in full detail while creating either a structured
@@ -55,16 +101,17 @@ data class ConversationSummary(
  * @param tokenEstimator Function to estimate token count for a message (default: words * 1.3)
  * @param summarizationThreshold Percentage (0.0-1.0) of maxTokens at which to trigger summarization, default 0.6
  * @param asyncSummarization Whether to run summarization asynchronously, default true
- * @param summarizationTimeoutSeconds Timeout for summarization operations in seconds, default 60
+ * @param summarizationTimeoutSeconds Timeout for summarization operations in seconds, default 300
  */
 class TokenAwareSummarizingMemory(
     private val appContext: AppContext,
     private val sessionId: String,
     private val sessionMemoryRepository: SessionMemoryRepository,
+    private val userMemoryRepository: UserMemoryRepository? = null,
     private val tokenEstimator: (ChatMessage) -> Int = defaultTokenEstimator(),
     private val summarizationThreshold: Double = 0.6,
     asyncSummarization: Boolean = true,
-    private val summarizationTimeoutSeconds: Long = 60,
+    private val summarizationTimeoutSeconds: Long = 300,
 ) : ChatMemory,
     AutoCloseable {
 
@@ -81,7 +128,7 @@ class TokenAwareSummarizingMemory(
     }
     private val messages = Collections.synchronizedList(mutableListOf<ChatMessage>())
 
-    @Volatile private var structuredSummary: ConversationSummary? = null
+    @Volatile private var structuredSummary: SessionConversationSummary? = null
 
     @Volatile private var basicSummary: String? = null
 
@@ -156,6 +203,7 @@ class TokenAwareSummarizingMemory(
     }
 
     override fun messages(): List<ChatMessage> = buildList {
+        // Add session conversation summary (if any)
         structuredSummary?.let { summary ->
             add(SystemMessage.from(buildStructuredSummaryMessage(summary)))
         } ?: basicSummary?.let { summary ->
@@ -169,6 +217,12 @@ class TokenAwareSummarizingMemory(
                     """.trimMargin(),
                 ),
             )
+        }
+
+        // Add user memory prefix dynamically (always fresh, updated in real-time)
+        val userMemoryPrefix = appContext.buildUserMemoryPrefix()
+        if (userMemoryPrefix.isNotBlank()) {
+            add(SystemMessage.from(userMemoryPrefix))
         }
 
         // Strip base64 image data before sending to the AI so images are never
@@ -282,7 +336,7 @@ class TokenAwareSummarizingMemory(
      * Trigger async summarization without blocking caller.
      * Uses AtomicBoolean.compareAndSet as the entry guard — safe across threads.
      */
-    private fun triggerAsyncSummarization() {
+    internal fun triggerAsyncSummarization() {
         // Only one summarization at a time. compareAndSet(false, true) returns false if
         // another task already set it to true, so we skip without touching the lock.
         if (!summarizationInProgress.compareAndSet(false, true)) {
@@ -291,8 +345,11 @@ class TokenAwareSummarizingMemory(
         }
 
         CompletableFuture.runAsync({
+            val startTime = System.currentTimeMillis()
             try {
                 summarizeAndPrune()
+                val elapsedSec = (System.currentTimeMillis() - startTime) / 1000.0
+                log.debug("Summarization completed in {}s", String.format("%.1f", elapsedSec))
             } catch (e: Exception) {
                 log.error("Async summarization failed", e)
                 // On any error, fall back to basic summary to ensure memory is managed
@@ -313,15 +370,13 @@ class TokenAwareSummarizingMemory(
             } finally {
                 // Always reset on the same thread that set it — AtomicBoolean is safe here.
                 summarizationInProgress.set(false)
+                val totalTime = (System.currentTimeMillis() - startTime) / 1000.0
+                if (totalTime > summarizationTimeoutSeconds) {
+                    log.warn("Summarization took {}s, exceeding timeout of {}s", String.format("%.1f", totalTime), summarizationTimeoutSeconds)
+                }
             }
         }, executorService)
-            .orTimeout(summarizationTimeoutSeconds, TimeUnit.SECONDS)
-            .exceptionally { throwable ->
-                log.error("Summarization timed out or failed", throwable)
-                // Ensure the flag is cleared even on timeout so future calls can proceed.
-                summarizationInProgress.set(false)
-                null
-            }
+        // Fire-and-forget: no orTimeout. Task is daemon and will be cleaned up in close().
     }
 
     /**
@@ -369,15 +424,45 @@ class TokenAwareSummarizingMemory(
 
             structuredSummary = mergeWithExistingSummary(newSummary)
             log.info("Generated structured summary with ${newSummary.keyFacts.size} facts, ${newSummary.mainTopics.size} topics")
+
+            // Merge stable user facts into the persistent user memory store
+            mergeIntoUserMemory(conversationText)
         } catch (e: Exception) {
             log.error("Structured summarization failed for session $sessionId", e)
         }
     }
 
-    private fun mergeWithExistingSummary(newSummary: ConversationSummary): ConversationSummary {
+    /**
+     * Extract stable user facts from the conversation and merge them into
+     * the persistent [UserMemoryRepository]. No-op when repository is not configured.
+     */
+    private fun mergeIntoUserMemory(conversationText: String) {
+        val repo = userMemoryRepository ?: return
+        try {
+            val extracted = chatClient.getUserMemoryFacts(conversationText)
+            if (extracted.isEmpty()) return
+
+            val existing = repo.get()
+            val current = if (existing != null) {
+                json.decodeFromString(UserMemorySummary.serializer(), existing.memoryJson)
+            } else {
+                UserMemorySummary()
+            }
+
+            val merged = current.merge(extracted)
+            repo.save(json.encodeToString(UserMemorySummary.serializer(), merged))
+            // Invalidate cached user memory in AppContext so next call picks up the update
+            appContext.invalidateUserMemoryCache()
+            log.debug("Merged {} user memory facts for session {}", extracted.size, sessionId)
+        } catch (e: Exception) {
+            log.warn("Failed to merge user memory for session {}: {}", sessionId, e.message)
+        }
+    }
+
+    private fun mergeWithExistingSummary(newSummary: SessionConversationSummary): SessionConversationSummary {
         val existing = structuredSummary
         return if (existing != null) {
-            ConversationSummary(
+            SessionConversationSummary(
                 keyFacts = existing.keyFacts + newSummary.keyFacts,
                 mainTopics = (existing.mainTopics + newSummary.mainTopics).distinct(),
                 recentContext = newSummary.recentContext,
@@ -428,7 +513,7 @@ class TokenAwareSummarizingMemory(
         }
     }
 
-    private fun buildStructuredSummaryMessage(summary: ConversationSummary): String = buildString {
+    private fun buildStructuredSummaryMessage(summary: SessionConversationSummary): String = buildString {
         appendLine("=== CONVERSATION CONTEXT ===")
         appendLine()
 
@@ -481,7 +566,7 @@ class TokenAwareSummarizingMemory(
      */
     data class MemoryState(
         val messages: List<MemoryMessage>,
-        val summary: ConversationSummary?,
+        val summary: SessionConversationSummary?,
     )
 
     /**
@@ -529,7 +614,7 @@ class TokenAwareSummarizingMemory(
     ): SessionMemory {
         val summaryJson = state.summary?.let {
             json.encodeToString(
-                ConversationSummary.serializer(),
+                SessionConversationSummary.serializer(),
                 it,
             )
         }
@@ -557,7 +642,7 @@ class TokenAwareSummarizingMemory(
     ): MemoryState {
         val summary = sessionMemory.memorySummary?.let {
             json.decodeFromString(
-                ConversationSummary.serializer(),
+                SessionConversationSummary.serializer(),
                 it,
             )
         }

@@ -13,7 +13,8 @@ import io.askimo.core.intent.DetectAiResponseIntentCommand
 import io.askimo.core.intent.FollowUpSuggestion
 import io.askimo.core.intent.ToolRegistry
 import io.askimo.core.logging.logger
-import io.askimo.core.memory.ConversationSummary
+import io.askimo.core.memory.SessionConversationSummary
+import io.askimo.core.memory.UserMemorySummary
 import io.askimo.core.util.JsonUtils.json
 import io.askimo.core.util.RetryPresets
 import io.askimo.core.util.RetryUtils
@@ -22,7 +23,6 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonPrimitive
 import java.nio.channels.UnresolvedAddressException
 import java.util.concurrent.CountDownLatch
 
@@ -280,6 +280,38 @@ fun ChatClient.sendStreamingMessageWithCallback(
 }
 
 /**
+ * Parse a structured JSON response from the model into a typed object.
+ *
+ * Handles common formatting issues:
+ * - Markdown code blocks (``` or ```json)
+ * - Excess whitespace and newlines
+ * - Arrays that should be strings (joins with comma-space)
+ * - Strings that should be arrays (splits by comma)
+ *
+ * @param rawResponse The raw JSON string from the model
+ * @param arrayKeys Keys whose values must be JSON arrays (converts comma-string → array)
+ * @param stringKeys Keys whose values must be strings (converts array → comma-string)
+ * @return Parsed object of type T
+ * @throws Exception if JSON parsing fails after cleanup
+ */
+private inline fun <reified T> parseStructuredOutput(
+    rawResponse: String,
+    arrayKeys: Set<String> = emptySet(),
+    stringKeys: Set<String> = emptySet(),
+): T {
+    var jsonText = rawResponse
+        .removePrefix("```json")
+        .removePrefix("```")
+        .removeSuffix("```")
+        .trim()
+
+    jsonText = cleanJsonResponse(jsonText)
+    jsonText = normalizeJsonFieldTypes(jsonText, arrayKeys, stringKeys)
+
+    return json.decodeFromString<T>(jsonText)
+}
+
+/**
  * Generates a structured summary of a conversation.
  *
  * This extension function analyzes conversation text and extracts:
@@ -288,74 +320,26 @@ fun ChatClient.sendStreamingMessageWithCallback(
  * - Recent context summary
  *
  * The AI model is instructed to respond with JSON only, which is then parsed
- * into a [ConversationSummary] object.
+ * into a [SessionConversationSummary] object using structured output parsing.
  *
  * @param conversationText The conversation text to summarize
- * @return A ConversationSummary containing key facts, main topics, and recent context
+ * @return A SessionConversationSummary containing key facts, main topics, and recent context
  */
-fun ChatClient.getSummary(conversationText: String): ConversationSummary {
+fun ChatClient.getSummary(conversationText: String): SessionConversationSummary {
     val log = logger<ChatClient>()
 
-    val prompt = """
-        Analyze this conversation and create a HIGH-QUALITY structured summary. Focus on extracting meaningful information while preserving essential context.
+    val prompt = buildSummaryPrompt(conversationText)
 
-        CONVERSATION:
-        $conversationText
-
-        CRITICAL INSTRUCTIONS:
-        1. Extract ONLY meaningful, actionable facts - ignore:
-           - Greetings and pleasantries (hello, thanks, etc.)
-           - Simple confirmations (ok, yes, got it)
-           - Filler words and transitional phrases
-           - Repetitive information already captured
-
-        2. Identify CONCRETE topics and user goals:
-           - Use specific terms, not generic labels (e.g., "Python error handling" not "coding")
-           - Capture the user's actual objectives and problems
-           - Note technical details, file names, or specific requirements
-
-        3. Preserve ESSENTIAL context:
-           - Important decisions made during the conversation
-           - User preferences and constraints
-           - Critical information needed for future interactions
-           - Any unresolved issues or pending tasks
-
-        4. For recentContext:
-           - Summarize the LATEST state of the conversation
-           - What is the user currently working on or asking about?
-           - What is the immediate next step or goal?
-           - Keep it concise (1-3 sentences)
-
-        5. Quality over quantity:
-           - Better to have fewer high-quality facts than many trivial ones
-           - Each fact should be actionable or informative
-           - Avoid redundancy across keyFacts, mainTopics, and recentContext
-
-        Respond with valid JSON only (no markdown, no code blocks, single line):
-        {
-            "keyFacts": {"specific_fact_name": "concrete_value"},
-            "mainTopics": ["specific_topic_1", "specific_topic_2"],
-            "recentContext": "concise summary of current state and user's immediate goal"
-        }
-    """.trimIndent()
-
-    try {
-        var jsonText = this.sendMessage(prompt)
-
-        // Remove markdown code blocks
-        jsonText = jsonText
-            .removePrefix("```json")
-            .removePrefix("```")
-            .removeSuffix("```")
-            .trim()
-
-        jsonText = cleanJsonResponse(jsonText)
-        jsonText = sanitizeArraysInKeyFacts(jsonText)
-
-        return json.decodeFromString<ConversationSummary>(jsonText)
+    return try {
+        val rawResponse = this.sendMessage(prompt)
+        parseStructuredOutput<SessionConversationSummary>(
+            rawResponse,
+            arrayKeys = setOf("mainTopics"), // must be array
+            stringKeys = setOf("recentContext"), // must be string
+        )
     } catch (e: Exception) {
         log.error("Failed to generate conversation summary. Response was likely malformed.", e)
-        return ConversationSummary(
+        SessionConversationSummary(
             keyFacts = emptyMap(),
             mainTopics = emptyList(),
             recentContext = conversationText.takeLast(500),
@@ -364,10 +348,125 @@ fun ChatClient.getSummary(conversationText: String): ConversationSummary {
 }
 
 /**
- * Clean JSON response from AI to handle common formatting issues.
- * Removes newlines inside string values while preserving structure.
+ * Build the system prompt for conversation summarization.
+ * Emphasizes quality, specificity, and actionable facts.
  */
-private fun cleanJsonResponse(jsonText: String): String {
+private fun buildSummaryPrompt(conversationText: String) = """
+    Analyze this conversation and extract a structured summary.
+
+    FOCUS ON:
+    • Meaningful, actionable facts (ignore greetings, confirmations, filler)
+    • Specific topics with technical details (don't use generic labels)
+    • User's goals, preferences, and constraints
+    • Current state and next steps
+
+    CONVERSATION:
+    $conversationText
+
+    RESPOND WITH VALID JSON ONLY (no markdown or explanation):
+    {
+      "keyFacts": { "key_name": "value", ... },
+      "mainTopics": [ "topic1", "topic2", ... ],
+      "recentContext": "1-3 sentence summary of latest state and immediate goal"
+    }
+""".trimIndent()
+
+/**
+ * Extract stable, long-term facts about the user from a conversation.
+ *
+ * Unlike [getSummary] which captures what was discussed, this focuses exclusively on
+ * persistent facts about the person: their role, tech stack, preferences, constraints,
+ * and working context. Trivial or session-specific information is ignored.
+ *
+ * Returns an empty map if nothing worth remembering is found — callers should skip
+ * the merge in that case to avoid polluting the user memory store.
+ *
+ * @param conversationText The conversation text to analyse.
+ * @return Map of fact-key to fact-value, or empty map if nothing stable was found.
+ */
+fun ChatClient.getUserMemoryFacts(conversationText: String): Map<String, String> {
+    val log = logger<ChatClient>()
+
+    val prompt = buildUserMemoryPrompt(conversationText)
+
+    return try {
+        val rawResponse = this.sendMessage(prompt)
+        // Wrap flat {"key":"value"} into {"facts": {...}} expected by UserMemorySummary
+        val wrapped = """{"facts": ${cleanJsonResponse(rawResponse.removePrefix("```json").removePrefix("```").removeSuffix("```").trim())}}"""
+        val sanitized = normalizeJsonFieldTypes(wrapped, emptySet(), emptySet())
+        json.decodeFromString<UserMemorySummary>(sanitized).facts
+    } catch (e: Exception) {
+        log.debug("getUserMemoryFacts: could not parse response, returning empty — {}", e.message)
+        emptyMap()
+    }
+}
+
+/**
+ * Build the system prompt for extracting user memory facts.
+ * Uses intention-qualified key names to avoid ambiguous extractions (e.g. bare "location").
+ */
+private fun buildUserMemoryPrompt(conversationText: String) = """
+    Extract stable, long-term personalization facts about the USER that will help provide relevant,
+    contextual, and personalized responses across all future conversations.
+
+    Include EVERYTHING that defines who they are and how they live:
+
+    LIFESTYLE & LIVING:
+    • Where the USER *lives* (only if they explicitly say so — "I live in...", "I'm based in...")
+    • Timezone, work schedule, lifestyle patterns
+    • Family situation, household composition
+    • Health, fitness, dietary preferences
+
+    PROFESSIONAL & EXPERTISE:
+    • Role, title, industry, company type
+    • Skills, expertise areas, tech stack
+    • Work style, work-life balance preferences
+    • Career goals, ambitions
+
+    PERSONAL INTERESTS & PASSIONS:
+    • Hobbies and activities they enjoy (e.g. "I love aquariums", "I enjoy gaming")
+    • Interests inferred from topics they *personally care about*
+    • Learning goals, sports, entertainment preferences
+
+    PREFERENCES & PERSONALITY:
+    • Communication style: formal/casual, detailed/concise, humor preference
+    • Decision-making and values: what matters to them
+    • Pet peeves or strong preferences
+
+    TECHNICAL & PRACTICAL:
+    • Operating system, devices, tools they use daily
+    • Programming languages, frameworks, tools
+
+    KEY NAMING RULES — USE INTENTION-QUALIFIED KEYS:
+    • ALWAYS qualify ambiguous keys with their meaning. Never use bare "location".
+    • "home_location" → where the user actually lives
+    • "travel_interest" → places they want to visit or are curious about
+    • "hobby" → activities they actively do
+    Bad:  { "location": "Los Angeles" }          ← meaningless, unclear intent
+    Good: { "travel_interest": "Los Angeles" }    ← user wants to visit
+    Good: { "home_location": "Ho Chi Minh City" } ← user lives here
+
+    CRITICAL RULES:
+    • Distinguish "user IS [something]" vs "user is ASKING ABOUT [something]"
+    • A city/place mentioned in a question is NOT the user's location unless explicitly stated
+    • Only store facts that reflect the user's own identity, preferences, or life — not topics discussed
+
+    IGNORE:
+    • Temporary context (current task, one-off questions)
+    • Topics discussed that don't reflect the user's identity
+    • Greetings, pleasantries, confirmations
+    • Weak or uncertain claims
+
+    CONVERSATION:
+    $conversationText
+
+    RESPOND WITH VALID JSON ONLY (no markdown, no explanation):
+    { "hobby": "travel", "family_status": "has young children", "travel_interest": "US national parks", ... }
+
+    Return empty {} if no stable personalizable facts found.
+""".trimIndent()
+
+internal fun cleanJsonResponse(jsonText: String): String {
     // First, try to find the actual JSON object
     val jsonStart = jsonText.indexOf('{')
     val jsonEnd = jsonText.lastIndexOf('}')
@@ -387,54 +486,55 @@ private fun cleanJsonResponse(jsonText: String): String {
 }
 
 /**
- * Sanitize arrays in keyFacts to comma-separated strings.
- * Since ConversationSummary.keyFacts is Map<String, String>, we need to convert
- * any array values to strings.
+ * Normalize JSON field types to match the expected schema:
+ * - [arrayKeys]: fields that must be JSON arrays.
+ *   If the model returns a string, it is split by comma into an array.
+ * - [stringKeys]: fields that must be strings.
+ *   If the model returns an array, it is joined with ", ".
+ * - All other array values (including inside nested objects such as keyFacts) are converted
+ *   to comma-strings — safe default for Map<String,String> schemas.
  */
-private fun sanitizeArraysInKeyFacts(jsonText: String): String {
+internal fun normalizeJsonFieldTypes(
+    jsonText: String,
+    arrayKeys: Set<String>,
+    stringKeys: Set<String>,
+): String {
     val log = logger<ChatClient>()
-
     return try {
         val jsonParser = Json { ignoreUnknownKeys = true }
-        val jsonElement = jsonParser.parseToJsonElement(jsonText)
+        val root = jsonParser.parseToJsonElement(jsonText)
+        if (root !is JsonObject) return jsonText
 
-        if (jsonElement !is JsonObject) {
-            return jsonText
-        }
+        fun normalizeValue(key: String, value: kotlinx.serialization.json.JsonElement): kotlinx.serialization.json.JsonElement = when {
+            key in arrayKeys -> when (value) {
+                is JsonArray -> value
 
-        val keyFacts = jsonElement["keyFacts"]
-        if (keyFacts !is JsonObject) {
-            return jsonText
-        }
-
-        // Convert arrays in keyFacts to comma-separated strings
-        val sanitizedKeyFacts = keyFacts.entries.associate { (key, value) ->
-            key to when (value) {
-                is JsonArray -> {
-                    // Convert array to comma-separated string
-                    val arrayValues = value.jsonArray.mapNotNull {
-                        when (it) {
-                            is JsonPrimitive -> it.jsonPrimitive.content
-                            else -> null
-                        }
-                    }
-                    JsonPrimitive(arrayValues.joinToString(", "))
+                is JsonPrimitive -> {
+                    val parts = value.content.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                    JsonArray(parts.map { JsonPrimitive(it) })
                 }
 
                 else -> value
             }
+
+            key in stringKeys || value is JsonArray -> when (value) {
+                is JsonArray -> JsonPrimitive(
+                    value.jsonArray.mapNotNull { (it as? JsonPrimitive)?.content }.joinToString(", "),
+                )
+
+                else -> value
+            }
+
+            // Recurse into nested objects so e.g. keyFacts values are also normalized
+            value is JsonObject -> JsonObject(value.entries.associate { (k, v) -> k to normalizeValue(k, v) })
+
+            else -> value
         }
 
-        // Rebuild JSON with sanitized keyFacts
-        val sanitizedJson = JsonObject(
-            jsonElement.toMap().toMutableMap().apply {
-                put("keyFacts", JsonObject(sanitizedKeyFacts))
-            },
-        )
-
-        sanitizedJson.toString()
+        val fixed = root.entries.associate { (key, value) -> key to normalizeValue(key, value) }
+        JsonObject(fixed).toString()
     } catch (e: Exception) {
-        log.debug("Failed to sanitize arrays in keyFacts, returning original: ${e.message}")
+        log.debug("normalizeJsonFieldTypes: failed to normalize, returning original — {}", e.message)
         jsonText
     }
 }

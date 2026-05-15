@@ -14,7 +14,7 @@ import java.time.LocalDateTime
  * Stores the serialized state of TokenAwareSummarizingMemory for a chat session.
  *
  * @property sessionId Unique identifier for the chat session
- * @property memorySummary JSON serialized ConversationSummary (nullable)
+ * @property memorySummary JSON serialized SessionConversationSummary (nullable)
  * @property memoryMessages JSON serialized List<ChatMessage> from LangChain4j
  * @property lastUpdated Timestamp of last memory update
  * @property createdAt Timestamp when memory was first created
