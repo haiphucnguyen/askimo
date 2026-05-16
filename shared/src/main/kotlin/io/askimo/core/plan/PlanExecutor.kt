@@ -47,16 +47,24 @@ class PlanExecutor(private val chatModel: ChatModel) {
 
     private val log = logger<PlanExecutor>()
 
-/**
+    /**
      * Executes the plan and returns the final AI-generated result as a string.
      *
      * @param plan        The parsed plan definition.
      * @param inputs      User-provided values keyed by [PlanInput.key].
      * @param executionId Optional [PlanExecution] record id — passed to [PlanExecutionListener]
      *                    so every [PlanStepEvent] is correlated back to the DB record.
+     * @param onStepOutputs Optional callback invoked after execution with the ordered list of
+     *                      (stepName → output) pairs for all completed steps. Use this to
+     *                      persist intermediate step results alongside the final output.
      * @return The final output string produced by the last step in the workflow.
      */
-    fun execute(plan: PlanDef, inputs: Map<String, String>, executionId: String = ""): String {
+    fun execute(
+        plan: PlanDef,
+        inputs: Map<String, String>,
+        executionId: String = "",
+        onStepOutputs: ((List<Pair<String, String>>) -> Unit)? = null,
+    ): String {
         validateInputs(plan, inputs)
 
         val stepCount = plan.steps.size
@@ -79,7 +87,7 @@ class PlanExecutor(private val chatModel: ChatModel) {
         val startMs = System.currentTimeMillis()
 
         return try {
-            val output = executeInternal(plan, inputs, executionId)
+            val output = executeInternal(plan, inputs, executionId, onStepOutputs)
             val durationMs = System.currentTimeMillis() - startMs
             val durationBucket = when {
                 durationMs < 5_000 -> "<5s"
@@ -116,7 +124,7 @@ class PlanExecutor(private val chatModel: ChatModel) {
         }
     }
 
-    private fun executeInternal(plan: PlanDef, inputs: Map<String, String>, executionId: String): String {
+    private fun executeInternal(plan: PlanDef, inputs: Map<String, String>, executionId: String, onStepOutputs: ((List<Pair<String, String>>) -> Unit)? = null): String {
         log.debug("Executing plan '{}' (execution={}) with inputs: {}", plan.id, executionId, inputs.keys)
 
         // Collect interactive answers first by traversing the workflow for Ask nodes.
@@ -140,6 +148,8 @@ class PlanExecutor(private val chatModel: ChatModel) {
             ?: ""
 
         logExecutionSummary(plan, output)
+
+        onStepOutputs?.invoke(listener.stepOutputs.toList())
 
         return output
     }

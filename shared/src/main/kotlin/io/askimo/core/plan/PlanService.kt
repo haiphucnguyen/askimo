@@ -119,14 +119,17 @@ class PlanService(
 
         val executor = PlanExecutor(chatModel)
 
+        var stepOutputs: List<Pair<String, String>> = emptyList()
+
         return runCatching {
-            executor.execute(plan, inputs, execution.id)
+            executor.execute(plan, inputs, execution.id) { stepOutputs = it }
         }.fold(
             onSuccess = { output ->
                 planExecutionRepository.update(
                     execution.copy(
                         status = PlanExecutionStatus.COMPLETED,
                         output = output.takeIf { it.isNotBlank() },
+                        stepOutputs = stepOutputs,
                     ),
                 )
                 log.info("Plan '{}' (execution={}) completed successfully", plan.id, execution.id)
@@ -157,8 +160,9 @@ class PlanService(
      * Runs a follow-up question against the result of a previous plan execution.
      *
      * The prior plan output is injected as context so the model can refine or extend it
-     * without re-running the full multi-step workflow. The [PlanExecution] record's
-     * [output] field is updated in place with the new answer, and [runCount] is incremented.
+     * without re-running the full multi-step workflow. For multi-step plans, all intermediate
+     * step outputs are included so the model has the full chain of reasoning. The [PlanExecution]
+     * record's [output] field is updated in place with the new answer, and [runCount] is incremented.
      *
      * @param executionId  The id of the previous [PlanExecution] whose output is the context.
      * @param followUpText The user's follow-up instruction (e.g. "Make it shorter").
@@ -182,7 +186,27 @@ class PlanService(
         val systemMessage = "You are continuing work on a previously generated result. " +
             "The user wants to refine or extend it. Reply with the complete updated result only."
 
-        val userMessage = "Previous result:\n\n$priorOutput\n\n---\n\nUser request: $followUpText"
+        // Build context: include intermediate step outputs (if any) so the model has the full
+        // chain of reasoning, not just the final answer.
+        val userMessage = buildString {
+            val stepOutputs = execution.stepOutputs
+            if (stepOutputs.size > 1) {
+                // Multi-step plan — show each intermediate step's output for full context.
+                // The last entry equals priorOutput so we show it separately as "Final result".
+                append("This result was produced by a multi-step plan. Here are the intermediate step outputs:\n\n")
+                stepOutputs.dropLast(1).forEachIndexed { index, (stepName, output) ->
+                    append("### Step ${index + 1}: $stepName\n\n")
+                    append(output)
+                    append("\n\n")
+                }
+                append("### Final result\n\n")
+                append(priorOutput)
+            } else {
+                append("Previous result:\n\n")
+                append(priorOutput)
+            }
+            append("\n\n---\n\nUser request: $followUpText")
+        }
 
         return runCatching {
             val response = chatModel.chat(

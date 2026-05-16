@@ -558,9 +558,9 @@ fun chatView(
                                         modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                                         colors = ButtonDefaults.textButtonColors(
                                             contentColor = if (selectedDirectiveObj != null) {
-                                                MaterialTheme.colorScheme.primary
-                                            } else {
                                                 MaterialTheme.colorScheme.onSurface
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurfaceVariant
                                             },
                                         ),
                                     ) {

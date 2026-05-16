@@ -31,6 +31,8 @@ enum class PlanExecutionStatus {
  * @param runCount      How many times this execution has been re-run (starts at 1).
  * @param sessionId     Linked ChatSession id that holds the message history.
  * @param output        The final AI-generated result text; populated on COMPLETED.
+ * @param stepOutputs   Ordered list of (stepName → output) pairs for every completed step;
+ *                      populated on COMPLETED so users can inspect intermediate results.
  * @param errorMessage  Populated when [status] is [PlanExecutionStatus.FAILED].
  * @param createdAt     When the execution record was first created.
  * @param updatedAt     When the execution record was last modified.
@@ -44,6 +46,7 @@ data class PlanExecution(
     val runCount: Int = 1,
     val sessionId: String? = null,
     val output: String? = null,
+    val stepOutputs: List<Pair<String, String>> = emptyList(),
     val errorMessage: String? = null,
     val createdAt: LocalDateTime = LocalDateTime.now(),
     val updatedAt: LocalDateTime = LocalDateTime.now(),
@@ -68,6 +71,12 @@ object PlanExecutionsTable : Table("plan_executions") {
 
     /** Final AI-generated output text; null until the run COMPLETES successfully. */
     val output = text("output").nullable()
+
+    /**
+     * JSON-encoded list of step outputs: `[{"step":"stepName","output":"..."},...]`.
+     * Null for executions created before this column was added.
+     */
+    val stepOutputs = text("step_outputs").nullable()
     val errorMessage = text("error_message").nullable()
     val createdAt = sqliteDatetime("created_at")
     val updatedAt = sqliteDatetime("updated_at")

@@ -533,8 +533,20 @@ class PlansViewModel(
         val defaults = plan.inputs.associate { it.key to it.default }
         inputValues = defaults + execution.inputs
         inputErrors = emptyMap()
-        stepProgress = emptyList()
-        activeExecutionId = null
+        activeExecutionId = execution.id
+
+        // Reconstruct step progress from persisted step outputs so the UI shows
+        // the breakdown from the previous run when the user clicks a history entry.
+        stepProgress = execution.stepOutputs.map { (stepName, output) ->
+            PlanStepEvent.Completed(
+                planId = execution.planId,
+                stepName = stepName,
+                executionId = execution.id,
+                output = output,
+                durationMs = 0L,
+            )
+        }
+
         val output = execution.output?.takeIf { it.isNotBlank() }
         when {
             output != null -> {

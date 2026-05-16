@@ -580,6 +580,7 @@ class DatabaseManager private constructor(
                     run_count     INTEGER NOT NULL DEFAULT 1,
                     session_id    TEXT,
                     output        TEXT,
+                    step_outputs  TEXT,
                     error_message TEXT,
                     created_at    TEXT NOT NULL,
                     updated_at    TEXT NOT NULL
@@ -593,6 +594,13 @@ class DatabaseManager private constructor(
                 ON plan_executions (plan_id, created_at)
                 """.trimIndent(),
             )
+
+            // Migration: add step_outputs column for databases created before this was introduced.
+            try {
+                stmt.executeUpdate("ALTER TABLE plan_executions ADD COLUMN step_outputs TEXT")
+            } catch (_: Exception) {
+                // Column already exists — safe to ignore.
+            }
         }
     }
 

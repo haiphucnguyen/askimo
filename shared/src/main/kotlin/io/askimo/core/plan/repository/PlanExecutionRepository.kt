@@ -54,6 +54,7 @@ class PlanExecutionRepository internal constructor(
                 it[runCount] = record.runCount
                 it[sessionId] = record.sessionId
                 it[output] = record.output
+                it[stepOutputs] = encodeStepOutputs(record.stepOutputs)
                 it[errorMessage] = record.errorMessage
                 it[createdAt] = record.createdAt
                 it[updatedAt] = record.updatedAt
@@ -76,6 +77,7 @@ class PlanExecutionRepository internal constructor(
                 it[status] = record.status.name
                 it[sessionId] = record.sessionId
                 it[output] = record.output
+                it[stepOutputs] = encodeStepOutputs(record.stepOutputs)
                 it[errorMessage] = record.errorMessage
                 it[runCount] = record.runCount
                 it[updatedAt] = record.updatedAt
@@ -146,6 +148,7 @@ class PlanExecutionRepository internal constructor(
         runCount = this[PlanExecutionsTable.runCount],
         sessionId = this[PlanExecutionsTable.sessionId],
         output = this[PlanExecutionsTable.output],
+        stepOutputs = decodeStepOutputs(this[PlanExecutionsTable.stepOutputs]),
         errorMessage = this[PlanExecutionsTable.errorMessage],
         createdAt = this[PlanExecutionsTable.createdAt],
         updatedAt = this[PlanExecutionsTable.updatedAt],
@@ -163,5 +166,25 @@ class PlanExecutionRepository internal constructor(
                 val value = line.substring(idx + 1).replace("\\n", "\n")
                 key to value
             }
+    }
+
+    /**
+     * Encodes step outputs as `stepName|output` lines (one per step).
+     * Step names are kebab-case identifiers and cannot contain `|` or newlines.
+     */
+    private fun encodeStepOutputs(steps: List<Pair<String, String>>): String? {
+        if (steps.isEmpty()) return null
+        return steps.joinToString("\n") { (name, output) ->
+            "$name|${output.replace("\n", "\\n")}"
+        }
+    }
+
+    private fun decodeStepOutputs(raw: String?): List<Pair<String, String>> {
+        if (raw.isNullOrBlank()) return emptyList()
+        return raw.lines().mapNotNull { line ->
+            val sep = line.indexOf('|')
+            if (sep < 0) return@mapNotNull null
+            line.substring(0, sep) to line.substring(sep + 1).replace("\\n", "\n")
+        }
     }
 }
