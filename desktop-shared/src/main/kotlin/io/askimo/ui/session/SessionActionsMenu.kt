@@ -11,6 +11,8 @@ import androidx.compose.material.icons.filled.DeveloperMode
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,6 +52,7 @@ fun sessionActionsMenu(
     onRenameSession: (String) -> Unit = {},
     onExportSession: (String) -> Unit,
     onDeleteSession: (String) -> Unit,
+    onStarSession: (String, Boolean) -> Unit = { _, _ -> },
     onShowSessionSummary: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -63,6 +66,7 @@ fun sessionActionsMenu(
     // Load current session to check if it belongs to a project
     val currentSession = remember(sessionId) { sessionRepository.getSession(sessionId) }
     val currentProjectId = currentSession?.projectId
+    var isStarred by remember(sessionId) { mutableStateOf(currentSession?.isStarred ?: false) }
     val currentProject = remember(currentProjectId) {
         currentProjectId?.let { projectRepository.getProject(it) }
     }
@@ -98,6 +102,26 @@ fun sessionActionsMenu(
             DropdownMenuItem(
                 text = {
                     Text(
+                        text = stringResource("session.export"),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                },
+                onClick = {
+                    onExportSession(sessionId)
+                    expanded = false
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                },
+                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(
                         text = stringResource("action.rename"),
                         style = MaterialTheme.typography.bodyMedium,
                     )
@@ -115,22 +139,25 @@ fun sessionActionsMenu(
                 },
                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
             )
+
             DropdownMenuItem(
                 text = {
                     Text(
-                        text = stringResource("session.export"),
+                        text = if (isStarred) stringResource("session.unstar") else stringResource("session.star"),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 },
                 onClick = {
-                    onExportSession(sessionId)
+                    val newStarred = !isStarred
+                    isStarred = newStarred
+                    onStarSession(sessionId, newStarred)
                     expanded = false
                 },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Default.Share,
+                        imageVector = if (isStarred) Icons.Default.Star else Icons.Default.StarBorder,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface,
+                        tint = if (isStarred) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                     )
                 },
                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),

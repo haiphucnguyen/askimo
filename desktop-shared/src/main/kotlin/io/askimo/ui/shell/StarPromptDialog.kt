@@ -37,23 +37,129 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import io.askimo.core.analytics.Analytics
+import io.askimo.core.analytics.AnalyticsEvent
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.theme.AppComponents
 
 /**
- * Dialog prompting users to support the project.
- * Shows once after meaningful usage.
+ * Happiness gate shown before [starPromptDialog].
  *
- * @param onDismiss Callback when user dismisses ("Maybe Later")
- * @param onStar    Callback when user clicks "Star on GitHub"
+ * Tracks sentiment via [Analytics.track] — respects the user's analytics opt-in.
+ * - Happy   → [onHappy]   caller shows the star/share prompt
+ * - Neutral → [onNeutral] caller dismisses
+ * - Unhappy → [onUnhappy] caller opens the contact/feedback page in the browser
+ */
+@Composable
+fun happinessGateDialog(
+    onHappy: () -> Unit,
+    onNeutral: () -> Unit,
+    onUnhappy: () -> Unit,
+) {
+    Dialog(onDismissRequest = {}) {
+        Surface(
+            modifier = Modifier.width(400.dp),
+            shape = MaterialTheme.shapes.large,
+            tonalElevation = 8.dp,
+        ) {
+            Column(
+                modifier = Modifier.padding(28.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = "😊",
+                    style = MaterialTheme.typography.displaySmall,
+                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        text = stringResource("happiness.gate.title"),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        text = stringResource("happiness.gate.subtitle"),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    sentimentButton(
+                        label = stringResource("happiness.gate.happy"),
+                        onClick = {
+                            Analytics.track(AnalyticsEvent.USER_SENTIMENT_HAPPY)
+                            onHappy()
+                        },
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                    sentimentButton(
+                        label = stringResource("happiness.gate.neutral"),
+                        onClick = {
+                            Analytics.track(AnalyticsEvent.USER_SENTIMENT_NEUTRAL)
+                            onNeutral()
+                        },
+                    )
+                    sentimentButton(
+                        label = stringResource("happiness.gate.unhappy"),
+                        onClick = {
+                            Analytics.track(AnalyticsEvent.USER_SENTIMENT_UNHAPPY)
+                            onUnhappy()
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun sentimentButton(
+    label: String,
+    onClick: () -> Unit,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceVariant,
+    contentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .pointerHoverIcon(PointerIcon.Hand),
+        shape = MaterialTheme.shapes.medium,
+        color = containerColor,
+        contentColor = contentColor,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier
+                .padding(14.dp)
+                .fillMaxWidth(),
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+/**
+ * Dialog prompting users to support the project.
  */
 @Composable
 fun starPromptDialog(
     onDismiss: () -> Unit,
     onStar: () -> Unit,
-    onShare: () -> Unit = {}, // kept for binary compatibility, not used — sharing is handled inline
 ) {
     Dialog(onDismissRequest = {}) {
         Surface(

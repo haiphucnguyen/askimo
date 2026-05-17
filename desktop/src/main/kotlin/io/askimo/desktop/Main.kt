@@ -149,6 +149,7 @@ import io.askimo.ui.shell.eventLogPanel
 import io.askimo.ui.shell.eventLogWindow
 import io.askimo.ui.shell.globalErrorHandler
 import io.askimo.ui.shell.globalSearchDialog
+import io.askimo.ui.shell.happinessGateDialog
 import io.askimo.ui.shell.rememberPersistedWindowState
 import io.askimo.ui.shell.rememberThemeState
 import io.askimo.ui.shell.splashScreen
@@ -260,6 +261,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
     var terminalPanelSize by remember { mutableStateOf(300.dp) } // Default size
     var pendingTerminalCommand by remember { mutableStateOf<PendingTerminalCommand?>(null) }
     var showStarPromptDialog by remember { mutableStateOf(false) }
+    var showHappinessGateDialog by remember { mutableStateOf(false) }
     var showNewProjectDialog by remember { mutableStateOf(false) }
     var showEditProjectDialog by remember { mutableStateOf(false) }
     var showGlobalSearchDialog by remember { mutableStateOf(false) }
@@ -455,18 +457,7 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
         }
     }
 
-    // Check if we should show star prompt (once on startup)
-    LaunchedEffect(Unit) {
-        AccountPreferences.device().recordFirstUseIfNeeded()
-        val launchCount = AccountPreferences.device().incrementLaunchCount()
-        Analytics.trackRetentionMilestone(launchCount)
-        if (AccountPreferences.device().shouldShowStarPrompt()) {
-            showStarPromptDialog = true
-            Analytics.track(AnalyticsEvent.STAR_PROMPT_SHOWN)
-        }
-    }
-
-    // Initialize business analytics and show one-time consent dialog after meaningful usage
+    // Initialize analytics first, then track retention and show star prompt
     LaunchedEffect(Unit) {
         Analytics.initialize()
         val hasRag = withContext(Dispatchers.IO) {
@@ -485,10 +476,15 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                 "theme" to ThemePreferences.themeMode.value.name.lowercase(),
             ),
         )
-    }
 
-    // Watch LLM call count from the user-facing telemetry — show the consent dialog once
-    // after ANALYTICS_CONSENT_THRESHOLD completed responses.
+        AccountPreferences.device().recordFirstUseIfNeeded()
+        val launchCount = AccountPreferences.device().incrementLaunchCount()
+        Analytics.trackRetentionMilestone(launchCount)
+        if (AccountPreferences.device().shouldShowStarPrompt()) {
+            showHappinessGateDialog = true
+            Analytics.track(AnalyticsEvent.STAR_PROMPT_SHOWN)
+        }
+    }
 
     // Theme state
     val themeState = rememberThemeState()
@@ -1595,6 +1591,31 @@ fun app(frameWindowScope: FrameWindowScope? = null, windowState: WindowState? = 
                         )
                     }
 
+                    // Happiness Gate Dialog — shown first; only happy users see the star prompt
+                    if (showHappinessGateDialog) {
+                        happinessGateDialog(
+                            onHappy = {
+                                showHappinessGateDialog = false
+                                showStarPromptDialog = true
+                            },
+                            onNeutral = {
+                                AccountPreferences.device().markAsPrompted()
+                                showHappinessGateDialog = false
+                            },
+                            onUnhappy = {
+                                AccountPreferences.device().markAsPrompted()
+                                showHappinessGateDialog = false
+                                runCatching {
+                                    if (Desktop.isDesktopSupported()) {
+                                        Desktop.getDesktop().browse(
+                                            URI("https://askimo.chat/contact/?subject=feedback"),
+                                        )
+                                    }
+                                }.onFailure { log.error("Cannot open browser for feedback", it) }
+                            },
+                        )
+                    }
+
                     if (errorDialogState.show) {
                         errorDialog(
                             title = errorDialogState.title,
@@ -1788,6 +1809,9 @@ fun mainContent(
                     },
                     onDeleteSession = { sessionId ->
                         sessionsViewModel.deleteSessionWithCleanup(sessionId)
+                    },
+                    onStarSession = { sessionId, isStarred ->
+                        sessionsViewModel.updateSessionStarred(sessionId, isStarred)
                     },
                     onNavigateToProject = onSelectProject,
                     onNavigateToMcpSettings = onNavigateToMcpSettings,

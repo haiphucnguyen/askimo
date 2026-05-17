@@ -299,6 +299,26 @@ enum class AnalyticsEvent(
         "User dismissed the star prompt without starring.",
     ),
 
+    // ── User sentiment ───────────────────────────────────────────────────────────
+
+    /** User responded "Yes, loving it" to the happiness gate before the star prompt. */
+    USER_SENTIMENT_HAPPY(
+        "user_sentiment_happy",
+        "User indicated they are happy with Askimo in the happiness gate.",
+    ),
+
+    /** User responded "It's okay" to the happiness gate. */
+    USER_SENTIMENT_NEUTRAL(
+        "user_sentiment_neutral",
+        "User indicated neutral sentiment in the happiness gate.",
+    ),
+
+    /** User responded "Not really" to the happiness gate. */
+    USER_SENTIMENT_UNHAPPY(
+        "user_sentiment_unhappy",
+        "User indicated they are unhappy with Askimo in the happiness gate.",
+    ),
+
     // ── Consent ──────────────────────────────────────────────────────────────
 
     /** User explicitly opted in via the consent dialog or flag. */

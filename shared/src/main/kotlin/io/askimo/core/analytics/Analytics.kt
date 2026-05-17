@@ -8,11 +8,7 @@ import io.askimo.core.config.AppConfig
 import io.askimo.core.logging.logger
 
 /**
- * Business analytics singleton — tracks anonymous feature usage for Askimo.
- *
- * Completely separate from [io.askimo.core.telemetry.TelemetryCollector]:
- * - TelemetryCollector is user-facing local performance metrics shown in the UI panel.
- * - Analytics is Askimo-facing feature usage, reported to a remote ingest endpoint.
+ * Business analytics singleton — tracks anonymous feature usage for Askimo.t.
  *
  * ## Privacy contract
  * - Default: **disabled**. Zero data leaves the device until the user explicitly opts in.
@@ -132,7 +128,6 @@ object Analytics {
     }
 
     /**
-     * User explicitly opted in (e.g. clicked "Yes" in the consent dialog).
      * Starts the reporter if not already running and persists the choice.
      */
     fun optIn() {

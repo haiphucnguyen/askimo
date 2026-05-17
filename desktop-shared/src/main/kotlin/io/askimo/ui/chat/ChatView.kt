@@ -126,6 +126,7 @@ fun chatView(
     onRenameSession: (String) -> Unit = {},
     onExportSession: (String) -> Unit = {},
     onDeleteSession: (String) -> Unit = {},
+    onStarSession: (String, Boolean) -> Unit = { _, _ -> },
     onNavigateToProject: ((String) -> Unit)? = null,
     onNavigateToMcpSettings: (() -> Unit)? = null,
     userAvatarPath: String? = null,
@@ -776,6 +777,7 @@ fun chatView(
                                     onRenameSession = onRenameSession,
                                     onExportSession = onExportSession,
                                     onDeleteSession = onDeleteSession,
+                                    onStarSession = onStarSession,
                                     onShowSessionSummary = { sid ->
                                         sessionMemorySessionId = sid
                                         showSessionMemoryDialog = true

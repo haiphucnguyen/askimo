@@ -184,6 +184,12 @@ private fun communityUserProfileSection(
                         )
                     }
                 }
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = stringResource("user.menu.settings"),
+                    modifier = Modifier.size((16 * fontScale).dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                )
             }
             communityProfileMenu(
                 showMenu = showMenu,
