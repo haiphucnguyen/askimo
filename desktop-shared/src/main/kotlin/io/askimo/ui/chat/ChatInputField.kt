@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -874,6 +875,9 @@ private fun toolsIndicatorButton(
                                         onNavigateToMcpSettings()
                                     },
                                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                    colors = ButtonDefaults.textButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    ),
                                 ) {
                                     Icon(
                                         Icons.Outlined.Settings,

@@ -48,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.askimo.core.mcp.McpInstance
 import io.askimo.core.mcp.McpInstanceService
+import io.askimo.core.mcp.McpServerDefinition
 import io.askimo.core.mcp.config.McpServersConfig
 import io.askimo.ui.common.components.dangerButton
 import io.askimo.ui.common.components.linkButton
@@ -59,6 +60,7 @@ import io.askimo.ui.common.theme.Spacing
 import io.askimo.ui.common.theme.ThemePreferences
 import io.askimo.ui.common.ui.themedTooltip
 import io.askimo.ui.mcp.addMcpInstanceDialog
+import io.askimo.ui.mcp.mcpServerCatalogDialog
 import io.askimo.ui.mcp.mcpToolsDialog
 import kotlinx.coroutines.launch
 import org.koin.java.KoinJavaComponent.get
@@ -69,7 +71,9 @@ import java.net.URI
 fun mcpServerTemplatesSection() {
     val mcpService = remember { get<McpInstanceService>(McpInstanceService::class.java) }
     var mcpInstances by remember { mutableStateOf(mcpService.getInstances()) }
+    var showCatalogDialog by remember { mutableStateOf(false) }
     var showAddMcpDialog by remember { mutableStateOf(false) }
+    var selectedTemplate by remember { mutableStateOf<McpServerDefinition?>(null) }
     var editingMcpInstance by remember { mutableStateOf<McpInstance?>(null) }
     var deletingMcpInstance by remember { mutableStateOf<McpInstance?>(null) }
     val scope = rememberCoroutineScope()
@@ -130,7 +134,7 @@ fun mcpServerTemplatesSection() {
                     Row(horizontalArrangement = Arrangement.spacedBy(Spacing.small)) {
                         themedTooltip(text = stringResource("mcp.instance.add.tooltip")) {
                             primaryButton(
-                                onClick = { showAddMcpDialog = true },
+                                onClick = { showCatalogDialog = true },
                                 modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
                             ) {
                                 Icon(Icons.Default.Add, contentDescription = null)
@@ -203,10 +207,31 @@ fun mcpServerTemplatesSection() {
         )
     }
 
-    // Add MCP Instance Dialog
+    // Step 1 — Catalog picker (shown when user clicks "Add")
+    if (showCatalogDialog) {
+        mcpServerCatalogDialog(
+            onSelectTemplate = { template ->
+                selectedTemplate = template
+                showCatalogDialog = false
+                showAddMcpDialog = true
+            },
+            onManualSetup = {
+                selectedTemplate = null
+                showCatalogDialog = false
+                showAddMcpDialog = true
+            },
+            onDismiss = { showCatalogDialog = false },
+        )
+    }
+
+    // Step 2 — Add MCP Instance Dialog (pre-filled from template, or blank for manual)
     if (showAddMcpDialog) {
         addMcpInstanceDialog(
-            onDismiss = { showAddMcpDialog = false },
+            templateDefinition = selectedTemplate,
+            onDismiss = {
+                showAddMcpDialog = false
+                selectedTemplate = null
+            },
             onSave = { serverId, name, parameters ->
                 scope.launch {
                     mcpService.createInstance(
@@ -217,6 +242,7 @@ fun mcpServerTemplatesSection() {
                     mcpInstances = mcpService.getInstances()
                 }
                 showAddMcpDialog = false
+                selectedTemplate = null
             },
         )
     }

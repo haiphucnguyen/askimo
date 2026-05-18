@@ -51,6 +51,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -93,6 +94,7 @@ import io.askimo.ui.common.components.linkButton
 import io.askimo.ui.common.i18n.stringResource
 import io.askimo.ui.common.preferences.ApplicationPreferences
 import io.askimo.ui.common.theme.AppComponents
+import io.askimo.ui.common.theme.AppComponents.appOutlinedTextField
 import io.askimo.ui.common.theme.ThemePreferences
 import io.askimo.ui.common.ui.markdownText
 import io.askimo.ui.common.ui.themedTooltip
@@ -458,6 +460,9 @@ private fun skillsMainContent(
                                 TextButton(
                                     onClick = { openSkillsFolder(AskimoHome.skillsDir()) },
                                     modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                                    colors = ButtonDefaults.textButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    ),
                                 ) {
                                     Text(stringResource("settings.skills.open.folder"))
                                 }
@@ -1539,7 +1544,7 @@ private fun importFromGitHubDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                OutlinedTextField(
+                appOutlinedTextField(
                     value = repoUrl,
                     onValueChange = {
                         repoUrl = it

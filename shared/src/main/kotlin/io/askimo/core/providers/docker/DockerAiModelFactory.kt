@@ -21,7 +21,6 @@ import io.askimo.core.config.AppConfig
 import io.askimo.core.context.AppContext
 import io.askimo.core.context.ExecutionMode
 import io.askimo.core.logging.display
-import io.askimo.core.logging.displayError
 import io.askimo.core.logging.logger
 import io.askimo.core.providers.AiServiceBuilder
 import io.askimo.core.providers.ChatClient
@@ -29,9 +28,10 @@ import io.askimo.core.providers.ChatModelFactory
 import io.askimo.core.providers.LocalEmbeddingTokenLimits
 import io.askimo.core.providers.ModelDTO
 import io.askimo.core.providers.ModelProvider
+import io.askimo.core.providers.ModelProvider.DOCKER
+import io.askimo.core.providers.ProviderModelUtils.fetchModels
 import io.askimo.core.providers.ensureLocalEmbeddingModelAvailable
 import io.askimo.core.telemetry.TelemetryChatModelListener
-import io.askimo.core.util.ProcessBuilderExt
 import io.askimo.core.util.ProxyUtil
 import java.net.http.HttpClient
 import java.time.Duration
@@ -39,29 +39,14 @@ import java.time.Duration
 class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
     private val log = logger<DockerAiModelFactory>()
 
-    override fun getProvider(): ModelProvider = ModelProvider.DOCKER
+    override fun getProvider(): ModelProvider = DOCKER
 
-    override fun availableModels(settings: DockerAiSettings): List<ModelDTO> = try {
-        val process =
-            ProcessBuilderExt("docker", "model", "ls", "--openai")
-                .redirectErrorStream(true)
-                .start()
-
-        val output = process.inputStream.bufferedReader().readText()
-        process.waitFor()
-
-        val modelIds = mutableListOf<String>()
-        val idPattern = """"id"\s*:\s*"([^"]+)"""".toRegex()
-        idPattern.findAll(output).forEach { matchResult ->
-            val modelId = matchResult.groupValues[1]
-            if (modelId.isNotBlank()) modelIds.add(modelId)
-        }
-
-        modelIds.distinct().map { ModelDTO.of(ModelProvider.DOCKER, it) }
-    } catch (e: Exception) {
-        log.displayError("⚠️ Failed to fetch models from Docker AI: ${e.message}", e)
-        emptyList()
-    }
+    override fun availableModels(settings: DockerAiSettings): List<ModelDTO> = fetchModels(
+        apiKey = "docker-ai",
+        url = "${settings.baseUrl}/models",
+        providerName = DOCKER,
+        httpVersion = HttpClient.Version.HTTP_1_1,
+    ).map { ModelDTO.of(DOCKER, it) }
 
     override fun defaultSettings(): DockerAiSettings = DockerAiSettings()
 
@@ -82,7 +67,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
     ): ChatClient = AiServiceBuilder.buildChatClient(
         sessionId = sessionId,
         settings = settings,
-        provider = ModelProvider.DOCKER,
+        provider = DOCKER,
         chatModel = createStreamingModel(settings),
         secondaryChatModel = createSecondaryModel(settings),
         chatMemory = chatMemory,
@@ -94,9 +79,9 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
     override fun createImageModel(
         settings: DockerAiSettings,
     ): ImageModel = OpenAiImageModel.builder()
-        .apiKey("dockerai")
+        .apiKey("docker-ai")
         .baseUrl(settings.baseUrl)
-        .modelName(AppConfig.models[ModelProvider.DOCKER].imageModel)
+        .modelName(AppConfig.models[DOCKER].imageModel)
         .logger(log)
         .logRequests(log.isDebugEnabled)
         .logResponses(log.isTraceEnabled)
@@ -115,7 +100,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
             .logger(log)
             .logRequests(log.isDebugEnabled)
             .logResponses(log.isTraceEnabled)
-            .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.DOCKER.name.lowercase())))
+            .listeners(listOf(TelemetryChatModelListener(telemetry, DOCKER.name.lowercase())))
             .build()
     }
 
@@ -126,7 +111,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
             .httpClientBuilder(jdkHttpClientBuilder)
             .baseUrl(settings.baseUrl)
             .apiKey("docker-ai")
-            .modelName(AppConfig.models[ModelProvider.DOCKER].utilityModel.ifBlank { AppContext.getInstance().params.model })
+            .modelName(AppConfig.models[DOCKER].utilityModel.ifBlank { AppContext.getInstance().params.model })
             .timeout(Duration.ofSeconds(AppConfig.models.timeouts.utilityModelTimeoutSeconds))
             .build()
     }
@@ -142,7 +127,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
             .apiKey("docker-ai")
             .modelName(settings.defaultModel)
             .timeout(Duration.ofSeconds(AppConfig.models.timeouts.defaultModelTimeoutSeconds))
-            .listeners(listOf(TelemetryChatModelListener(telemetry, ModelProvider.DOCKER.name.lowercase())))
+            .listeners(listOf(TelemetryChatModelListener(telemetry, DOCKER.name.lowercase())))
             .build()
     }
 
@@ -156,7 +141,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
 
     override fun createEmbeddingModel(settings: DockerAiSettings): EmbeddingModel {
         val baseUrl = settings.baseUrl.removeSuffix("/")
-        val modelName = AppConfig.models[ModelProvider.DOCKER].embeddingModel
+        val modelName = AppConfig.models[DOCKER].embeddingModel
 
         log.display(
             """
@@ -167,7 +152,7 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
             """.trimIndent(),
         )
 
-        ensureLocalEmbeddingModelAvailable(ModelProvider.DOCKER, baseUrl, modelName)
+        ensureLocalEmbeddingModelAvailable(DOCKER, baseUrl, modelName)
 
         return OpenAiEmbeddingModelBuilder()
             .apiKey("not-needed")
@@ -176,5 +161,5 @@ class DockerAiModelFactory : ChatModelFactory<DockerAiSettings> {
             .build()
     }
 
-    override fun getEmbeddingTokenLimit(settings: DockerAiSettings): Int = LocalEmbeddingTokenLimits.resolve(AppConfig.models[ModelProvider.DOCKER].embeddingModel)
+    override fun getEmbeddingTokenLimit(settings: DockerAiSettings): Int = LocalEmbeddingTokenLimits.resolve(AppConfig.models[DOCKER].embeddingModel)
 }

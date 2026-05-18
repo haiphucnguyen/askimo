@@ -5,6 +5,7 @@
 package io.askimo.ui.mcp
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,12 +14,20 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SecondaryTabRow
@@ -43,6 +52,8 @@ import io.askimo.core.mcp.HttpConfig
 import io.askimo.core.mcp.McpClientFactory
 import io.askimo.core.mcp.McpInstance
 import io.askimo.core.mcp.McpServerDefinition
+import io.askimo.core.mcp.McpServerTemplateRegistry
+import io.askimo.core.mcp.ParameterType
 import io.askimo.core.mcp.ServerDefinitionSecretManager
 import io.askimo.core.mcp.StdioConfig
 import io.askimo.core.mcp.TransportType
@@ -62,63 +73,111 @@ import java.time.LocalDateTime
 import java.util.UUID
 
 /**
- * Simplified one-step dialog for creating/editing MCP instances directly.
- * No template selection - user enters configuration directly.
+ * Dialog for creating or editing an MCP server instance.
+ *
+ * When [templateDefinition] is provided (selected from the catalog), the dialog renders
+ * labeled parameter fields for each [io.askimo.core.mcp.Parameter] declared by the template
+ * instead of showing the raw command/env textarea fields
+ *
+ * When [templateDefinition] is null (manual setup or editing an existing instance), the full
+ * raw STDIO / HTTP configuration fields are shown.
  */
 @Composable
 fun addMcpInstanceDialog(
     existingInstance: McpInstance? = null,
+    templateDefinition: McpServerDefinition? = null,
     onDismiss: () -> Unit,
     onSave: (serverId: String, name: String, parameters: Map<String, String>) -> Unit,
 ) {
     val dialogState = rememberDialogState()
     val scope = rememberCoroutineScope()
 
-    // Get server definition if editing
+    // Editing an existing instance takes precedence over a template
     val existingServerDef = remember(existingInstance) {
         existingInstance?.let { McpServersConfig.get(it.serverId) }
     }
 
+    // The effective "pre-fill" source: existing def when editing, template when creating from catalog
+    val prefill = existingServerDef ?: templateDefinition
+
     // Basic fields
-    var instanceName by remember { mutableStateOf(existingInstance?.name ?: "") }
-    var description by remember { mutableStateOf(existingServerDef?.description ?: "") }
+    var instanceName by remember { mutableStateOf(existingInstance?.name ?: templateDefinition?.name ?: "") }
+    var description by remember { mutableStateOf(prefill?.description ?: "") }
+
+    // Template parameter values — keyed by Parameter.key
+    val templateParamValues = remember(templateDefinition) {
+        mutableStateOf(
+            templateDefinition?.parameters?.associate { p ->
+                p.key to (p.defaultValue ?: "")
+            } ?: emptyMap(),
+        )
+    }
+
+    // Whether we are in "template mode" (catalog-driven) vs "manual mode"
+    val isTemplateMode = templateDefinition != null && existingInstance == null
+
+    // Whether the user has expanded the Advanced settings section in template mode.
+    // When true, buildServerDefinition uses the raw fields instead of resolving the template.
+    var showAdvanced by remember { mutableStateOf(false) }
 
     // Transport type: 0 = STDIO, 1 = HTTP
     var selectedTab by remember {
         mutableStateOf(
-            if (existingServerDef?.transportType == TransportType.HTTP) 1 else 0,
+            if (prefill?.transportType == TransportType.HTTP) 1 else 0,
         )
     }
 
-    // STDIO fields
+    // STDIO fields — pre-filled from existingServerDef (edit) or from the template (advanced mode)
     var command by remember {
         mutableStateOf(
-            existingServerDef?.stdioConfig?.commandTemplate?.firstOrNull() ?: "",
+            existingServerDef?.stdioConfig?.commandTemplate?.firstOrNull()
+                ?: templateDefinition?.stdioConfig?.commandTemplate?.firstOrNull()
+                ?: "",
         )
     }
     var args by remember {
         mutableStateOf(
-            existingServerDef?.stdioConfig?.commandTemplate?.drop(1)?.joinToString(" ") ?: "",
+            existingServerDef?.stdioConfig?.commandTemplate?.drop(1)?.joinToString(" ")
+                ?: templateDefinition?.stdioConfig?.commandTemplate?.drop(1)?.joinToString(" ")
+                ?: "",
         )
     }
     var workingDir by remember {
-        mutableStateOf(existingServerDef?.stdioConfig?.workingDirectory ?: "")
+        mutableStateOf(
+            existingServerDef?.stdioConfig?.workingDirectory
+                ?: templateDefinition?.stdioConfig?.workingDirectory
+                ?: "",
+        )
     }
     var envVars by remember {
         mutableStateOf(
-            existingServerDef?.stdioConfig?.envTemplate?.entries?.joinToString("\n") { "${it.key}=${it.value}" } ?: "",
+            existingServerDef?.stdioConfig?.envTemplate?.entries?.joinToString("\n") { "${it.key}=${it.value}" }
+                ?: templateDefinition?.stdioConfig?.envTemplate?.entries?.joinToString("\n") { "${it.key}=${it.value}" }
+                ?: "",
         )
     }
 
     // HTTP fields
-    var url by remember { mutableStateOf(existingServerDef?.httpConfig?.urlTemplate ?: "") }
+    var url by remember {
+        mutableStateOf(
+            existingServerDef?.httpConfig?.urlTemplate
+                ?: templateDefinition?.httpConfig?.urlTemplate
+                ?: "",
+        )
+    }
     var headers by remember {
         mutableStateOf(
-            existingServerDef?.httpConfig?.headersTemplate?.entries?.joinToString("\n") { "${it.key}=${it.value}" } ?: "",
+            existingServerDef?.httpConfig?.headersTemplate?.entries?.joinToString("\n") { "${it.key}=${it.value}" }
+                ?: templateDefinition?.httpConfig?.headersTemplate?.entries?.joinToString("\n") { "${it.key}=${it.value}" }
+                ?: "",
         )
     }
     var timeoutMs by remember {
-        mutableStateOf(existingServerDef?.httpConfig?.timeoutMs?.toString() ?: "60000")
+        mutableStateOf(
+            existingServerDef?.httpConfig?.timeoutMs?.toString()
+                ?: templateDefinition?.httpConfig?.timeoutMs?.toString()
+                ?: "60000",
+        )
     }
 
     // Connection test state
@@ -128,7 +187,6 @@ fun addMcpInstanceDialog(
 
     val transportType = if (selectedTab == 0) TransportType.STDIO else TransportType.HTTP
 
-    // Helper function to parse environment variables
     fun parseEnvironmentVariables(envVarsString: String): Map<String, String> {
         if (envVarsString.isBlank()) return emptyMap()
         return envVarsString
@@ -193,7 +251,15 @@ fun addMcpInstanceDialog(
     }
 
     // Helper function to build server definition from current form state
-    fun buildServerDefinition(serverId: String): McpServerDefinition = if (transportType == TransportType.STDIO) {
+    fun buildServerDefinition(serverId: String): McpServerDefinition = if (isTemplateMode && !showAdvanced) {
+        // Template mode (simple): resolve {{key}} placeholders with user-supplied parameter values
+        McpServerTemplateRegistry.resolve(
+            template = templateDefinition,
+            instanceId = serverId,
+            instanceName = instanceName,
+            paramValues = templateParamValues.value,
+        ).copy(description = description)
+    } else if (transportType == TransportType.STDIO) {
         // Parse the command field as a complete command line
         val commandList = buildList {
             addAll(parseCommandLine(command))
@@ -364,138 +430,71 @@ fun addMcpInstanceDialog(
 
                         HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.small))
 
-                        // Transport Type Selector
-                        Text(
-                            text = stringResource("mcp.instance.field.transport"),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        SecondaryTabRow(
-                            selectedTabIndex = selectedTab,
-                            modifier = Modifier.fillMaxWidth(),
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurface,
-                        ) {
-                            Tab(
-                                selected = selectedTab == 0,
-                                onClick = { selectedTab = 0 },
-                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                                text = {
-                                    Text(
-                                        text = stringResource("mcp.instance.transport.stdio"),
-                                        color = if (selectedTab == 0) {
-                                            MaterialTheme.colorScheme.primary
+                        if (isTemplateMode) {
+                            // ── Toggle row (always visible in template mode) ───────────────
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showAdvanced = !showAdvanced }
+                                    .pointerHoverIcon(PointerIcon.Hand)
+                                    .padding(vertical = Spacing.extraSmall),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.End,
+                            ) {
+                                Text(
+                                    text = stringResource(
+                                        if (showAdvanced) {
+                                            "mcp.instance.template.advanced.hide"
                                         } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                            "mcp.instance.template.advanced.show"
                                         },
-                                    )
-                                },
-                            )
-                            Tab(
-                                selected = selectedTab == 1,
-                                onClick = { selectedTab = 1 },
-                                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
-                                text = {
-                                    Text(
-                                        text = stringResource("mcp.instance.transport.http"),
-                                        color = if (selectedTab == 1) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        },
-                                    )
-                                },
-                            )
-                        }
-
-                        // STDIO Configuration
-                        AnimatedVisibility(visible = selectedTab == 0) {
-                            Column(verticalArrangement = Arrangement.spacedBy(Spacing.medium)) {
-                                OutlinedTextField(
-                                    value = command,
-                                    onValueChange = { command = it },
-                                    label = { Text(stringResource("mcp.instance.field.command")) },
-                                    placeholder = { Text(stringResource("mcp.instance.field.command.placeholder")) },
-                                    supportingText = { Text(stringResource("mcp.instance.field.command.hint")) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true,
-                                    colors = AppComponents.outlinedTextFieldColors(),
+                                    ),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-
-                                OutlinedTextField(
-                                    value = args,
-                                    onValueChange = { args = it },
-                                    label = { Text(stringResource("mcp.instance.field.args")) },
-                                    placeholder = { Text(stringResource("mcp.instance.field.args.placeholder")) },
-                                    supportingText = { Text(stringResource("mcp.instance.field.args.hint")) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true,
-                                    colors = AppComponents.outlinedTextFieldColors(),
-                                )
-
-                                OutlinedTextField(
-                                    value = workingDir,
-                                    onValueChange = { workingDir = it },
-                                    label = { Text(stringResource("mcp.instance.field.workingdir")) },
-                                    placeholder = { Text(System.getProperty("user.home")) },
-                                    supportingText = { Text(stringResource("mcp.instance.field.workingdir.hint")) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true,
-                                    colors = AppComponents.outlinedTextFieldColors(),
-                                )
-
-                                OutlinedTextField(
-                                    value = envVars,
-                                    onValueChange = { envVars = it },
-                                    label = { Text(stringResource("mcp.instance.env.label")) },
-                                    placeholder = { Text(stringResource("mcp.instance.env.placeholder")) },
-                                    supportingText = { Text(stringResource("mcp.instance.env.hint")) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    minLines = 3,
-                                    maxLines = 5,
-                                    colors = AppComponents.outlinedTextFieldColors(),
+                                Icon(
+                                    imageVector = if (showAdvanced) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp),
                                 )
                             }
-                        }
 
-                        // HTTP Configuration
-                        AnimatedVisibility(visible = selectedTab == 1) {
-                            Column(verticalArrangement = Arrangement.spacedBy(Spacing.medium)) {
-                                OutlinedTextField(
-                                    value = url,
-                                    onValueChange = { url = it },
-                                    label = { Text(stringResource("mcp.instance.http.url.label")) },
-                                    placeholder = { Text(stringResource("mcp.instance.http.url.placeholder")) },
-                                    supportingText = { Text(stringResource("mcp.instance.http.url.hint")) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true,
-                                    colors = AppComponents.outlinedTextFieldColors(),
+                            if (!showAdvanced) {
+                                // ── Simple view: labeled parameter fields ─────────────────
+                                templateParameterFields(
+                                    template = templateDefinition,
+                                    paramValues = templateParamValues.value,
+                                    onParamChange = { key, value ->
+                                        templateParamValues.value += (key to value)
+                                    },
                                 )
-
-                                OutlinedTextField(
-                                    value = headers,
-                                    onValueChange = { headers = it },
-                                    label = { Text(stringResource("mcp.instance.http.headers.label")) },
-                                    placeholder = { Text(stringResource("mcp.instance.http.headers.placeholder")) },
-                                    supportingText = { Text(stringResource("mcp.instance.http.headers.hint")) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    minLines = 3,
-                                    maxLines = 5,
-                                    colors = AppComponents.outlinedTextFieldColors(),
-                                )
-
-                                OutlinedTextField(
-                                    value = timeoutMs,
-                                    onValueChange = { timeoutMs = it },
-                                    label = { Text(stringResource("mcp.instance.http.timeout.label")) },
-                                    placeholder = { Text("60000") },
-                                    supportingText = { Text(stringResource("mcp.instance.http.timeout.hint")) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true,
-                                    colors = AppComponents.outlinedTextFieldColors(),
+                            } else {
+                                // ── Advanced view: full manual dialog fields ──────────────
+                                advancedTransportFields(
+                                    selectedTab = selectedTab,
+                                    onTabChange = { selectedTab = it },
+                                    command = command, onCommandChange = { command = it },
+                                    args = args, onArgsChange = { args = it },
+                                    workingDir = workingDir, onWorkingDirChange = { workingDir = it },
+                                    envVars = envVars, onEnvVarsChange = { envVars = it },
+                                    url = url, onUrlChange = { url = it },
+                                    headers = headers, onHeadersChange = { headers = it },
+                                    timeoutMs = timeoutMs, onTimeoutMsChange = { timeoutMs = it },
                                 )
                             }
+                        } else {
+                            advancedTransportFields(
+                                selectedTab = selectedTab,
+                                onTabChange = { selectedTab = it },
+                                command = command, onCommandChange = { command = it },
+                                args = args, onArgsChange = { args = it },
+                                workingDir = workingDir, onWorkingDirChange = { workingDir = it },
+                                envVars = envVars, onEnvVarsChange = { envVars = it },
+                                url = url, onUrlChange = { url = it },
+                                headers = headers, onHeadersChange = { headers = it },
+                                timeoutMs = timeoutMs, onTimeoutMsChange = { timeoutMs = it },
+                            )
                         }
 
                         HorizontalDivider(modifier = Modifier.padding(vertical = Spacing.medium))
@@ -535,7 +534,7 @@ fun addMcpInstanceDialog(
                                     ),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = if (success) {
-                                        MaterialTheme.colorScheme.tertiary
+                                        MaterialTheme.colorScheme.onSurfaceVariant
                                     } else {
                                         MaterialTheme.colorScheme.error
                                     },
@@ -685,6 +684,223 @@ fun addMcpInstanceDialog(
                         Text(stringResource("action.save"))
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * SECRET parameters show a password visibility toggle.
+ */
+@Composable
+private fun templateParameterFields(
+    template: McpServerDefinition,
+    paramValues: Map<String, String>,
+    onParamChange: (key: String, value: String) -> Unit,
+) {
+    if (template.parameters.isEmpty()) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            ),
+        ) {
+            Text(
+                text = stringResource("mcp.instance.template.no.credentials"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.padding(Spacing.medium),
+            )
+        }
+        return
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.medium)) {
+        Text(
+            text = stringResource("mcp.instance.template.config.title"),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = stringResource("mcp.instance.template.config.description"),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        template.parameters.forEach { param ->
+            val value = paramValues[param.key] ?: ""
+            val isSecret = param.type == ParameterType.SECRET
+            var showSecret by remember { mutableStateOf(false) }
+
+            OutlinedTextField(
+                value = value,
+                onValueChange = { onParamChange(param.key, it) },
+                label = {
+                    Text(
+                        param.label + if (!param.required) stringResource("mcp.instance.template.param.optional") else "",
+                    )
+                },
+                placeholder = param.placeholder?.let { { Text(it) } },
+                supportingText = param.description?.let { desc -> { Text(desc) } },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = isSecret || param.type != ParameterType.PATH,
+                visualTransformation = if (isSecret && !showSecret) {
+                    androidx.compose.ui.text.input.PasswordVisualTransformation()
+                } else {
+                    androidx.compose.ui.text.input.VisualTransformation.None
+                },
+                trailingIcon = if (isSecret) {
+                    {
+                        IconButton(onClick = { showSecret = !showSecret }) {
+                            Icon(
+                                imageVector = if (showSecret) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = if (showSecret) "Hide" else "Show",
+                            )
+                        }
+                    }
+                } else {
+                    null
+                },
+                colors = AppComponents.outlinedTextFieldColors(),
+            )
+        }
+    }
+}
+
+/**
+ * The transport configuration fields (STDIO / HTTP tabs + all raw inputs).
+ * Shared between manual mode and the Advanced section in template mode.
+ */
+@Composable
+private fun advancedTransportFields(
+    selectedTab: Int,
+    onTabChange: (Int) -> Unit,
+    command: String,
+    onCommandChange: (String) -> Unit,
+    args: String,
+    onArgsChange: (String) -> Unit,
+    workingDir: String,
+    onWorkingDirChange: (String) -> Unit,
+    envVars: String,
+    onEnvVarsChange: (String) -> Unit,
+    url: String,
+    onUrlChange: (String) -> Unit,
+    headers: String,
+    onHeadersChange: (String) -> Unit,
+    timeoutMs: String,
+    onTimeoutMsChange: (String) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.medium)) {
+        Text(
+            text = stringResource("mcp.instance.field.transport"),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        SecondaryTabRow(
+            selectedTabIndex = selectedTab,
+            modifier = Modifier.fillMaxWidth(),
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+        ) {
+            Tab(
+                selected = selectedTab == 0,
+                onClick = { onTabChange(0) },
+                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                text = {
+                    Text(
+                        text = stringResource("mcp.instance.transport.stdio"),
+                        color = if (selectedTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
+            )
+            Tab(
+                selected = selectedTab == 1,
+                onClick = { onTabChange(1) },
+                modifier = Modifier.pointerHoverIcon(PointerIcon.Hand),
+                text = {
+                    Text(
+                        text = stringResource("mcp.instance.transport.http"),
+                        color = if (selectedTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
+            )
+        }
+
+        AnimatedVisibility(visible = selectedTab == 0) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.medium)) {
+                OutlinedTextField(
+                    value = command,
+                    onValueChange = onCommandChange,
+                    label = { Text(stringResource("mcp.instance.field.command")) },
+                    placeholder = { Text(stringResource("mcp.instance.field.command.placeholder")) },
+                    supportingText = { Text(stringResource("mcp.instance.field.command.hint")) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = AppComponents.outlinedTextFieldColors(),
+                )
+                OutlinedTextField(
+                    value = args,
+                    onValueChange = onArgsChange,
+                    label = { Text(stringResource("mcp.instance.field.args")) },
+                    placeholder = { Text(stringResource("mcp.instance.field.args.placeholder")) },
+                    supportingText = { Text(stringResource("mcp.instance.field.args.hint")) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = AppComponents.outlinedTextFieldColors(),
+                )
+                OutlinedTextField(
+                    value = workingDir,
+                    onValueChange = onWorkingDirChange,
+                    label = { Text(stringResource("mcp.instance.field.workingdir")) },
+                    placeholder = { Text(System.getProperty("user.home")) },
+                    supportingText = { Text(stringResource("mcp.instance.field.workingdir.hint")) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = AppComponents.outlinedTextFieldColors(),
+                )
+                OutlinedTextField(
+                    value = envVars, onValueChange = onEnvVarsChange,
+                    label = { Text(stringResource("mcp.instance.env.label")) },
+                    placeholder = { Text(stringResource("mcp.instance.env.placeholder")) },
+                    supportingText = { Text(stringResource("mcp.instance.env.hint")) },
+                    modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 5,
+                    colors = AppComponents.outlinedTextFieldColors(),
+                )
+            }
+        }
+
+        AnimatedVisibility(visible = selectedTab == 1) {
+            Column(verticalArrangement = Arrangement.spacedBy(Spacing.medium)) {
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = onUrlChange,
+                    label = { Text(stringResource("mcp.instance.http.url.label")) },
+                    placeholder = { Text(stringResource("mcp.instance.http.url.placeholder")) },
+                    supportingText = { Text(stringResource("mcp.instance.http.url.hint")) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = AppComponents.outlinedTextFieldColors(),
+                )
+                OutlinedTextField(
+                    value = headers, onValueChange = onHeadersChange,
+                    label = { Text(stringResource("mcp.instance.http.headers.label")) },
+                    placeholder = { Text(stringResource("mcp.instance.http.headers.placeholder")) },
+                    supportingText = { Text(stringResource("mcp.instance.http.headers.hint")) },
+                    modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 5,
+                    colors = AppComponents.outlinedTextFieldColors(),
+                )
+                OutlinedTextField(
+                    value = timeoutMs,
+                    onValueChange = onTimeoutMsChange,
+                    label = { Text(stringResource("mcp.instance.http.timeout.label")) },
+                    placeholder = { Text("60000") },
+                    supportingText = { Text(stringResource("mcp.instance.http.timeout.hint")) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    colors = AppComponents.outlinedTextFieldColors(),
+                )
             }
         }
     }
