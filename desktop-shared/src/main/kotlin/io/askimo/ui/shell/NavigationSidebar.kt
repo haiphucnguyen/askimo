@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: AGPLv3
  *
- * Copyright (c) 2026 Hai Nguyen
+ * Copyright (c) 2026 Askimo
  */
 package io.askimo.ui.shell
 
@@ -39,17 +39,21 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -69,6 +73,8 @@ import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.domain.Project
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.ChatCompletedEvent
+import io.askimo.core.event.internal.ChatInProgressEvent
 import io.askimo.core.event.internal.ProjectsRefreshEvent
 import io.askimo.core.event.internal.SessionsRefreshEvent
 import io.askimo.core.user.domain.UserProfile
@@ -239,6 +245,20 @@ private fun expandedNavigationSidebar(
 ) {
     val fontScale = LocalFontScale.current
 
+    // Collect chat-in-progress events at the sidebar level so newly composed session
+    // items (e.g. a brand-new session that didn't exist yet when the event fired) can
+    // read the correct state immediately on their first composition.
+    val inProgressSessionIds = remember { mutableStateSetOf<String>() }
+    LaunchedEffect(Unit) {
+        EventBus.internalEvents.collect { event ->
+            when (event) {
+                is ChatInProgressEvent -> inProgressSessionIds.add(event.sessionId)
+                is ChatCompletedEvent -> inProgressSessionIds.remove(event.sessionId)
+                else -> Unit
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .width(animatedWidth)
@@ -338,6 +358,7 @@ private fun expandedNavigationSidebar(
                 starredProjects = projectsViewModel.starredProjects,
                 starredSessions = sessionsViewModel.recentSessions.filter { it.isStarred },
                 currentSessionId = currentSessionId,
+                inProgressSessionIds = inProgressSessionIds,
                 onSelectProject = onSelectProject,
                 onResumeSession = onResumeSession,
                 onStarProject = onStarProject,
@@ -390,6 +411,7 @@ private fun expandedNavigationSidebar(
                 sessionsList(
                     sessionsViewModel = sessionsViewModel,
                     currentSessionId = currentSessionId,
+                    inProgressSessionIds = inProgressSessionIds,
                     onNavigateToSessions = onNavigateToSessions,
                     onResumeSession = onResumeSession,
                     onDeleteSession = onDeleteSession,
@@ -614,6 +636,7 @@ private fun pinnedSection(
     starredProjects: List<Project>,
     starredSessions: List<ChatSession>,
     currentSessionId: String?,
+    inProgressSessionIds: Set<String>,
     onSelectProject: (String) -> Unit,
     onResumeSession: (String) -> Unit,
     onStarProject: (String, Boolean) -> Unit,
@@ -679,6 +702,7 @@ private fun pinnedSection(
                     pinnedSessionItem(
                         session = session,
                         isSelected = session.id == currentSessionId,
+                        isChatInProgress = session.id in inProgressSessionIds,
                         onResumeSession = onResumeSession,
                         onUnpin = { onStarSession(session.id, false) },
                         onDelete = { onDeleteSession(session.id) },
@@ -791,6 +815,7 @@ private fun pinnedProjectItem(
 private fun pinnedSessionItem(
     session: ChatSession,
     isSelected: Boolean,
+    isChatInProgress: Boolean,
     onResumeSession: (String) -> Unit,
     onUnpin: () -> Unit,
     onDelete: () -> Unit,
@@ -801,7 +826,6 @@ private fun pinnedSessionItem(
     var showDeleteDialog by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
     val isHovered by interactionSource.collectIsHoveredAsState()
-    val fontScale = LocalFontScale.current
 
     if (showDeleteDialog) {
         deleteSessionDialog(
@@ -822,7 +846,17 @@ private fun pinnedSessionItem(
     ) {
         themedTooltip(text = session.title) {
             NavigationDrawerItem(
-                icon = null,
+                icon = if (isChatInProgress) {
+                    {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(14.dp),
+                            strokeWidth = 2.dp,
+                            color = LocalContentColor.current,
+                        )
+                    }
+                } else {
+                    null
+                },
                 label = {
                     navigationItemLabelWithMenu(
                         text = session.title,
@@ -833,14 +867,17 @@ private fun pinnedSessionItem(
                 selected = isSelected,
                 onClick = { onResumeSession(session.id) },
                 modifier = Modifier
-                    .padding(vertical = (2 * fontScale).dp)
+                    .fillMaxWidth()
                     .pointerHoverIcon(PointerIcon.Hand),
                 colors = AppComponents.navigationDrawerItemColors(),
             )
         }
 
         Box(modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp)) {
-            AppComponents.dropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+            AppComponents.dropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false },
+            ) {
                 DropdownMenuItem(
                     text = { Text(stringResource("action.unpin")) },
                     leadingIcon = { Icon(Icons.Default.Star, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
@@ -891,6 +928,7 @@ private fun pinnedSessionItem(
 private fun sessionsList(
     sessionsViewModel: SessionsViewModel,
     currentSessionId: String?,
+    inProgressSessionIds: Set<String>,
     onNavigateToSessions: () -> Unit,
     onResumeSession: (String) -> Unit,
     onDeleteSession: (String) -> Unit,
@@ -928,6 +966,7 @@ private fun sessionsList(
                 sessionItemWithMenu(
                     session = session,
                     isSelected = session.id == currentSessionId,
+                    isChatInProgress = session.id in inProgressSessionIds,
                     onResumeSession = onResumeSession,
                     onDeleteSession = onDeleteSession,
                     onStarSession = onStarSession,
@@ -970,6 +1009,7 @@ private fun sessionsList(
 private fun sessionItemWithMenu(
     session: ChatSession,
     isSelected: Boolean,
+    isChatInProgress: Boolean,
     onResumeSession: (String) -> Unit,
     onDeleteSession: (String) -> Unit,
     onStarSession: (String, Boolean) -> Unit,
@@ -1005,7 +1045,17 @@ private fun sessionItemWithMenu(
     ) {
         themedTooltip(text = session.title) {
             NavigationDrawerItem(
-                icon = null,
+                icon = if (isChatInProgress) {
+                    {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(14.dp),
+                            strokeWidth = 2.dp,
+                            color = LocalContentColor.current,
+                        )
+                    }
+                } else {
+                    null
+                },
                 label = {
                     navigationItemLabelWithMenu(
                         text = session.title,

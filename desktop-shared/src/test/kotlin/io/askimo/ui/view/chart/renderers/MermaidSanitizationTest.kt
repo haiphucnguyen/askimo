@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: AGPLv3
  *
- * Copyright (c) 2026 Hai Nguyen
+ * Copyright (c) 2026 Askimo
  */
 package io.askimo.ui.view.chart.renderers
 

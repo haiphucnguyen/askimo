@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: AGPLv3
  *
- * Copyright (c) 2026 Hai Nguyen
+ * Copyright (c) 2026 Askimo
  */
 package io.askimo.ui.chat
 
@@ -18,6 +18,8 @@ import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.error.SendMessageErrorEvent
+import io.askimo.core.event.internal.ChatCompletedEvent
+import io.askimo.core.event.internal.ChatInProgressEvent
 import io.askimo.core.event.internal.DiagramFixedEvent
 import io.askimo.core.event.internal.ProjectRefreshEvent
 import io.askimo.core.event.internal.SessionTitleUpdatedEvent
@@ -355,6 +357,7 @@ class ChatViewModel(
                 activeThread.isComplete.collect { isComplete ->
                     if (currentSessionId.value == sessionId && isComplete) {
                         isLoading = false
+                        EventBus.post(ChatCompletedEvent(sessionId = sessionId))
                         isThinking = false
                         stopThinkingTimer()
 
@@ -508,6 +511,7 @@ class ChatViewModel(
                 // Clear any previous error
                 errorMessage = null
                 isLoading = true
+                EventBus.post(ChatInProgressEvent(sessionId = sessionId))
                 currentResponse = ""
                 isThinking = true
                 thinkingElapsedSeconds = 0
@@ -533,6 +537,7 @@ class ChatViewModel(
                         if (threadId == null) {
                             errorMessage = "Please wait for the current response to complete before retrying."
                             isLoading = false
+                            EventBus.post(ChatCompletedEvent(sessionId = sessionId, failed = true))
                             isThinking = false
                             stopThinkingTimer()
                             return@launch
@@ -544,6 +549,7 @@ class ChatViewModel(
                         if (currentSessionId.value == sessionId) {
                             errorMessage = ErrorHandler.getUserFriendlyError(e, "retrying message")
                             isLoading = false
+                            EventBus.post(ChatCompletedEvent(sessionId = sessionId, failed = true))
                             isThinking = false
                             stopThinkingTimer()
                             // Save the failed partial response so it gets a real id and retry remains available
@@ -598,6 +604,7 @@ class ChatViewModel(
         // Clear any previous error
         errorMessage = null
         isLoading = true
+        EventBus.post(ChatInProgressEvent(sessionId = sessionId))
         currentResponse = ""
         isThinking = true
         thinkingElapsedSeconds = 0
@@ -638,6 +645,7 @@ class ChatViewModel(
                 if (threadId == null) {
                     errorMessage = "Please wait for the current response to complete before asking another question."
                     isLoading = false
+                    EventBus.post(ChatCompletedEvent(sessionId = sessionId, failed = true))
                     isThinking = false
                     stopThinkingTimer()
                     return@launch
@@ -675,6 +683,7 @@ class ChatViewModel(
                     EventBus.emit(SendMessageErrorEvent(e))
                 }
                 isLoading = false
+                EventBus.post(ChatCompletedEvent(sessionId = sessionId, failed = true))
             }
         }
     }
@@ -686,9 +695,13 @@ class ChatViewModel(
     override fun cancelResponse() {
         currentJob?.cancel()
         currentJob = null
+        val sessionId = currentSessionId.value
         isLoading = false
         isThinking = false
         stopThinkingTimer()
+        if (sessionId != null) {
+            EventBus.post(ChatCompletedEvent(sessionId = sessionId, failed = false))
+        }
 
         // Stop the streaming service and cancel ALL subscriptions for current chat
         val chatId = currentSessionId.value
