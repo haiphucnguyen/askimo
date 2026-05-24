@@ -6,6 +6,7 @@ package io.askimo.core.context
 
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.chat.StreamingChatModel
 import dev.langchain4j.model.embedding.EmbeddingModel
 import dev.langchain4j.model.image.ImageModel
 import dev.langchain4j.rag.content.retriever.ContentRetriever
@@ -212,6 +213,16 @@ class AppContext private constructor(
 
         @Suppress("UNCHECKED_CAST")
         return (factory as ChatModelFactory<ProviderSettings>).createModel(settings)
+    }
+
+    fun createStreamingChatModel(): StreamingChatModel {
+        val provider = params.currentProvider
+        val factory = getModelFactory(provider)
+            ?: error("No model factory registered for $provider")
+        val settings = getOrCreateProviderSettings(provider)
+
+        @Suppress("UNCHECKED_CAST")
+        return (factory as ChatModelFactory<ProviderSettings>).createStreamingModel(settings)
     }
 
     fun getStatelessChatClient(): ChatClient {

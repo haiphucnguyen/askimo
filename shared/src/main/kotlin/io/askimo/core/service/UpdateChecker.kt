@@ -94,6 +94,22 @@ class UpdateChecker(
 
         val isNewVersion = isNewerVersion(latestVersion, currentVersion)
 
+        // Count how many releases are newer than the current version (stop early at cap)
+        val versionsBehind = if (isNewVersion) {
+            var count = 0
+            for (release in releases) {
+                val v = release.tag_name.removePrefix("v")
+                if (v == currentVersion) break
+                count++
+                if (count >= MAX_VERSIONS_BEHIND_CAP) break
+            }
+            count
+        } else {
+            0
+        }
+
+        log.debug("Versions behind: $versionsBehind")
+
         UpdateInfo(
             currentVersion = currentVersion,
             latestVersion = latestVersion,
@@ -102,7 +118,7 @@ class UpdateChecker(
             downloadUrl = "https://askimo.chat/download/",
             releaseNotes = htmlToMarkdown(latest.body_html.orEmpty()),
             isNewVersion = isNewVersion,
-            versionsBehind = if (isNewVersion) 1 else 0,
+            versionsBehind = versionsBehind,
         )
     } catch (e: Exception) {
         log.error("Error parsing release info", e)
