@@ -228,8 +228,6 @@ fun chatView(
                     val newAttachments = files.map { file ->
                         FileAttachmentDTO(
                             id = randomUUID().toString(),
-                            messageId = "",
-                            sessionId = sessionId ?: "",
                             fileName = file.name,
                             mimeType = file.extension,
                             size = file.length(),
@@ -996,7 +994,9 @@ fun chatView(
                             extension = ext,
                             title = saveDialogTitle,
                         ) ?: return@launch
-                        attachment.filePath?.let { filePath ->
+                        val resolvedPath = attachment.filePath?.takeIf { it.isNotBlank() }
+                            ?: attachment.storagePath?.takeIf { it.isNotBlank() }
+                        resolvedPath?.let { filePath ->
                             val sourceFile = File(filePath)
                             if (sourceFile.exists()) {
                                 try {
@@ -1336,8 +1336,6 @@ fun chatView(
                             val file = File(path)
                             FileAttachmentDTO(
                                 id = randomUUID().toString(),
-                                messageId = "",
-                                sessionId = sessionId ?: "",
                                 fileName = file.name,
                                 mimeType = file.extension,
                                 size = file.length(),
