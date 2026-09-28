@@ -54,9 +54,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -191,6 +193,10 @@ fun chatView(
     val memoryBudgetTokens = state.memoryBudgetTokens
     val isCompressing = state.isCompressing
     val isContextSizeLearned = state.isContextSizeLearned
+
+    // Empty state: no messages yet and not in search mode — center the welcome
+    // message together with the chat input field in the middle of the view.
+    val isEmptyState = !isSearchMode && messages.isEmpty()
 
     // Internal state management for ChatView
     val scope = rememberCoroutineScope()
@@ -1012,6 +1018,99 @@ fun chatView(
                     }
                 }
 
+                var warningBannerDismissed by remember(sessionId) { mutableStateOf(false) }
+
+                val memoryBanners: @Composable () -> Unit = {
+                    if (memoryPressureLevel == MemoryPressureLevel.WARNING && !warningBannerDismissed) {
+                        memoryPressureBanner(
+                            message = stringResource("memory.pressure.warning.message"),
+                            isCritical = false,
+                            isCompressing = isCompressing,
+                            onDismiss = { warningBannerDismissed = true },
+                            onCompress = { actions.compressMemory() },
+                        )
+                    }
+                    if (memoryPressureLevel == MemoryPressureLevel.CRITICAL) {
+                        memoryPressureBanner(
+                            message = stringResource("memory.pressure.critical.message"),
+                            isCritical = true,
+                            isCompressing = isCompressing,
+                            onDismiss = null,
+                            onCompress = { actions.compressMemory() },
+                        )
+                    }
+                }
+
+                val inputField = remember {
+                    movableContentOf { fieldModifier: Modifier ->
+                        val latestIsLoading by rememberUpdatedState(isLoading)
+                        val latestIsThinking by rememberUpdatedState(isThinking)
+                        val latestErrorMessage by rememberUpdatedState(errorMessage)
+                        val latestSessionId by rememberUpdatedState(sessionId)
+                        val latestProject by rememberUpdatedState(project)
+                        val latestSelectedDirective by rememberUpdatedState(selectedDirective)
+                        val latestActiveResourceCollectionIds by rememberUpdatedState(activeResourceCollectionIds)
+                        val latestMemoryPressureLevel by rememberUpdatedState(memoryPressureLevel)
+                        val latestMemoryUtilization by rememberUpdatedState(memoryUtilization)
+                        val latestMemoryUsedTokens by rememberUpdatedState(memoryUsedTokens)
+                        val latestMemoryBudgetTokens by rememberUpdatedState(memoryBudgetTokens)
+                        val latestIsCompressing by rememberUpdatedState(isCompressing)
+                        val latestIsContextSizeLearned by rememberUpdatedState(isContextSizeLearned)
+                        val latestActions by rememberUpdatedState(actions)
+
+                        chatInputField(
+                            inputText = inputText,
+                            onInputTextChange = { inputText = it },
+                            attachments = attachments,
+                            onAttachmentsChange = { attachments = it },
+                            onSendMessage = { mode ->
+                                if (inputText.text.isNotBlank() && !latestIsLoading && !latestIsThinking) {
+                                    latestActions.sendOrEditMessage(
+                                        mode,
+                                        inputText.text,
+                                        attachments,
+                                        editingMessage,
+                                        currentEnabledServerIds,
+                                    )
+                                    inputText = TextFieldValue("")
+                                    attachments = emptyList()
+                                    editingMessage = null
+                                }
+                            },
+                            isLoading = latestIsLoading,
+                            isThinking = latestIsThinking,
+                            onStopResponse = { latestActions.cancelResponse() },
+                            errorMessage = latestErrorMessage,
+                            editingMessage = editingMessage,
+                            onCancelEdit = {
+                                editingMessage = null
+                                inputText = TextFieldValue("")
+                                attachments = emptyList()
+                            },
+                            sessionId = latestSessionId,
+                            onEnabledServerIdsChange = { currentEnabledServerIds = it },
+                            onNavigateToMcpSettings = onNavigateToMcpSettings,
+                            // Directives chip — selection controlled here; CRUD managed inside chatInputField
+                            selectedDirective = latestSelectedDirective,
+                            onToggleDirective = { id -> latestActions.setDirective(id) },
+                            isProjectSession = latestProject != null,
+                            onWebSearchInRagChange = { enabled -> latestActions.setWebSearchInRag(enabled) },
+                            // Resource Collections chip — persistent chip selection (see ChatState.activeResourceCollectionIds)
+                            activeResourceCollectionIds = latestActiveResourceCollectionIds,
+                            onActiveResourceCollectionsChange = { ids -> latestActions.setActiveResourceCollections(ids) },
+                            onNavigateToResourceCollections = onNavigateToResourceCollections,
+                            memoryPressureLevel = latestMemoryPressureLevel,
+                            memoryUtilization = latestMemoryUtilization,
+                            memoryUsedTokens = latestMemoryUsedTokens,
+                            memoryBudgetTokens = latestMemoryBudgetTokens,
+                            isCompressing = latestIsCompressing,
+                            isContextSizeLearned = latestIsContextSizeLearned,
+                            onCompressMemory = { latestActions.compressMemory() },
+                            modifier = fieldModifier,
+                        )
+                    }
+                }
+
                 // ── Auto-scroll logic ────────────────────────────────────────────
                 val currentUserMessageCount = messages.count { it.isUser }
                 var lastUserMessageCount by remember { mutableStateOf(0) }
@@ -1097,111 +1196,130 @@ fun chatView(
                         .weight(1f)
                         .fillMaxWidth(),
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = Spacing.large, vertical = Spacing.small)
-                            .padding(end = Spacing.small) // room for scrollbar
-                            .verticalScroll(messagesScrollState)
-                            .focusRequester(messageListFocusRequester)
-                            .focusable()
-                            .onGloballyPositioned { coords ->
-                                if (coords.isAttached) viewportBounds = coords.boundsInWindow()
-                            },
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        // Constrain content width while allowing scroll to fill the whole area
-                        Box(modifier = Modifier.widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH).fillMaxWidth()) {
-                            when {
-                                isSearchMode && searchResults.isEmpty() && !isSearching -> {
-                                    Text(
-                                        stringResource("chat.search.not.found", searchQuery),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.align(Alignment.Center).padding(top = Spacing.extraLarge),
-                                    )
-                                }
+                    if (isEmptyState) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .focusRequester(messageListFocusRequester)
+                                .focusable(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH)
+                                    .fillMaxWidth()
+                                    .padding(horizontal = Spacing.large),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(Spacing.large),
+                            ) {
+                                Text(
+                                    stringResource("chat.welcome"),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                memoryBanners()
+                                inputField(Modifier.fillMaxWidth())
+                            }
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = Spacing.large, vertical = Spacing.small)
+                                .padding(end = Spacing.small) // room for scrollbar
+                                .verticalScroll(messagesScrollState)
+                                .focusRequester(messageListFocusRequester)
+                                .focusable()
+                                .onGloballyPositioned { coords ->
+                                    if (coords.isAttached) viewportBounds = coords.boundsInWindow()
+                                },
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            // Constrain content width while allowing scroll to fill the whole area
+                            Box(modifier = Modifier.widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH).fillMaxWidth()) {
+                                when {
+                                    isSearchMode && searchResults.isEmpty() && !isSearching -> {
+                                        Text(
+                                            stringResource("chat.search.not.found", searchQuery),
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.align(Alignment.Center).padding(top = Spacing.extraLarge),
+                                        )
+                                    }
 
-                                isSearchMode -> {
-                                    chatMessageList(
-                                        messages = searchResults,
-                                        isThinking = false,
-                                        thinkingElapsedSeconds = 0,
-                                        spinnerFrame = spinnerFrame.toString(),
-                                        isLoadingPrevious = false,
-                                        searchQuery = searchQuery,
-                                        currentSearchResultIndex = currentSearchResultIndex,
-                                        onMessageClick = onJumpToMessage,
-                                        onEditMessage = { message ->
-                                            if (message.isUser) {
-                                                editingMessage = message
-                                                inputText = TextFieldValue(text = message.content, selection = TextRange(0))
-                                                attachments = message.attachments
-                                            } else {
-                                                editingAIMessage = message
-                                            }
-                                        },
-                                        onDownloadAttachment = downloadAttachment,
-                                        userAvatarPainter = userAvatarPainter,
-                                        aiAvatarPainter = aiAvatarPainter,
-                                        onRetryMessage = { messageId -> actions.retryMessage(messageId, currentEnabledServerIds) },
-                                        viewportTopY = viewportBounds?.top,
-                                        projectId = project?.id,
-                                        onForkFromMessage = { messageId -> actions.forkFromMessage(messageId) },
-                                    )
-                                }
+                                    isSearchMode -> {
+                                        chatMessageList(
+                                            messages = searchResults,
+                                            isThinking = false,
+                                            thinkingElapsedSeconds = 0,
+                                            spinnerFrame = spinnerFrame.toString(),
+                                            isLoadingPrevious = false,
+                                            searchQuery = searchQuery,
+                                            currentSearchResultIndex = currentSearchResultIndex,
+                                            onMessageClick = onJumpToMessage,
+                                            onEditMessage = { message ->
+                                                if (message.isUser) {
+                                                    editingMessage = message
+                                                    inputText = TextFieldValue(text = message.content, selection = TextRange(0))
+                                                    attachments = message.attachments
+                                                } else {
+                                                    editingAIMessage = message
+                                                }
+                                            },
+                                            onDownloadAttachment = downloadAttachment,
+                                            userAvatarPainter = userAvatarPainter,
+                                            aiAvatarPainter = aiAvatarPainter,
+                                            onRetryMessage = { messageId -> actions.retryMessage(messageId, currentEnabledServerIds) },
+                                            viewportTopY = viewportBounds?.top,
+                                            projectId = project?.id,
+                                            onForkFromMessage = { messageId -> actions.forkFromMessage(messageId) },
+                                        )
+                                    }
 
-                                messages.isEmpty() -> {
-                                    Text(
-                                        stringResource("chat.welcome"),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.align(Alignment.Center).padding(top = Spacing.extraLarge),
-                                    )
-                                }
-
-                                else -> {
-                                    chatMessageList(
-                                        messages = messages,
-                                        isThinking = isThinking,
-                                        thinkingElapsedSeconds = thinkingElapsedSeconds,
-                                        spinnerFrame = spinnerFrame.toString(),
-                                        isLoadingPrevious = isLoadingPrevious,
-                                        onEditMessage = { message ->
-                                            if (message.isUser) {
-                                                editingMessage = message
-                                                inputText = TextFieldValue(text = message.content, selection = TextRange(0))
-                                                attachments = message.attachments
-                                            } else {
-                                                editingAIMessage = message
-                                            }
-                                        },
-                                        onDownloadAttachment = downloadAttachment,
-                                        userAvatarPainter = userAvatarPainter,
-                                        aiAvatarPainter = aiAvatarPainter,
-                                        onRetryMessage = { messageId -> actions.retryMessage(messageId, currentEnabledServerIds) },
-                                        viewportTopY = viewportBounds?.top,
-                                        projectId = project?.id,
-                                        activeTimeline = activeTimeline,
-                                        completedGroupsByMessageId = completedTimelines,
-                                        bookmarkedMessageIds = bookmarkedMessageIds,
-                                        onToggleBookmark = { messageId -> actions.toggleBookmark(messageId) },
-                                        onForkFromMessage = { messageId -> actions.forkFromMessage(messageId) },
-                                    )
+                                    else -> {
+                                        chatMessageList(
+                                            messages = messages,
+                                            isThinking = isThinking,
+                                            thinkingElapsedSeconds = thinkingElapsedSeconds,
+                                            spinnerFrame = spinnerFrame.toString(),
+                                            isLoadingPrevious = isLoadingPrevious,
+                                            onEditMessage = { message ->
+                                                if (message.isUser) {
+                                                    editingMessage = message
+                                                    inputText = TextFieldValue(text = message.content, selection = TextRange(0))
+                                                    attachments = message.attachments
+                                                } else {
+                                                    editingAIMessage = message
+                                                }
+                                            },
+                                            onDownloadAttachment = downloadAttachment,
+                                            userAvatarPainter = userAvatarPainter,
+                                            aiAvatarPainter = aiAvatarPainter,
+                                            onRetryMessage = { messageId -> actions.retryMessage(messageId, currentEnabledServerIds) },
+                                            viewportTopY = viewportBounds?.top,
+                                            projectId = project?.id,
+                                            activeTimeline = activeTimeline,
+                                            completedGroupsByMessageId = completedTimelines,
+                                            bookmarkedMessageIds = bookmarkedMessageIds,
+                                            onToggleBookmark = { messageId -> actions.toggleBookmark(messageId) },
+                                            onForkFromMessage = { messageId -> actions.forkFromMessage(messageId) },
+                                        )
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    // Scrollbar — belongs to ChatView, spans the full messages area
-                    VerticalScrollbar(
-                        modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
-                        adapter = rememberScrollbarAdapter(messagesScrollState),
-                        style = AppComponents.scrollbarStyle(),
-                    )
+                        // Scrollbar — belongs to ChatView, spans the full messages area
+                        VerticalScrollbar(
+                            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                            adapter = rememberScrollbarAdapter(messagesScrollState),
+                            style = AppComponents.scrollbarStyle(),
+                        )
+                    }
                 }
 
                 // Tool approval banner — inline between messages and input field
+
                 if (pendingToolApproval != null) {
                     Box(
                         modifier = Modifier.fillMaxWidth(),
@@ -1241,85 +1359,22 @@ fun chatView(
                 }
 
                 // Input area
-                var warningBannerDismissed by remember(sessionId) { mutableStateOf(false) }
 
-                if (memoryPressureLevel == MemoryPressureLevel.WARNING && !warningBannerDismissed) {
-                    memoryPressureBanner(
-                        message = stringResource("memory.pressure.warning.message"),
-                        isCritical = false,
-                        isCompressing = isCompressing,
-                        onDismiss = { warningBannerDismissed = true },
-                        onCompress = { actions.compressMemory() },
-                    )
-                }
-                if (memoryPressureLevel == MemoryPressureLevel.CRITICAL) {
-                    memoryPressureBanner(
-                        message = stringResource("memory.pressure.critical.message"),
-                        isCritical = true,
-                        isCompressing = isCompressing,
-                        onDismiss = null,
-                        onCompress = { actions.compressMemory() },
-                    )
-                }
+                if (!isEmptyState) {
+                    memoryBanners()
 
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    chatInputField(
-                        inputText = inputText,
-                        onInputTextChange = { inputText = it },
-                        attachments = attachments,
-                        onAttachmentsChange = { attachments = it },
-                        onSendMessage = { mode ->
-                            if (inputText.text.isNotBlank() && !isLoading && !isThinking) {
-                                actions.sendOrEditMessage(
-                                    mode,
-                                    inputText.text,
-                                    attachments,
-                                    editingMessage,
-                                    currentEnabledServerIds,
-                                )
-                                inputText = TextFieldValue("")
-                                attachments = emptyList()
-                                editingMessage = null
-                            }
-                        },
-                        isLoading = isLoading,
-                        isThinking = isThinking,
-                        onStopResponse = actions::cancelResponse,
-                        errorMessage = errorMessage,
-                        editingMessage = editingMessage,
-                        onCancelEdit = {
-                            editingMessage = null
-                            inputText = TextFieldValue("")
-                            attachments = emptyList()
-                        },
-                        sessionId = sessionId,
-                        onEnabledServerIdsChange = { currentEnabledServerIds = it },
-                        onNavigateToMcpSettings = onNavigateToMcpSettings,
-                        // Directives chip — selection controlled here; CRUD managed inside chatInputField
-                        selectedDirective = selectedDirective,
-                        onToggleDirective = { id -> actions.setDirective(id) },
-                        isProjectSession = project != null,
-                        onWebSearchInRagChange = { enabled -> actions.setWebSearchInRag(enabled) },
-                        // Resource Collections chip — persistent chip selection (see ChatState.activeResourceCollectionIds)
-                        activeResourceCollectionIds = activeResourceCollectionIds,
-                        onActiveResourceCollectionsChange = { ids -> actions.setActiveResourceCollections(ids) },
-                        onNavigateToResourceCollections = onNavigateToResourceCollections,
-                        memoryPressureLevel = memoryPressureLevel,
-                        memoryUtilization = memoryUtilization,
-                        memoryUsedTokens = memoryUsedTokens,
-                        memoryBudgetTokens = memoryBudgetTokens,
-                        isCompressing = isCompressing,
-                        isContextSizeLearned = isContextSizeLearned,
-                        onCompressMemory = { actions.compressMemory() },
-                        modifier = Modifier
-                            .widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH)
-                            .fillMaxWidth()
-                            .padding(Spacing.large),
-                    )
-                } // end centered Box
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        inputField(
+                            Modifier
+                                .widthIn(max = ThemePreferences.CONTENT_MAX_WIDTH)
+                                .fillMaxWidth()
+                                .padding(Spacing.large),
+                        )
+                    } // end centered Box
+                }
             } // End of main chat Column
 
             // Project Side Panel (right side) — only shown when session belongs to a project
