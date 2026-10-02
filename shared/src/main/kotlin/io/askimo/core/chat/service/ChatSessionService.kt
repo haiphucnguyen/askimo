@@ -4,11 +4,10 @@
  */
 package io.askimo.core.chat.service
 
-import com.github.benmanes.caffeine.cache.Cache
-import com.github.benmanes.caffeine.cache.Caffeine
 import dev.langchain4j.data.message.Content
 import dev.langchain4j.rag.content.retriever.ContentRetriever
 import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever
+import io.askimo.core.cache.SynchronizedCache
 import io.askimo.core.chat.domain.ChatMessage
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.domain.Project
@@ -52,6 +51,8 @@ import io.askimo.core.rag.container.IndexingContainer
 import io.askimo.core.rag.container.asIndexingContainer
 import io.askimo.core.util.formatFileSize
 import io.askimo.core.vision.toUserMessage
+import io.github.reactivecircus.cache4k.Cache
+import io.github.reactivecircus.cache4k.CacheEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -61,7 +62,6 @@ import java.io.File
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.toJavaDuration
 
 /**
  * Data class to hold both ChatClient and its associated memory for a session.
@@ -134,37 +134,58 @@ class ChatSessionService(
     /**
      * Cache of session contexts (ChatClient + memory). Each session can have two
      * contexts (regular + vision), keyed as "sessionId" / "sessionId_vision".
+     * See [SynchronizedCache] for why this isn't a raw cache4k `Cache`.
      */
-    private val sessionContextCache: Cache<String, SessionChatContext> = Caffeine.newBuilder()
-        .maximumSize(20) // regular + vision clients
-        .expireAfterAccess(30.minutes.toJavaDuration())
-        .removalListener<String, SessionChatContext> { sessionId, context, cause ->
-            if (context != null && sessionId != null) {
-                log.debug("Evicting session context for session {} (cause: {})", sessionId, cause)
+    private val sessionContextCache = SynchronizedCache(
+        Cache.Builder<String, SessionChatContext>()
+            .maximumCacheSize(20) // regular + vision clients
+            .expireAfterAccess(30.minutes)
+            .eventListener { event ->
+                val context = event.evictedValueOrNull()
+                if (context != null) {
+                    log.debug("Evicting session context for session {} (event: {})", event.key, event::class.simpleName)
+                }
             }
-        }
-        .build()
+            .build(),
+    )
 
     /**
      * Shared memory instances — regular and vision clients use the same memory
-     * to keep conversation continuity.
+     * to keep conversation continuity. See [SynchronizedCache] for why this isn't
+     * a raw cache4k `Cache`.
      */
-    private val memoryCache: Cache<String, TokenAwareSummarizingMemory> = Caffeine.newBuilder()
-        .maximumSize(10)
-        .expireAfterAccess(30.minutes.toJavaDuration())
-        .removalListener<String, TokenAwareSummarizingMemory> { sessionId, memory, _ ->
-            // Skip summarization if nothing changed since the last cycle (avoids a
-            // wasteful AI call, e.g. user opened a session and left without sending).
-            if (memory != null && sessionId != null) {
-                if (memory.hasNewMessagesSinceLastSummary()) {
-                    log.debug("Memory evicted for session {}, triggering background summarization", sessionId)
-                    memory.triggerAsyncSummarization()
-                } else {
-                    log.debug("Memory evicted for session {}, no new messages since last summary — skipping", sessionId)
+    private val memoryCache = SynchronizedCache(
+        Cache.Builder<String, TokenAwareSummarizingMemory>()
+            .maximumCacheSize(10)
+            .expireAfterAccess(30.minutes)
+            .eventListener { event ->
+                val memory = event.evictedValueOrNull()
+                val sessionId = event.key
+                // Skip summarization if nothing changed since the last cycle (avoids a
+                // wasteful AI call, e.g. user opened a session and left without sending).
+                if (memory != null) {
+                    if (memory.hasNewMessagesSinceLastSummary()) {
+                        log.debug("Memory evicted for session {}, triggering background summarization", sessionId)
+                        memory.triggerAsyncSummarization()
+                    } else {
+                        log.debug("Memory evicted for session {}, no new messages since last summary — skipping", sessionId)
+                    }
                 }
             }
-        }
-        .build()
+            .build(),
+    )
+
+    /**
+     * Returns the value carried by this event if it represents an actual eviction
+     * (explicit removal, expiry, or size-based eviction) — mirrors Caffeine's
+     * `RemovalListener` semantics, which cache4k splits into separate event types.
+     */
+    private fun <K : Any, V : Any> CacheEvent<K, V>.evictedValueOrNull(): V? = when (this) {
+        is CacheEvent.Removed -> value
+        is CacheEvent.Expired -> value
+        is CacheEvent.Evicted -> value
+        else -> null
+    }
 
     /**
      * Per-session web-search-in-RAG toggle. Absent = false. Changing the value
@@ -229,7 +250,7 @@ class ChatSessionService(
      * Get or create shared memory for a session, so regular and vision clients
      * share the same conversation history.
      */
-    internal fun getOrCreateSharedMemory(sessionId: String): TokenAwareSummarizingMemory = memoryCache.get(sessionId) { _ ->
+    internal fun getOrCreateSharedMemory(sessionId: String): TokenAwareSummarizingMemory = memoryCache.getOrPut(sessionId) {
         TokenAwareSummarizingMemory(
             appContext,
             sessionId = sessionId,
@@ -245,7 +266,7 @@ class ChatSessionService(
      */
     private fun getOrCreateContextForSession(
         sessionId: String,
-    ): SessionChatContext = sessionContextCache.get(sessionId) { _ ->
+    ): SessionChatContext = sessionContextCache.getOrPut(sessionId) {
         val project = projectRepository.findProjectBySessionId(sessionId)
 
         // Reuse shared memory across regular and vision clients
@@ -367,7 +388,7 @@ class ChatSessionService(
      * Returns the cached memory for [sessionId] if currently loaded, or null if never
      * accessed / evicted. Used by ChatViewModel to subscribe to pressureLevel and call forceCompact.
      */
-    fun getMemoryForSession(sessionId: String): TokenAwareSummarizingMemory? = memoryCache.getIfPresent(sessionId)
+    fun getMemoryForSession(sessionId: String): TokenAwareSummarizingMemory? = memoryCache.get(sessionId)
 
     /**
      * Returns the memory for [sessionId], creating and caching it synchronously if
@@ -679,7 +700,7 @@ class ChatSessionService(
         val count = messageRepository.markMessagesAsOutdatedAfter(sessionId, fromMessageId)
 
         // Get shared memory if session is active
-        val sharedMemory = memoryCache.getIfPresent(sessionId)
+        val sharedMemory = memoryCache.get(sessionId)
 
         if (sharedMemory != null) {
             // Clear session memory and reload with the most recent 50 active messages
