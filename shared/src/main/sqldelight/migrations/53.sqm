@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS agent_run_history (
+    id               TEXT PRIMARY KEY,
+    workspace_id     TEXT NOT NULL REFERENCES workspaces(id),
+    conversation_id  TEXT NOT NULL,
+    title            TEXT NOT NULL DEFAULT '',
+    user_input       TEXT NOT NULL DEFAULT '',
+    response         TEXT NOT NULL DEFAULT '',
+    error            TEXT,
+    agent_session_id TEXT,
+    activity_log     TEXT NOT NULL DEFAULT '',
+    input_tokens     INTEGER,
+    output_tokens    INTEGER,
+    total_tokens     INTEGER,
+    duration_ms      INTEGER,
+    created_at       TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_run_history_workspace ON agent_run_history (workspace_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_agent_run_history_conversation ON agent_run_history (conversation_id, created_at);
+

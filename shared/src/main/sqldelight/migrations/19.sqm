@@ -1,0 +1,3 @@
+-- chat_sessions drop sort_order — guarded (try/catch) ALTER TABLE DROP COLUMN via
+-- SqlDelightSchemaMigrations.callbacks() AfterVersion(18)
+

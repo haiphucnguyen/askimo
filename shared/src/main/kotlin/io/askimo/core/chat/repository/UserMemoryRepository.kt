@@ -5,23 +5,20 @@
 package io.askimo.core.chat.repository
 
 import io.askimo.core.chat.domain.UserMemory
-import io.askimo.core.chat.domain.UserMemoryTable
-import io.askimo.core.db.AbstractSQLiteRepository
+import io.askimo.core.db.AbstractRepository
 import io.askimo.core.db.DatabaseManager
-import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.update
+import io.askimo.core.db.sqldelight.User_memory
+import io.askimo.core.util.TimeUtil
 import java.time.Instant
 
-private fun ResultRow.toUserMemory(): UserMemory = UserMemory(
-    id = this[UserMemoryTable.id],
-    memoryJson = this[UserMemoryTable.memoryJson],
-    lastUpdated = this[UserMemoryTable.lastUpdated],
-    createdAt = this[UserMemoryTable.createdAt],
+/**
+ * Maps a generated [User_memory] row to the shared [UserMemory] domain object.
+ */
+private fun User_memory.toUserMemory(): UserMemory = UserMemory(
+    id = id,
+    memoryJson = memory_json,
+    lastUpdated = TimeUtil.parseInstant(last_updated),
+    createdAt = TimeUtil.parseInstant(created_at),
 )
 
 /**
@@ -30,41 +27,38 @@ private fun ResultRow.toUserMemory(): UserMemory = UserMemory(
  */
 class UserMemoryRepository internal constructor(
     databaseManager: DatabaseManager = DatabaseManager.getInstance(),
-) : AbstractSQLiteRepository(databaseManager) {
+) : AbstractRepository(databaseManager) {
+
+    private val queries get() = db.userMemoryQueries
 
     /**
      * Load the user memory record, or null if it has never been written.
      */
-    fun get(): UserMemory? = transaction(database) {
-        UserMemoryTable.selectAll()
-            .where { UserMemoryTable.id eq UserMemory.DEFAULT_ID }
-            .singleOrNull()
-            ?.toUserMemory()
-    }
+    fun get(): UserMemory? = queries.selectById(UserMemory.DEFAULT_ID).executeAsOneOrNull()?.toUserMemory()
 
     /**
      * Upsert user memory. Creates the row on first call, updates on subsequent calls.
      */
     fun save(memoryJson: String): UserMemory {
         val now = Instant.now()
-        return transaction(database) {
-            val existing = UserMemoryTable.selectAll()
-                .where { UserMemoryTable.id eq UserMemory.DEFAULT_ID }
-                .singleOrNull()
+
+        return db.transactionWithResult {
+            val existing = queries.selectById(UserMemory.DEFAULT_ID).executeAsOneOrNull()
 
             if (existing != null) {
-                UserMemoryTable.update({ UserMemoryTable.id eq UserMemory.DEFAULT_ID }) {
-                    it[UserMemoryTable.memoryJson] = memoryJson
-                    it[UserMemoryTable.lastUpdated] = now
-                }
-                UserMemory(memoryJson = memoryJson, lastUpdated = now, createdAt = existing[UserMemoryTable.createdAt])
+                queries.updateMemory(
+                    memoryJson = memoryJson,
+                    lastUpdated = now.toString(),
+                    id = UserMemory.DEFAULT_ID,
+                )
+                UserMemory(memoryJson = memoryJson, lastUpdated = now, createdAt = TimeUtil.parseInstant(existing.created_at))
             } else {
-                UserMemoryTable.insert {
-                    it[id] = UserMemory.DEFAULT_ID
-                    it[UserMemoryTable.memoryJson] = memoryJson
-                    it[lastUpdated] = now
-                    it[createdAt] = now
-                }
+                queries.insertMemory(
+                    id = UserMemory.DEFAULT_ID,
+                    memoryJson = memoryJson,
+                    lastUpdated = now.toString(),
+                    createdAt = now.toString(),
+                )
                 UserMemory(memoryJson = memoryJson, lastUpdated = now, createdAt = now)
             }
         }
@@ -73,7 +67,5 @@ class UserMemoryRepository internal constructor(
     /**
      * Delete the user memory record (reset).
      */
-    fun clear(): Int = transaction(database) {
-        UserMemoryTable.deleteWhere { id eq UserMemory.DEFAULT_ID }
-    }
+    fun clear(): Int = queries.deleteById(UserMemory.DEFAULT_ID).value.toInt()
 }

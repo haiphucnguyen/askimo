@@ -1,0 +1,3 @@
+-- chat_directives.deleted_at — guarded ALTER TABLE ADD COLUMN via SqlDelightSchemaMigrations.callbacks() AfterVersion(36)
+-- (no-op here since base CREATE TABLE at version 34 already includes deleted_at; kept 1:1 with original history)
+

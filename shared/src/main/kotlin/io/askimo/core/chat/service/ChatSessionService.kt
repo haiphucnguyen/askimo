@@ -21,7 +21,6 @@ import io.askimo.core.chat.mapper.ChatMessageMapper.toDTOs
 import io.askimo.core.chat.mapper.ChatMessageMapper.toDomain
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
-import io.askimo.core.chat.repository.PaginationDirection
 import io.askimo.core.chat.repository.ProjectRepository
 import io.askimo.core.chat.repository.ResourceCollectionRepository
 import io.askimo.core.chat.repository.SessionMemoryRepository
@@ -34,6 +33,8 @@ import io.askimo.core.context.AppContext
 import io.askimo.core.context.MessageRole
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.db.Pageable
+import io.askimo.core.db.PaginationDirection
+import io.askimo.core.db.SortOrder
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.ModelChangedEvent
 import io.askimo.core.event.internal.PushDataToServerEvent
@@ -56,7 +57,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
-import org.jetbrains.exposed.v1.core.SortOrder
 import java.io.File
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
@@ -335,7 +335,7 @@ class ChatSessionService(
      */
     fun getSessions(limit: Int): List<ChatSession> = sessionRepository.getSessions(limit)
 
-    fun getSessionsWithoutProject(limit: Int, sortOrder: SortOrder = SortOrder.DESC): List<ChatSession> = sessionRepository.getSessionsWithoutProject(limit, sortOrder)
+    fun getSessionsWithoutProject(limit: Int, sortOrder: SortOrder = SortOrder.DESC): List<ChatSession> = sessionRepository.getSessionsWithoutProject(limit, sortOrder == SortOrder.DESC)
 
     /**
      * Count all sessions not belonging to any project.
@@ -350,7 +350,7 @@ class ChatSessionService(
         page: Int = 1,
         pageSize: Int = 10,
         sortOrder: SortOrder = SortOrder.DESC,
-    ): Pageable<ChatSession> = sessionRepository.searchSessionsWithoutProject(titleQuery, page, pageSize, sortOrder)
+    ): Pageable<ChatSession> = sessionRepository.searchSessionsWithoutProject(titleQuery, page, pageSize, sortOrder == SortOrder.DESC)
 
     /**
      * Get sessions with pagination support.
@@ -361,7 +361,7 @@ class ChatSessionService(
      * @param pageSize The number of sessions per page
      * @return PagedSessions containing the sessions for the requested page and pagination info
      */
-    fun getSessionsPagedWithoutProject(page: Int, pageSize: Int, sortOrder: SortOrder = SortOrder.DESC): Pageable<ChatSession> = sessionRepository.getSessionsPaged(page, pageSize, projectFilter = false, sortOrder = sortOrder)
+    fun getSessionsPagedWithoutProject(page: Int, pageSize: Int, sortOrder: SortOrder = SortOrder.DESC): Pageable<ChatSession> = sessionRepository.getSessionsPaged(page, pageSize, projectFilter = false, sortOrderDesc = sortOrder == SortOrder.DESC)
 
     /**
      * Returns the cached memory for [sessionId] if currently loaded, or null if never

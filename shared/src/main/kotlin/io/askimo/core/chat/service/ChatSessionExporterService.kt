@@ -8,8 +8,8 @@ import io.askimo.core.chat.domain.ChatMessage
 import io.askimo.core.chat.domain.ChatSession
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
-import io.askimo.core.chat.repository.PaginationDirection
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.db.PaginationDirection
 import io.askimo.core.logging.logger
 import org.commonmark.ext.gfm.tables.TablesExtension
 import org.commonmark.parser.Parser

@@ -5,6 +5,35 @@
 package io.askimo.core.db
 
 /**
+ * Direction for cursor-based pagination over a timestamp-ordered query — generic, reusable
+ * across any repository (not tied to a specific entity).
+ */
+enum class PaginationDirection {
+    FORWARD,
+    BACKWARD,
+}
+
+/**
+ * Generic sort direction, reusable across any repository/service (not tied to a specific
+ * entity or persistence layer). Replaces Exposed's `SortOrder` so this layer no longer
+ * depends on Exposed types.
+ */
+enum class SortOrder {
+    ASC,
+    DESC,
+}
+
+/**
+ * Sort options for text-search query results — generic, reusable across any repository
+ * (not tied to a specific entity).
+ */
+enum class SearchSortBy {
+    DATE_DESC, // Newest first (default)
+    DATE_ASC, // Oldest first
+    RELEVANCE, // For future use if relevance scoring is added
+}
+
+/**
  * Generic container for paginated results.
  *
  * @param T The type of items in the page

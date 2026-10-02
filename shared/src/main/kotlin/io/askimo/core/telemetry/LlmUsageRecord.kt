@@ -4,8 +4,6 @@
  */
 package io.askimo.core.telemetry
 
-import io.askimo.core.db.sqliteInstant
-import org.jetbrains.exposed.v1.core.Table
 import java.time.Instant
 
 /**
@@ -34,27 +32,6 @@ data class LlmUsageRecord(
     val durationMs: Long = 0,
     val isError: Boolean = false,
 )
-
-/**
- * Exposed table definition for llm_usage_records.
- *
- * The [timestamp] column uses [sqliteInstant] (ISO-8601 TEXT) consistent with all
- * other timestamp columns in the schema, and is indexed for efficient range queries.
- */
-object LlmUsageRecordTable : Table("llm_usage_records") {
-    val id = long("id").autoIncrement()
-    val timestamp = sqliteInstant("timestamp")
-    val provider = text("provider")
-    val model = text("model")
-    val instanceId = text("instance_id").nullable()
-    val promptTokens = integer("prompt_tokens").default(0)
-    val outputTokens = integer("output_tokens").default(0)
-    val totalTokens = integer("total_tokens").default(0)
-    val durationMs = long("duration_ms").default(0)
-    val isError = integer("is_error").default(0) // 0 = success, 1 = error
-
-    override val primaryKey = PrimaryKey(id)
-}
 
 /**
  * Aggregated LLM usage stats for a single instance+model combination within a time range.

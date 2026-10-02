@@ -4,9 +4,7 @@
  */
 package io.askimo.core.plan.domain
 
-import io.askimo.core.db.sqliteInstant
 import kotlinx.serialization.Serializable
-import org.jetbrains.exposed.v1.core.Table
 import java.time.Instant
 
 /** Lifecycle state of a single [PlanExecution] run. */
@@ -71,49 +69,3 @@ data class PlanExecution(
     val createdAt: Instant = Instant.now(),
     val updatedAt: Instant = Instant.now(),
 )
-
-/**
- * Exposed table definition for plan_executions.
- *
- * Inputs are stored as a JSON string (simple key=value pairs, no external deps needed).
- * Status is stored as its enum name string for readability in the database.
- */
-object PlanExecutionsTable : Table("plan_executions") {
-    val id = varchar("id", 36)
-    val planId = varchar("plan_id", 255)
-    val planName = varchar("plan_name", 512)
-
-    /** JSON-encoded Map<String, String> of user-provided inputs. */
-    val inputs = text("inputs").default("{}")
-    val status = varchar("status", 32).default(PlanExecutionStatus.IDLE.name)
-    val runCount = integer("run_count").default(1)
-    val sessionId = varchar("session_id", 36).nullable()
-
-    /** Final AI-generated output text; null until the run COMPLETES successfully. */
-    val output = text("output").nullable()
-
-    /**
-     * JSON-encoded list of step outputs:
-     * `[{"stepName":"step-a","output":"...","inputTokens":12,"outputTokens":34,"totalTokens":46,"durationMs":1000}, ...]`.
-     * Null for executions created before this column was added.
-     */
-    val stepOutputs = text("step_outputs").nullable()
-
-    /** Sum of input tokens across all steps; null for old rows or when no token data available. */
-    val totalInputTokens = integer("total_input_tokens").nullable()
-
-    /** Sum of output tokens across all steps; null for old rows or when no token data available. */
-    val totalOutputTokens = integer("total_output_tokens").nullable()
-
-    /** Sum of total tokens across all steps; null for old rows or when no token data available. */
-    val totalTokens = integer("total_tokens").nullable()
-
-    /** Sum of wall-clock duration across all steps in milliseconds; null for old rows. */
-    val totalDurationMs = long("total_duration_ms").nullable()
-
-    val errorMessage = text("error_message").nullable()
-    val createdAt = sqliteInstant("created_at")
-    val updatedAt = sqliteInstant("updated_at")
-
-    override val primaryKey = PrimaryKey(id)
-}

@@ -1,0 +1,2 @@
+-- plan_executions.total_duration_ms — guarded ALTER TABLE ADD COLUMN via SqlDelightSchemaMigrations.callbacks() AfterVersion(50)
+

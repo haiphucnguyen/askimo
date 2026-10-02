@@ -15,7 +15,6 @@ import io.askimo.core.event.internal.DirectiveDeletedEvent
 import io.askimo.core.user.repository.UserProfileRepository
 import io.askimo.core.util.JsonUtils
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
 
 /**
  * Result of a directive import operation.

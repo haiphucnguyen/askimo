@@ -1,0 +1,2 @@
+-- chat_messages.content_json — guarded ALTER TABLE ADD COLUMN via SqlDelightSchemaMigrations.callbacks() AfterVersion(28)
+

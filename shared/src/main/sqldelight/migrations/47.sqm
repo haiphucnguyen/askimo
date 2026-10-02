@@ -1,0 +1,3 @@
+-- plan_executions.step_outputs — guarded ALTER TABLE ADD COLUMN via SqlDelightSchemaMigrations.callbacks() AfterVersion(46)
+-- (no-op here since base CREATE TABLE at version 46 already includes step_outputs; kept 1:1 with original history)
+

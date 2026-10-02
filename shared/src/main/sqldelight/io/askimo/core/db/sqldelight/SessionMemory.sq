@@ -1,0 +1,26 @@
+CREATE TABLE IF NOT EXISTS session_memory (
+    session_id TEXT PRIMARY KEY,
+    memory_summary TEXT,
+    memory_messages TEXT NOT NULL,
+    last_updated TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (session_id) REFERENCES chat_sessions (id) ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+selectBySessionId:
+SELECT * FROM session_memory WHERE session_id = :sessionId;
+
+insertMemory:
+INSERT INTO session_memory (session_id, memory_summary, memory_messages, last_updated, created_at)
+VALUES (:sessionId, :memorySummary, :memoryMessages, :lastUpdated, :createdAt);
+
+updateMemory:
+UPDATE session_memory SET memory_summary = :memorySummary, memory_messages = :memoryMessages, last_updated = :lastUpdated
+WHERE session_id = :sessionId;
+
+deleteBySessionId:
+DELETE FROM session_memory WHERE session_id = :sessionId;
+
+deleteOlderThan:
+DELETE FROM session_memory WHERE last_updated < :olderThan;
+

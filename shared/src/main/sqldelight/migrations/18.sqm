@@ -1,0 +1,1 @@
+-- chat_sessions.active_resource_collection_ids — guarded ALTER TABLE ADD COLUMN via SqlDelightSchemaMigrations.callbacks() AfterVersion(17)

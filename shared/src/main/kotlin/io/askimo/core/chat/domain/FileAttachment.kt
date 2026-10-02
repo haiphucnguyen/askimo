@@ -4,8 +4,6 @@
  */
 package io.askimo.core.chat.domain
 
-import io.askimo.core.db.sqliteInstant
-import org.jetbrains.exposed.v1.core.Table
 import java.time.Instant
 
 /**
@@ -45,47 +43,3 @@ data class AttachmentReference(
     val messageId: String,
     val sessionId: String,
 )
-
-/**
- * Exposed table definition for file_attachments.
- * Stores attachment metadata without message/session context (shared storage model).
- */
-object FileAttachmentsTable : Table("file_attachments") {
-    val id = varchar("id", 36)
-    val fileName = varchar("file_name", 255)
-    val mimeType = varchar("mime_type", 100)
-    val size = long("size")
-    val createdAt = sqliteInstant("created_at")
-    val storagePath = varchar("storage_path", 1024).nullable()
-
-    override val primaryKey = PrimaryKey(id)
-}
-
-/**
- * Exposed table definition for attachment_references.
- * Join table linking messages to attachments (N:M relationship).
- */
-object AttachmentReferencesTable : Table("attachment_references") {
-    val attachmentId = varchar("attachment_id", 36).references(FileAttachmentsTable.id)
-    val messageId = varchar("message_id", 36).references(ChatMessagesTable.id)
-    val sessionId = varchar("session_id", 36).references(ChatSessionsTable.id)
-
-    override val primaryKey = PrimaryKey(attachmentId, messageId)
-}
-
-/**
- * @deprecated Use FileAttachmentsTable and AttachmentReferencesTable instead.
- * Old table definition kept for migration purposes.
- */
-object ChatMessageAttachmentsTable : Table("chat_message_attachments") {
-    val id = varchar("id", 36)
-    val messageId = varchar("message_id", 36).references(ChatMessagesTable.id)
-    val sessionId = varchar("session_id", 36).references(ChatSessionsTable.id)
-    val fileName = varchar("file_name", 255)
-    val mimeType = varchar("mime_type", 100)
-    val size = long("size")
-    val createdAt = sqliteInstant("created_at")
-    val storagePath = varchar("storage_path", 1024).nullable()
-
-    override val primaryKey = PrimaryKey(id)
-}

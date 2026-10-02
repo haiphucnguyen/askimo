@@ -1,0 +1,3 @@
+-- file_segments (base + legacy project_id -> container_id rename + indexes) — fully handled by
+-- SqlDelightSchemaMigrations.callbacks() AfterVersion(42) -> migrateFileSegmentsTable(driver)
+

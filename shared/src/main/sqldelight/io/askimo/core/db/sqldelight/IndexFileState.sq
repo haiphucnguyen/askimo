@@ -1,0 +1,58 @@
+CREATE TABLE IF NOT EXISTS index_file_state (
+    container_id TEXT NOT NULL,
+    resource_id TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_hash TEXT NOT NULL,
+    source_type TEXT NOT NULL,
+    indexed_at TEXT NOT NULL,
+    PRIMARY KEY (container_id, resource_id, file_path)
+);
+
+CREATE INDEX IF NOT EXISTS idx_index_file_state_hash ON index_file_state (file_hash);
+CREATE INDEX IF NOT EXISTS idx_index_file_state_container_resource_source ON index_file_state (container_id, resource_id, source_type);
+
+selectHashesForSourceType:
+SELECT file_path, file_hash
+FROM index_file_state
+WHERE container_id = :containerId AND source_type = :sourceType AND resource_id = :resourceId;
+
+selectHashesForFiles:
+SELECT file_path, file_hash
+FROM index_file_state
+WHERE container_id = :containerId AND resource_id = :resourceId AND file_path IN :filePaths;
+
+selectPathsForResource:
+SELECT file_path
+FROM index_file_state
+WHERE container_id = :containerId AND resource_id = :resourceId;
+
+selectPathsForContainer:
+SELECT file_path
+FROM index_file_state
+WHERE container_id = :containerId;
+
+selectPathsForContainerBySourceTypes:
+SELECT file_path
+FROM index_file_state
+WHERE container_id = :containerId AND source_type IN :sourceTypes;
+
+insertFileState:
+INSERT INTO index_file_state (container_id, resource_id, file_path, file_hash, source_type, indexed_at)
+VALUES (:containerId, :resourceId, :filePath, :fileHash, :sourceType, :indexedAt);
+
+deleteByPathsChunk:
+DELETE FROM index_file_state
+WHERE container_id = :containerId AND resource_id = :resourceId AND file_path IN :filePaths;
+
+deleteBySourceTypeAndResource:
+DELETE FROM index_file_state
+WHERE container_id = :containerId AND source_type = :sourceType AND resource_id = :resourceId;
+
+deleteByResource:
+DELETE FROM index_file_state
+WHERE container_id = :containerId AND resource_id = :resourceId;
+
+deleteByContainer:
+DELETE FROM index_file_state
+WHERE container_id = :containerId;
+

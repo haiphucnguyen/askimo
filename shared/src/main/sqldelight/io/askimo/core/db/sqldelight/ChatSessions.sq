@@ -1,0 +1,126 @@
+CREATE TABLE IF NOT EXISTS chat_sessions (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    directive_id TEXT,
+    folder_id TEXT,
+    is_starred INTEGER DEFAULT 0,
+    synced_at TEXT,
+    project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
+    is_user_renamed INTEGER DEFAULT 0,
+    active_resource_collection_ids TEXT DEFAULT '[]'
+);
+
+insertSession:
+INSERT INTO chat_sessions (id, title, created_at, updated_at, directive_id, is_starred, project_id, active_resource_collection_ids)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+insertFromServer:
+INSERT INTO chat_sessions (id, title, created_at, updated_at, project_id, directive_id, is_starred, active_resource_collection_ids, synced_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+countAll:
+SELECT COUNT(*) FROM chat_sessions;
+
+selectAllOrderedLimited:
+SELECT * FROM chat_sessions ORDER BY is_starred DESC, updated_at DESC LIMIT :limit;
+
+selectById:
+SELECT * FROM chat_sessions WHERE id = :id;
+
+selectByProjectId:
+SELECT * FROM chat_sessions WHERE project_id = :projectId ORDER BY updated_at DESC;
+
+selectByIds:
+SELECT * FROM chat_sessions WHERE id IN :ids;
+
+-- :projectFilter is a tri-state INTEGER bind param: NULL = no filter, 1 = has project, 0 = no project.
+countFiltered:
+SELECT COUNT(*) FROM chat_sessions
+WHERE (:projectFilter IS NULL)
+   OR (:projectFilter = 1 AND project_id IS NOT NULL)
+   OR (:projectFilter = 0 AND project_id IS NULL);
+
+selectFilteredPagedAsc:
+SELECT * FROM chat_sessions
+WHERE (:projectFilter IS NULL)
+   OR (:projectFilter = 1 AND project_id IS NOT NULL)
+   OR (:projectFilter = 0 AND project_id IS NULL)
+ORDER BY is_starred DESC, updated_at ASC
+LIMIT :limit OFFSET :offset;
+
+selectFilteredPagedDesc:
+SELECT * FROM chat_sessions
+WHERE (:projectFilter IS NULL)
+   OR (:projectFilter = 1 AND project_id IS NOT NULL)
+   OR (:projectFilter = 0 AND project_id IS NULL)
+ORDER BY is_starred DESC, updated_at DESC
+LIMIT :limit OFFSET :offset;
+
+touchSession:
+UPDATE chat_sessions SET updated_at = :updatedAt WHERE id = :id;
+
+updateTitle:
+UPDATE chat_sessions SET title = :title, updated_at = :updatedAt WHERE id = :id;
+
+updateDirective:
+UPDATE chat_sessions SET directive_id = :directiveId, updated_at = :updatedAt WHERE id = :id;
+
+updateActiveResourceCollectionIds:
+UPDATE chat_sessions SET active_resource_collection_ids = :ids, updated_at = :updatedAt WHERE id = :id;
+
+deleteById:
+DELETE FROM chat_sessions WHERE id = :id;
+
+deleteAllSessions:
+DELETE FROM chat_sessions;
+
+updateStarred:
+UPDATE chat_sessions SET is_starred = :isStarred, updated_at = :updatedAt WHERE id = :id;
+
+markUserRenamed:
+UPDATE chat_sessions SET is_user_renamed = 1 WHERE id = :id;
+
+selectStarred:
+SELECT * FROM chat_sessions WHERE is_starred = 1 ORDER BY updated_at DESC;
+
+selectWithoutProjectOrderedAsc:
+SELECT * FROM chat_sessions WHERE project_id IS NULL ORDER BY updated_at ASC LIMIT :limit;
+
+selectWithoutProjectOrderedDesc:
+SELECT * FROM chat_sessions WHERE project_id IS NULL ORDER BY updated_at DESC LIMIT :limit;
+
+countWithoutProject:
+SELECT COUNT(*) FROM chat_sessions WHERE project_id IS NULL;
+
+searchWithoutProjectCount:
+SELECT COUNT(*) FROM chat_sessions WHERE project_id IS NULL AND title LIKE :pattern;
+
+searchWithoutProjectPagedAsc:
+SELECT * FROM chat_sessions WHERE project_id IS NULL AND title LIKE :pattern
+ORDER BY is_starred DESC, updated_at ASC LIMIT :limit OFFSET :offset;
+
+searchWithoutProjectPagedDesc:
+SELECT * FROM chat_sessions WHERE project_id IS NULL AND title LIKE :pattern
+ORDER BY is_starred DESC, updated_at DESC LIMIT :limit OFFSET :offset;
+
+updateProject:
+UPDATE chat_sessions SET project_id = :projectId, updated_at = :updatedAt WHERE id = :id;
+
+selectExistingByIds:
+SELECT id, updated_at FROM chat_sessions WHERE id IN :ids;
+
+updateFromServer:
+UPDATE chat_sessions
+SET title = :title, updated_at = :updatedAt, project_id = :projectId, directive_id = :directiveId,
+    is_starred = :isStarred, active_resource_collection_ids = :activeIds, synced_at = :syncedAt
+WHERE id = :id;
+
+markSynced:
+UPDATE chat_sessions SET synced_at = :syncedAt WHERE id = :id;
+
+selectAllOrderedByUpdatedAtAsc:
+SELECT * FROM chat_sessions ORDER BY updated_at ASC;
+
+

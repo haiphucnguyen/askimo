@@ -5,37 +5,19 @@
 package io.askimo.core.chat.repository
 
 import io.askimo.core.chat.domain.AttachmentReference
-import io.askimo.core.chat.domain.AttachmentReferencesTable
 import io.askimo.core.chat.domain.FileAttachment
-import io.askimo.core.chat.domain.FileAttachmentsTable
 import io.askimo.core.chat.util.AttachmentStorageManager
-import io.askimo.core.db.AbstractSQLiteRepository
+import io.askimo.core.db.AbstractRepository
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.logger
-import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.selectAll
 import java.util.UUID
 
-/**
- * Maps ResultRow to AttachmentReference domain object.
- */
-private fun ResultRow.toAttachmentReference(): AttachmentReference = AttachmentReference(
-    attachmentId = this[AttachmentReferencesTable.attachmentId],
-    messageId = this[AttachmentReferencesTable.messageId],
-    sessionId = this[AttachmentReferencesTable.sessionId],
-)
-
-/**
- * Manages attachments with shared storage: one file can be referenced by multiple messages.
- * Files are deleted when no messages reference them.
- */
 class ChatMessageAttachmentRepository internal constructor(
     databaseManager: DatabaseManager = DatabaseManager.getInstance(),
-) : AbstractSQLiteRepository(databaseManager) {
+) : AbstractRepository(databaseManager) {
     private val log = logger<ChatMessageAttachmentRepository>()
+    private val attachmentQueries get() = db.fileAttachmentsQueries
+    private val referenceQueries get() = db.attachmentReferencesQueries
 
     /**
      * Save attachment and create message reference. No ref counting needed.
@@ -50,29 +32,26 @@ class ChatMessageAttachmentRepository internal constructor(
         }
 
         // Insert attachment if it doesn't exist (ignore if it does)
-        val existingAttachment = FileAttachmentsTable
-            .selectAll()
-            .where { FileAttachmentsTable.id eq attachmentWithId.id }
-            .firstOrNull()
+        val existingAttachment = attachmentQueries.selectAttachmentById(attachmentWithId.id).executeAsOneOrNull()
 
         if (existingAttachment == null) {
-            FileAttachmentsTable.insert {
-                it[id] = attachmentWithId.id
-                it[fileName] = attachmentWithId.fileName
-                it[mimeType] = attachmentWithId.mimeType
-                it[size] = attachmentWithId.size
-                it[createdAt] = attachmentWithId.createdAt
-                it[storagePath] = attachmentWithId.storagePath
-            }
+            attachmentQueries.insertAttachment(
+                id = attachmentWithId.id,
+                fileName = attachmentWithId.fileName,
+                mimeType = attachmentWithId.mimeType,
+                size = attachmentWithId.size,
+                createdAt = attachmentWithId.createdAt.toString(),
+                storagePath = attachmentWithId.storagePath,
+            )
             log.debug("Saved new attachment: ${attachmentWithId.id}")
         }
 
         // Always create reference from message
-        AttachmentReferencesTable.insert {
-            it[attachmentId] = attachmentWithId.id
-            it[this.messageId] = messageId
-            it[this.sessionId] = sessionId
-        }
+        referenceQueries.insertReference(
+            attachmentId = attachmentWithId.id,
+            messageId = messageId,
+            sessionId = sessionId,
+        )
         log.debug("Created attachment reference: attachmentId=${attachmentWithId.id}, messageId=$messageId")
 
         return attachmentWithId
@@ -89,28 +68,25 @@ class ChatMessageAttachmentRepository internal constructor(
      */
     internal fun deleteAttachmentsByMessageIdInternal(messageId: String): Int {
         // Get attachment references for this message
-        val references = AttachmentReferencesTable
-            .selectAll()
-            .where { AttachmentReferencesTable.messageId eq messageId }
-            .map { it.toAttachmentReference() }
+        val references = referenceQueries.selectReferencesByMessageId(messageId).executeAsList()
+            .map {
+                AttachmentReference(
+                    attachmentId = it.attachment_id,
+                    messageId = it.message_id,
+                    sessionId = it.session_id,
+                )
+            }
 
         // Delete references from database
-        val deletedCount = AttachmentReferencesTable.deleteWhere {
-            AttachmentReferencesTable.messageId eq messageId
-        }
+        val deletedCount = referenceQueries.deleteReferencesByMessageId(messageId).value.toInt()
 
         // Check each attachment: if no other references exist, delete it
         references.forEach { reference ->
-            val otherReferences = AttachmentReferencesTable
-                .selectAll()
-                .where { AttachmentReferencesTable.attachmentId eq reference.attachmentId }
-                .count()
+            val otherReferences = referenceQueries.countReferencesByAttachmentId(reference.attachmentId).executeAsOne()
 
             if (otherReferences == 0L) {
                 // No other messages reference this attachment, safe to delete
-                FileAttachmentsTable.deleteWhere {
-                    FileAttachmentsTable.id eq reference.attachmentId
-                }
+                attachmentQueries.deleteAttachmentById(reference.attachmentId)
                 AttachmentStorageManager.deleteAttachmentFile(reference.attachmentId)
                 log.debug("Deleted attachment (no references): ${reference.attachmentId}")
             }

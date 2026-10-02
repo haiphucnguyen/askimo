@@ -1,0 +1,64 @@
+CREATE TABLE IF NOT EXISTS model_classifications (
+    id TEXT PRIMARY KEY,
+    provider TEXT NOT NULL,
+    model_name TEXT NOT NULL,
+    supports_text INTEGER DEFAULT 1,
+    supports_image INTEGER DEFAULT 0,
+    supports_audio INTEGER DEFAULT 0,
+    supports_video INTEGER DEFAULT 0,
+    supports_tools INTEGER DEFAULT 0,
+    supports_sampling INTEGER DEFAULT 1,
+    supports_streaming INTEGER DEFAULT 1,
+    description TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_model_classifications_provider_model ON model_classifications (provider, model_name);
+
+selectById:
+SELECT * FROM model_classifications WHERE id = :id;
+
+insertClassification:
+INSERT INTO model_classifications (
+    id, provider, model_name, supports_text, supports_image, supports_audio, supports_video,
+    supports_tools, supports_sampling, supports_streaming, description, created_at, updated_at
+)
+VALUES (
+    :id, :provider, :modelName, :supportsText, :supportsImage, :supportsAudio, :supportsVideo,
+    :supportsTools, :supportsSampling, :supportsStreaming, :description, :createdAt, :updatedAt
+);
+
+updateClassification:
+UPDATE model_classifications SET
+    provider = :provider,
+    model_name = :modelName,
+    supports_text = :supportsText,
+    supports_image = :supportsImage,
+    supports_audio = :supportsAudio,
+    supports_video = :supportsVideo,
+    supports_tools = :supportsTools,
+    supports_sampling = :supportsSampling,
+    supports_streaming = :supportsStreaming,
+    description = :description,
+    updated_at = :updatedAt
+WHERE id = :id;
+
+selectByProviderAndModel:
+SELECT * FROM model_classifications WHERE provider = :provider AND model_name = :modelName;
+
+selectByProvider:
+SELECT * FROM model_classifications WHERE provider = :provider ORDER BY model_name ASC;
+
+selectImageModels:
+SELECT * FROM model_classifications WHERE supports_image = 1 ORDER BY provider ASC, model_name ASC;
+
+selectToolCapableModels:
+SELECT * FROM model_classifications WHERE supports_tools = 1 ORDER BY provider ASC, model_name ASC;
+
+selectAllOrdered:
+SELECT * FROM model_classifications ORDER BY provider ASC, model_name ASC;
+
+deleteByProviderAndModel:
+DELETE FROM model_classifications WHERE provider = :provider AND model_name = :modelName;
+

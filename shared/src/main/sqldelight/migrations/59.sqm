@@ -1,0 +1,2 @@
+-- chat_message_attachments.storage_path — guarded ALTER TABLE ADD COLUMN via SqlDelightSchemaMigrations.callbacks() AfterVersion(58)
+

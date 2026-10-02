@@ -1,0 +1,3 @@
+-- chat_directives.updated_at — guarded ALTER TABLE ADD COLUMN via SqlDelightSchemaMigrations.callbacks() AfterVersion(35)
+-- (no-op here since base CREATE TABLE at version 34 already includes updated_at; kept 1:1 with original history)
+

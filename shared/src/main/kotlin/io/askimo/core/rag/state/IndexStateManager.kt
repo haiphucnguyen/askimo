@@ -20,7 +20,7 @@ class IndexStateManager(
     val resourceId: String, // KnowledgeSourceConfig.resourceIdentifier
 ) {
     private val log = logger<IndexStateManager>()
-    private val repository = IndexStateRepository(DatabaseManager.getInstance())
+    private val repository = DatabaseManager.getInstance().getIndexStateRepository()
 
     /**
      * Load persisted state from database
@@ -101,7 +101,7 @@ class IndexStateManager(
     }
 
     companion object {
-        private val repository by lazy { IndexStateRepository(DatabaseManager.getInstance()) }
+        private val repository by lazy { DatabaseManager.getInstance().getIndexStateRepository() }
         private val localSourceTypes = setOf("folders", "files")
 
         /**

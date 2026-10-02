@@ -4,34 +4,26 @@
  */
 package io.askimo.core.rag.state
 
+import io.askimo.core.db.AbstractRepository
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.logging.logger
-import org.jetbrains.exposed.v1.core.and
-import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.core.inList
-import org.jetbrains.exposed.v1.jdbc.Database
-import org.jetbrains.exposed.v1.jdbc.batchInsert
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import java.time.Instant
+import kotlin.collections.iterator
 
 /**
- * Repository for managing file index state in the database.
  * All operations are scoped to (containerId, resourceId) so that multiple
- * coordinators for the same container (project or resource collection) never interfere with each other.
+ * coordinators for the same container (project or resource collection) never interfere with
+ * each other.
  */
-class IndexStateRepository(
-    private val databaseManager: DatabaseManager,
-) {
-    private val log = logger<IndexStateRepository>()
+class IndexStateRepository internal constructor(
+    databaseManager: DatabaseManager = DatabaseManager.getInstance(),
+) : AbstractRepository(databaseManager) {
 
-    private val database: Database by lazy {
-        Database.connect(databaseManager.dataSource)
-    }
+    private val log = logger<IndexStateRepository>()
+    private val queries get() = db.indexFileStateQueries
 
     companion object {
-        /** SQLite bind-parameter limit is 999. We use 500 to stay well clear. */
+        /** SQLite bind-parameter limit is 999. We use 100 to stay well clear. */
         private const val IN_LIST_CHUNK_SIZE = 100
     }
 
@@ -42,17 +34,8 @@ class IndexStateRepository(
         containerId: String,
         sourceType: String,
         resourceId: String,
-    ): Map<String, String> = transaction(database) {
-        IndexFileStateTable.selectAll()
-            .where {
-                (IndexFileStateTable.containerId eq containerId) and
-                    (IndexFileStateTable.sourceType eq sourceType) and
-                    (IndexFileStateTable.resourceId eq resourceId)
-            }
-            .associate { row ->
-                row[IndexFileStateTable.filePath] to row[IndexFileStateTable.fileHash]
-            }
-    }
+    ): Map<String, String> = queries.selectHashesForSourceType(containerId, sourceType, resourceId).executeAsList()
+        .associate { it.file_path to it.file_hash }
 
     /**
      * Get hashes for a specific subset of file paths.
@@ -66,15 +49,8 @@ class IndexStateRepository(
         if (filePaths.isEmpty()) return emptyMap()
         val result = mutableMapOf<String, String>()
         for (chunk in filePaths.chunked(IN_LIST_CHUNK_SIZE)) {
-            transaction(database) {
-                IndexFileStateTable.selectAll()
-                    .where {
-                        (IndexFileStateTable.containerId eq containerId) and
-                            (IndexFileStateTable.resourceId eq resourceId) and
-                            (IndexFileStateTable.filePath inList chunk)
-                    }
-                    .forEach { result[it[IndexFileStateTable.filePath]] = it[IndexFileStateTable.fileHash] }
-            }
+            queries.selectHashesForFiles(containerId, resourceId, chunk).executeAsList()
+                .forEach { result[it.file_path] = it.file_hash }
         }
         return result
     }
@@ -86,14 +62,7 @@ class IndexStateRepository(
     fun getPathsForResource(
         containerId: String,
         resourceId: String,
-    ): Set<String> = transaction(database) {
-        IndexFileStateTable.selectAll()
-            .where {
-                (IndexFileStateTable.containerId eq containerId) and
-                    (IndexFileStateTable.resourceId eq resourceId)
-            }
-            .mapTo(HashSet<String>()) { it[IndexFileStateTable.filePath] }
-    }
+    ): Set<String> = queries.selectPathsForResource(containerId, resourceId).executeAsList().toHashSet()
 
     /**
      * Get all indexed paths for a container, optionally limited by source types.
@@ -102,19 +71,10 @@ class IndexStateRepository(
     fun getPathsForProject(
         containerId: String,
         sourceTypes: Set<String> = emptySet(),
-    ): Set<String> = transaction(database) {
-        if (sourceTypes.isEmpty()) {
-            IndexFileStateTable.selectAll()
-                .where { IndexFileStateTable.containerId eq containerId }
-                .mapTo(HashSet<String>()) { it[IndexFileStateTable.filePath] }
-        } else {
-            IndexFileStateTable.selectAll()
-                .where {
-                    (IndexFileStateTable.containerId eq containerId) and
-                        (IndexFileStateTable.sourceType inList sourceTypes.toList())
-                }
-                .mapTo(HashSet<String>()) { it[IndexFileStateTable.filePath] }
-        }
+    ): Set<String> = if (sourceTypes.isEmpty()) {
+        queries.selectPathsForContainer(containerId).executeAsList().toHashSet()
+    } else {
+        queries.selectPathsForContainerBySourceTypes(containerId, sourceTypes.toList()).executeAsList().toHashSet()
     }
 
     /**
@@ -129,13 +89,9 @@ class IndexStateRepository(
         fileHashes: Map<String, String>,
     ) {
         if (fileHashes.isEmpty()) return
-        transaction(database) {
+        db.transaction {
             for (chunk in fileHashes.keys.toList().chunked(IN_LIST_CHUNK_SIZE)) {
-                IndexFileStateTable.deleteWhere {
-                    (IndexFileStateTable.containerId eq containerId) and
-                        (IndexFileStateTable.resourceId eq resourceId) and
-                        (IndexFileStateTable.filePath inList chunk)
-                }
+                queries.deleteByPathsChunk(containerId, resourceId, chunk)
             }
             batchInsertFileHashes(containerId, resourceId, sourceType, fileHashes)
         }
@@ -150,18 +106,16 @@ class IndexStateRepository(
         fileHashes: Map<String, String>,
         sourceType: String,
         resourceId: String,
-    ) = transaction(database) {
-        IndexFileStateTable.deleteWhere {
-            (IndexFileStateTable.containerId eq containerId) and
-                (IndexFileStateTable.sourceType eq sourceType) and
-                (IndexFileStateTable.resourceId eq resourceId)
+    ) {
+        db.transaction {
+            queries.deleteBySourceTypeAndResource(containerId, sourceType, resourceId)
+            batchInsertFileHashes(containerId, resourceId, sourceType, fileHashes)
         }
-        batchInsertFileHashes(containerId, resourceId, sourceType, fileHashes)
         log.trace("Saved ${fileHashes.size} file states for container $containerId, resource $resourceId")
     }
 
     /**
-     * Inserts [fileHashes] rows into [IndexFileStateTable].
+     * Inserts [fileHashes] rows into `index_file_state`.
      * Must be called inside an existing transaction.
      */
     private fun batchInsertFileHashes(
@@ -171,14 +125,16 @@ class IndexStateRepository(
         fileHashes: Map<String, String>,
     ) {
         if (fileHashes.isEmpty()) return
-        val now = Instant.now()
-        IndexFileStateTable.batchInsert(fileHashes.entries) { (filePath, hash) ->
-            this[IndexFileStateTable.containerId] = containerId
-            this[IndexFileStateTable.resourceId] = resourceId
-            this[IndexFileStateTable.filePath] = filePath
-            this[IndexFileStateTable.fileHash] = hash
-            this[IndexFileStateTable.sourceType] = sourceType
-            this[IndexFileStateTable.indexedAt] = now
+        val now = Instant.now().toString()
+        for ((filePath, hash) in fileHashes) {
+            queries.insertFileState(
+                containerId = containerId,
+                resourceId = resourceId,
+                filePath = filePath,
+                fileHash = hash,
+                sourceType = sourceType,
+                indexedAt = now,
+            )
         }
     }
 
@@ -191,13 +147,9 @@ class IndexStateRepository(
         filePaths: Set<String>,
     ) {
         if (filePaths.isEmpty()) return
-        transaction(database) {
+        db.transaction {
             for (chunk in filePaths.toList().chunked(IN_LIST_CHUNK_SIZE)) {
-                IndexFileStateTable.deleteWhere {
-                    (IndexFileStateTable.containerId eq containerId) and
-                        (IndexFileStateTable.resourceId eq resourceId) and
-                        (IndexFileStateTable.filePath inList chunk)
-                }
+                queries.deleteByPathsChunk(containerId, resourceId, chunk)
             }
         }
     }
@@ -206,26 +158,21 @@ class IndexStateRepository(
      * Delete state for a single coordinator (one knowledge source).
      * Used when removing a specific knowledge source from a project.
      */
-    fun clearResourceState(containerId: String, resourceId: String) = transaction(database) {
-        val deleted = IndexFileStateTable.deleteWhere {
-            (IndexFileStateTable.containerId eq containerId) and
-                (IndexFileStateTable.resourceId eq resourceId)
-        }
+    fun clearResourceState(containerId: String, resourceId: String) {
+        val deleted = queries.deleteByResource(containerId, resourceId).value
         log.info("Cleared $deleted file states for container $containerId, resource $resourceId")
     }
 
     /**
      * Delete all file-hash state for an entire container, across every resource/source type.
      * Must be called whenever the on-disk/vector index for a container is wiped without going
-     * through each coordinator's [IndexStateManager.clearStates] (e.g. app-restart re-index or
+     * through each coordinator's `IndexStateManager.clearStates` (e.g. app-restart re-index or
      * embedding-model-mismatch rebuild with no live coordinators) — otherwise a freshly created
      * coordinator loads these stale hashes, treats every unchanged-on-disk file as already
      * indexed, skips re-embedding it, and reports the now-empty index as READY.
      */
-    fun clearAllStatesForContainer(containerId: String) = transaction(database) {
-        val deleted = IndexFileStateTable.deleteWhere {
-            IndexFileStateTable.containerId eq containerId
-        }
+    fun clearAllStatesForContainer(containerId: String) {
+        val deleted = queries.deleteByContainer(containerId).value
         log.info("Cleared $deleted file states for container $containerId")
     }
 }

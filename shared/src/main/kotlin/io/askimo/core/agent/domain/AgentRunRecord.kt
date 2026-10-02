@@ -5,8 +5,6 @@
 package io.askimo.core.agent.domain
 
 import io.askimo.core.chat.dto.TurnTimelineEntry
-import io.askimo.core.db.sqliteInstant
-import org.jetbrains.exposed.v1.core.Table
 import java.time.Instant
 import java.util.UUID
 
@@ -77,45 +75,3 @@ data class AgentRunRecord(
     val durationMs: Long? = null,
     val createdAt: Instant = Instant.now(),
 )
-
-/**
- * Exposed table definition for agent_run_history.
- *
- * [activityLog] is stored as a newline-delimited text block — no JSON dependency needed.
- * [contentJson] stores the richer [AgentRunRecord.contentBlocks] list as JSON; nullable so
- * older rows (created before this column existed) simply decode to an empty list.
- * Token usage columns are nullable — older rows and agents that don't expose structured
- * usage (e.g. Codex today) simply have `null` here.
- */
-object AgentRunHistoryTable : Table("agent_run_history") {
-    val id = varchar("id", 36)
-    val workspaceId = varchar("workspace_id", 36).references(WorkspaceTable.id)
-    val conversationId = varchar("conversation_id", 36)
-    val title = text("title").default("")
-    val userInput = text("user_input").default("")
-    val response = text("response").default("")
-    val error = text("error").nullable()
-
-    /**
-     * See [AgentRunRecord.isCancelled]. Non-null with a `DEFAULT 0` — the migration backfills
-     * older rows to `false` rather than leaving them nullable, so reads never need a null check.
-     */
-    val isCancelled = bool("is_cancelled").default(false)
-    val agentId = varchar("agent_id", 64).nullable()
-    val agentSessionId = text("agent_session_id").nullable()
-
-    /** Newline-delimited activity log entries. */
-    val activityLog = text("activity_log").default("")
-
-    /** JSON-encoded `List<TurnTimelineEntry>` (Tool + Token only) — ordered content blocks. */
-    val contentJson = text("content_json").nullable()
-
-    val inputTokens = integer("input_tokens").nullable()
-    val outputTokens = integer("output_tokens").nullable()
-    val totalTokens = integer("total_tokens").nullable()
-    val durationMs = long("duration_ms").nullable()
-
-    val createdAt = sqliteInstant("created_at")
-
-    override val primaryKey = PrimaryKey(id)
-}

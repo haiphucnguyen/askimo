@@ -1,0 +1,18 @@
+CREATE TABLE IF NOT EXISTS user_interests (
+    id TEXT PRIMARY KEY,
+    profile_id TEXT NOT NULL,
+    interest TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (profile_id) REFERENCES user_profiles(id) ON DELETE CASCADE
+);
+
+selectByProfileId:
+SELECT * FROM user_interests WHERE profile_id = :profileId;
+
+insertInterest:
+INSERT INTO user_interests (id, profile_id, interest, created_at)
+VALUES (:id, :profileId, :interest, :createdAt);
+
+deleteByProfileId:
+DELETE FROM user_interests WHERE profile_id = :profileId;
+

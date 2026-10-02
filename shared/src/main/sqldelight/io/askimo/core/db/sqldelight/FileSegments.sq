@@ -1,0 +1,30 @@
+CREATE TABLE IF NOT EXISTS file_segments (
+    container_id TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    segment_id TEXT NOT NULL,
+    chunk_index INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    PRIMARY KEY (container_id, file_path, segment_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_file_segments_container_file ON file_segments (container_id, file_path);
+
+insertSegment:
+INSERT OR IGNORE INTO file_segments (container_id, file_path, segment_id, chunk_index, created_at)
+VALUES (:containerId, :filePath, :segmentId, :chunkIndex, :createdAt);
+
+selectSegmentIdsForResource:
+SELECT segment_id FROM file_segments WHERE container_id = :containerId AND file_path = :filePath ORDER BY chunk_index;
+
+deleteByContainerAndResource:
+DELETE FROM file_segments WHERE container_id = :containerId AND file_path = :filePath;
+
+deleteAllByContainer:
+DELETE FROM file_segments WHERE container_id = :containerId;
+
+selectSegmentIdsForDirectory:
+SELECT segment_id FROM file_segments WHERE container_id = :containerId AND file_path LIKE :prefix;
+
+deleteByDirectory:
+DELETE FROM file_segments WHERE container_id = :containerId AND file_path LIKE :prefix;
+

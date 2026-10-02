@@ -1,0 +1,19 @@
+CREATE TABLE IF NOT EXISTS file_attachments (
+    id TEXT PRIMARY KEY,
+    file_name TEXT NOT NULL,
+    mime_type TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    storage_path TEXT
+);
+
+selectAttachmentById:
+SELECT * FROM file_attachments WHERE id = :id;
+
+insertAttachment:
+INSERT INTO file_attachments (id, file_name, mime_type, size, created_at, storage_path)
+VALUES (:id, :fileName, :mimeType, :size, :createdAt, :storagePath);
+
+deleteAttachmentById:
+DELETE FROM file_attachments WHERE id = :id;
+

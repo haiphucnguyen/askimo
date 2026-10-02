@@ -17,10 +17,10 @@ import io.askimo.core.chat.dto.TurnTimelineEntry
 import io.askimo.core.chat.dto.TurnTimelineGroup
 import io.askimo.core.chat.dto.grouped
 import io.askimo.core.chat.mapper.ChatMessageMapper.toDTO
-import io.askimo.core.chat.repository.PaginationDirection
 import io.askimo.core.chat.service.ChatDirectiveService
 import io.askimo.core.chat.service.ChatSessionService
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.db.PaginationDirection
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.error.SendMessageErrorEvent
 import io.askimo.core.event.internal.BookmarkToggledEvent

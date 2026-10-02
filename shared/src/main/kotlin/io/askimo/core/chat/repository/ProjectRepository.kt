@@ -4,48 +4,35 @@
  */
 package io.askimo.core.chat.repository
 
-import io.askimo.core.chat.domain.ChatSessionsTable
 import io.askimo.core.chat.domain.KnowledgeSourceConfig
 import io.askimo.core.chat.domain.KnowledgeSourceSerializer
 import io.askimo.core.chat.domain.Project
-import io.askimo.core.chat.domain.ProjectsTable
-import io.askimo.core.db.AbstractSQLiteRepository
+import io.askimo.core.db.AbstractRepository
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.db.Pageable
 import io.askimo.core.db.resolvePageParams
+import io.askimo.core.db.sqldelight.Projects
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.PushDataToServerEvent
 import io.askimo.core.logging.logger
-import org.jetbrains.exposed.v1.core.JoinType
-import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.SortOrder
-import org.jetbrains.exposed.v1.core.count
-import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.core.inList
-import org.jetbrains.exposed.v1.core.like
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.select
-import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.update
+import io.askimo.core.util.TimeUtil
 import java.time.Instant
 import java.util.UUID
 
 /**
- * Extension function to map an Exposed ResultRow to a Project object.
+ * Maps a generated [Projects] row to the shared [Project] domain object.
  */
-private fun ResultRow.toProject(): Project = Project(
-    id = this[ProjectsTable.id],
-    name = this[ProjectsTable.name],
-    description = this[ProjectsTable.description],
-    knowledgeSources = KnowledgeSourceSerializer.deserialize(this[ProjectsTable.knowledgeSourcesConfig]),
-    createdAt = this[ProjectsTable.createdAt],
-    updatedAt = this[ProjectsTable.updatedAt],
-    isStarred = this[ProjectsTable.isStarred] == 1,
-    spaceId = this[ProjectsTable.spaceId],
-    spaceName = this[ProjectsTable.spaceName],
-    defaultDirectiveId = this[ProjectsTable.defaultDirectiveId],
+private fun Projects.toProject(): Project = Project(
+    id = id,
+    name = name,
+    description = description,
+    knowledgeSources = KnowledgeSourceSerializer.deserialize(indexed_paths),
+    createdAt = TimeUtil.parseInstant(created_at),
+    updatedAt = TimeUtil.parseInstant(updated_at),
+    isStarred = is_starred == 1L,
+    spaceId = space_id,
+    spaceName = space_name,
+    defaultDirectiveId = default_directive_id,
 )
 
 /**
@@ -54,8 +41,9 @@ private fun ResultRow.toProject(): Project = Project(
  */
 class ProjectRepository internal constructor(
     databaseManager: DatabaseManager = DatabaseManager.getInstance(),
-) : AbstractSQLiteRepository(databaseManager) {
+) : AbstractRepository(databaseManager) {
     private val log = logger<ProjectRepository>()
+    private val queries get() = db.projectsQueries
 
     /**
      * Create a new project.
@@ -67,69 +55,43 @@ class ProjectRepository internal constructor(
             id = project.id.ifBlank { UUID.randomUUID().toString() },
         )
 
-        transaction(database) {
-            ProjectsTable.insert {
-                it[id] = projectWithInjectedFields.id
-                it[name] = projectWithInjectedFields.name
-                it[description] = projectWithInjectedFields.description
-                it[knowledgeSourcesConfig] = KnowledgeSourceSerializer.serialize(projectWithInjectedFields.knowledgeSources)
-                it[createdAt] = projectWithInjectedFields.createdAt
-                it[updatedAt] = projectWithInjectedFields.updatedAt
-                it[defaultDirectiveId] = projectWithInjectedFields.defaultDirectiveId
-            }
-        }
+        queries.insertProject(
+            id = projectWithInjectedFields.id,
+            name = projectWithInjectedFields.name,
+            description = projectWithInjectedFields.description,
+            indexedPaths = KnowledgeSourceSerializer.serialize(projectWithInjectedFields.knowledgeSources),
+            createdAt = projectWithInjectedFields.createdAt.toString(),
+            updatedAt = projectWithInjectedFields.updatedAt.toString(),
+            defaultDirectiveId = projectWithInjectedFields.defaultDirectiveId,
+        )
 
         log.debug("Created project ${projectWithInjectedFields.id} with name '${projectWithInjectedFields.name}'")
         EventBus.post(PushDataToServerEvent(reason = "project created"))
         return projectWithInjectedFields
     }
 
-    /**
-     * Returns the total number of projects using a SQL COUNT(*) query.
-     */
-    fun countAll(): Int = transaction(database) {
-        val count = ProjectsTable.id.count()
-        ProjectsTable.select(count).first()[count].toInt()
-    }
+    /** Returns the total number of projects using a SQL COUNT(*) query. */
+    fun countAll(): Int = queries.countAll().executeAsOne().toInt()
 
     /**
      * Get all projects ordered by updated time (most recent first).
      * @return List of all projects
      */
-    fun getAllProjects(): List<Project> = transaction(database) {
-        ProjectsTable
-            .selectAll()
-            .orderBy(ProjectsTable.isStarred, SortOrder.DESC)
-            .orderBy(ProjectsTable.updatedAt, SortOrder.DESC)
-            .map { it.toProject() }
-    }
+    fun getAllProjects(): List<Project> = queries.selectAllOrdered().executeAsList().map { it.toProject() }
 
     /**
      * Get a project by id.
      * @param projectId The project id
      * @return The project or null if not found
      */
-    fun getProject(projectId: String): Project? = transaction(database) {
-        ProjectsTable
-            .selectAll()
-            .where { ProjectsTable.id eq projectId }
-            .map { it.toProject() }
-            .firstOrNull()
-    }
+    fun getProject(projectId: String): Project? = queries.selectById(projectId).executeAsOneOrNull()?.toProject()
 
     /**
      * Find a project by name.
      * @param name The project name
      * @return The project or null if not found
      */
-    fun findProjectByName(name: String): Project? = transaction(database) {
-        ProjectsTable
-            .selectAll()
-            .where { ProjectsTable.name eq name }
-            .orderBy(ProjectsTable.createdAt, SortOrder.DESC)
-            .map { it.toProject() }
-            .firstOrNull()
-    }
+    fun findProjectByName(name: String): Project? = queries.selectByNameOrderedDesc(name).executeAsOneOrNull()?.toProject()
 
     /**
      * Find a project by session ID.
@@ -138,14 +100,7 @@ class ProjectRepository internal constructor(
      * @param sessionId The chat session id
      * @return The project that the session belongs to, or null if session has no project or not found
      */
-    fun findProjectBySessionId(sessionId: String): Project? = transaction(database) {
-        ProjectsTable
-            .join(ChatSessionsTable, JoinType.INNER, ProjectsTable.id, ChatSessionsTable.projectId)
-            .select(ProjectsTable.columns)
-            .where { ChatSessionsTable.id eq sessionId }
-            .singleOrNull()
-            ?.toProject()
-    }
+    fun findProjectBySessionId(sessionId: String): Project? = queries.findProjectBySessionId(sessionId).executeAsOneOrNull()?.toProject()
 
     /**
      * Update a project's information.
@@ -162,19 +117,20 @@ class ProjectRepository internal constructor(
         name: String,
         description: String?,
         knowledgeSources: List<KnowledgeSourceConfig>,
-    ): Boolean = transaction(database) {
-        val updated = ProjectsTable.update({ ProjectsTable.id eq projectId }) {
-            it[ProjectsTable.name] = name
-            it[ProjectsTable.description] = description
-            it[ProjectsTable.knowledgeSourcesConfig] = KnowledgeSourceSerializer.serialize(knowledgeSources)
-            it[updatedAt] = Instant.now()
-        } > 0
+    ): Boolean {
+        val updated = queries.updateProject(
+            name = name,
+            description = description,
+            indexedPaths = KnowledgeSourceSerializer.serialize(knowledgeSources),
+            updatedAt = Instant.now().toString(),
+            id = projectId,
+        ).value > 0
 
         if (updated) {
             log.debug("Updated project $projectId")
             EventBus.post(PushDataToServerEvent(reason = "project updated"))
         }
-        updated
+        return updated
     }
 
     /**
@@ -185,17 +141,18 @@ class ProjectRepository internal constructor(
      * @param directiveId The directive id to use as default, or null to clear it
      * @return true if updated successfully
      */
-    fun setDefaultDirective(projectId: String, directiveId: String?): Boolean = transaction(database) {
-        val updated = ProjectsTable.update({ ProjectsTable.id eq projectId }) {
-            it[ProjectsTable.defaultDirectiveId] = directiveId
-            it[updatedAt] = Instant.now()
-        } > 0
+    fun setDefaultDirective(projectId: String, directiveId: String?): Boolean {
+        val updated = queries.setDefaultDirective(
+            defaultDirectiveId = directiveId,
+            updatedAt = Instant.now().toString(),
+            id = projectId,
+        ).value > 0
 
         if (updated) {
             log.debug("Set default directive for project $projectId to $directiveId")
             EventBus.post(PushDataToServerEvent(reason = "project default directive updated"))
         }
-        updated
+        return updated
     }
 
     /**
@@ -204,20 +161,14 @@ class ProjectRepository internal constructor(
      * @param pageSize Number of projects per page
      * @return Paginated project results
      */
-    fun getProjectsPaged(page: Int = 1, pageSize: Int = 10): Pageable<Project> = transaction(database) {
-        val countExpr = ProjectsTable.id.count()
-        val totalItems = ProjectsTable.select(countExpr).first()[countExpr].toInt()
-        val pageParams = resolvePageParams(totalItems, page, pageSize)
-            ?: return@transaction Pageable.empty(pageSize)
+    fun getProjectsPaged(page: Int = 1, pageSize: Int = 10): Pageable<Project> {
+        val totalItems = queries.countAll().executeAsOne().toInt()
+        val pageParams = resolvePageParams(totalItems, page, pageSize) ?: return Pageable.empty(pageSize)
 
-        val pageProjects = ProjectsTable
-            .selectAll()
-            .orderBy(ProjectsTable.updatedAt, SortOrder.DESC)
-            .limit(pageSize)
-            .offset(pageParams.offset)
-            .map { it.toProject() }
+        val pageProjects = queries.selectPagedDesc(pageSize.toLong(), pageParams.offset)
+            .executeAsList().map { it.toProject() }
 
-        Pageable(
+        return Pageable(
             items = pageProjects,
             currentPage = pageParams.validPage,
             totalPages = pageParams.totalPages,
@@ -234,27 +185,16 @@ class ProjectRepository internal constructor(
      * @param pageSize Number of projects per page
      * @return Paginated results matching the query
      */
-    fun searchProjectsPaged(nameQuery: String, page: Int = 1, pageSize: Int = 10): Pageable<Project> = transaction(database) {
+    fun searchProjectsPaged(nameQuery: String, page: Int = 1, pageSize: Int = 10): Pageable<Project> {
         val pattern = "%${nameQuery.trim()}%"
 
-        val countExpr = ProjectsTable.id.count()
-        val totalItems = ProjectsTable
-            .select(countExpr)
-            .where { ProjectsTable.name like pattern }
-            .first()[countExpr].toInt()
-        val pageParams = resolvePageParams(totalItems, page, pageSize)
-            ?: return@transaction Pageable.empty(pageSize)
+        val totalItems = queries.countSearch(pattern).executeAsOne().toInt()
+        val pageParams = resolvePageParams(totalItems, page, pageSize) ?: return Pageable.empty(pageSize)
 
-        val pageProjects = ProjectsTable
-            .selectAll()
-            .where { ProjectsTable.name like pattern }
-            .orderBy(ProjectsTable.isStarred, SortOrder.DESC)
-            .orderBy(ProjectsTable.updatedAt, SortOrder.DESC)
-            .limit(pageSize)
-            .offset(pageParams.offset)
-            .map { it.toProject() }
+        val pageProjects = queries.selectSearchPagedDesc(pattern, pageSize.toLong(), pageParams.offset)
+            .executeAsList().map { it.toProject() }
 
-        Pageable(
+        return Pageable(
             items = pageProjects,
             currentPage = pageParams.validPage,
             totalPages = pageParams.totalPages,
@@ -263,23 +203,22 @@ class ProjectRepository internal constructor(
         )
     }
 
+    /** Set (or clear) the starred status of a project. */
+    fun starProject(projectId: String, isStarred: Boolean): Boolean {
+        val updated = queries.starProject(if (isStarred) 1L else 0L, projectId).value > 0
+        if (updated) EventBus.post(PushDataToServerEvent(reason = "project starred"))
+        return updated
+    }
+
     /**
      * Delete a project and all its associated sessions.
      *
      * @param projectId The project id to delete
      * @return true if deleted successfully
      */
-    fun starProject(projectId: String, isStarred: Boolean): Boolean = transaction(database) {
-        ProjectsTable.update({ ProjectsTable.id eq projectId }) {
-            it[ProjectsTable.isStarred] = if (isStarred) 1 else 0
-        } > 0
-    }.also { if (it) EventBus.post(PushDataToServerEvent(reason = "project starred")) }
-
     fun deleteProject(projectId: String): Boolean {
         log.debug("Deleting project $projectId")
-        return transaction(database) {
-            ProjectsTable.deleteWhere { ProjectsTable.id eq projectId } > 0
-        }
+        return queries.deleteProject(projectId).value > 0
     }
 
     /**
@@ -287,66 +226,55 @@ class ProjectRepository internal constructor(
      * (`syncedAt IS NULL`) or were locally modified after the last push
      * (`updatedAt > syncedAt`).
      */
-    fun getUnsyncedProjects(limit: Int = 50): List<Project> = transaction(database) {
-        ProjectsTable
-            .selectAll()
-            .orderBy(ProjectsTable.updatedAt, SortOrder.ASC)
-            .mapNotNull { row ->
-                val syncedAt = row[ProjectsTable.syncedAt]
-                val updatedAt = row[ProjectsTable.updatedAt].toString()
-                if (syncedAt == null || updatedAt > syncedAt) row.toProject() else null
-            }
-            .take(limit)
-    }
+    fun getUnsyncedProjects(limit: Int = 50): List<Project> = queries.selectAllOrderedByUpdatedAtAsc().executeAsList()
+        .mapNotNull { row ->
+            if (row.synced_at == null || row.updated_at > row.synced_at) row.toProject() else null
+        }
+        .take(limit)
 
-    /**
-     * Mark a project as successfully synced to the server.
-     */
-    fun markSynced(projectId: String): Boolean = transaction(database) {
-        ProjectsTable.update({ ProjectsTable.id eq projectId }) {
-            it[syncedAt] = Instant.now().toString()
-        } > 0
-    }
+    /** Mark a project as successfully synced to the server. */
+    fun markSynced(projectId: String): Boolean = queries.markSynced(Instant.now().toString(), projectId).value > 0
 
-    /**
-     * Upsert projects
-     */
+    /** Upsert projects */
     fun upsertFromServer(projects: List<Project>) {
         if (projects.isEmpty()) return
-        transaction(database) {
+
+        db.transaction {
             val nowStr = Instant.now().toString()
-            val existingById = ProjectsTable
-                .selectAll()
-                .where { ProjectsTable.id inList projects.map { it.id } }
-                .associate { row -> row[ProjectsTable.id] to row[ProjectsTable.updatedAt] }
+            val ids = projects.map { it.id }
+
+            val existingById = queries.selectExistingByIds(ids).executeAsList()
+                .associate { it.id to it.updated_at }
 
             for (project in projects) {
                 val storedUpdatedAt = existingById[project.id]
+
                 if (storedUpdatedAt == null) {
-                    ProjectsTable.insert {
-                        it[id] = project.id
-                        it[name] = project.name
-                        it[description] = project.description
-                        it[knowledgeSourcesConfig] = KnowledgeSourceSerializer.serialize(project.knowledgeSources)
-                        it[createdAt] = project.createdAt
-                        it[updatedAt] = project.updatedAt
-                        it[syncedAt] = nowStr
-                        it[spaceId] = project.spaceId
-                        it[spaceName] = project.spaceName
-                        it[defaultDirectiveId] = project.defaultDirectiveId
-                    }
+                    queries.insertFromServer(
+                        id = project.id,
+                        name = project.name,
+                        description = project.description,
+                        indexedPaths = KnowledgeSourceSerializer.serialize(project.knowledgeSources),
+                        createdAt = project.createdAt.toString(),
+                        updatedAt = project.updatedAt.toString(),
+                        syncedAt = nowStr,
+                        spaceId = project.spaceId,
+                        spaceName = project.spaceName,
+                        defaultDirectiveId = project.defaultDirectiveId,
+                    )
                     log.debug("upsertFromServer: inserted project {}", project.id)
-                } else if (project.updatedAt.isAfter(storedUpdatedAt)) {
-                    ProjectsTable.update({ ProjectsTable.id eq project.id }) {
-                        it[name] = project.name
-                        it[description] = project.description
-                        it[knowledgeSourcesConfig] = KnowledgeSourceSerializer.serialize(project.knowledgeSources)
-                        it[updatedAt] = project.updatedAt
-                        it[syncedAt] = nowStr
-                        it[spaceId] = project.spaceId
-                        it[spaceName] = project.spaceName
-                        it[defaultDirectiveId] = project.defaultDirectiveId
-                    }
+                } else if (project.updatedAt.isAfter(TimeUtil.parseInstant(storedUpdatedAt))) {
+                    queries.updateFromServer(
+                        name = project.name,
+                        description = project.description,
+                        indexedPaths = KnowledgeSourceSerializer.serialize(project.knowledgeSources),
+                        updatedAt = project.updatedAt.toString(),
+                        syncedAt = nowStr,
+                        spaceId = project.spaceId,
+                        spaceName = project.spaceName,
+                        defaultDirectiveId = project.defaultDirectiveId,
+                        id = project.id,
+                    )
                     log.debug("upsertFromServer: updated project {} (server newer)", project.id)
                 } else {
                     log.debug("upsertFromServer: skipped project {} (local is same age or newer)", project.id)

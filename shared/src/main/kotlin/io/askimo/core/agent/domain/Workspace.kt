@@ -4,8 +4,6 @@
  */
 package io.askimo.core.agent.domain
 
-import io.askimo.core.db.sqliteInstant
-import org.jetbrains.exposed.v1.core.Table
 import java.time.Instant
 import java.util.UUID
 
@@ -27,17 +25,3 @@ data class Workspace(
     val lastUsedAt: Instant = Instant.now(),
     val pinned: Boolean = false,
 )
-
-/**
- * Exposed table definition for `workspaces`.
- */
-object WorkspaceTable : Table("workspaces") {
-    val id = varchar("id", 36)
-    val name = text("name")
-    val path = text("path")
-    val createdAt = sqliteInstant("created_at")
-    val lastUsedAt = sqliteInstant("last_used_at")
-    val pinned = bool("pinned").default(false)
-
-    override val primaryKey = PrimaryKey(id)
-}

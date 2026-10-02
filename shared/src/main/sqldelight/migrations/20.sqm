@@ -1,0 +1,14 @@
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    is_outdated INTEGER DEFAULT 0,
+    edit_parent_id TEXT,
+    is_edited INTEGER DEFAULT 0,
+    synced_at TEXT,
+    FOREIGN KEY (session_id) REFERENCES chat_sessions (id) ON DELETE CASCADE,
+    FOREIGN KEY (edit_parent_id) REFERENCES chat_messages (id) ON DELETE SET NULL
+);
+

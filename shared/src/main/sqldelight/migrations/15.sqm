@@ -1,0 +1,2 @@
+-- chat_sessions.project_id — guarded ALTER TABLE ADD COLUMN via SqlDelightSchemaMigrations.callbacks() AfterVersion(14)
+

@@ -1,0 +1,2 @@
+-- chat_messages.total_tokens — guarded ALTER TABLE ADD COLUMN via SqlDelightSchemaMigrations.callbacks() AfterVersion(25)
+

@@ -5,52 +5,34 @@
 package io.askimo.core.agent.repository
 
 import io.askimo.core.agent.domain.Workspace
-import io.askimo.core.agent.domain.WorkspaceTable
-import io.askimo.core.db.AbstractSQLiteRepository
+import io.askimo.core.db.AbstractRepository
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.db.sqldelight.Workspaces
 import io.askimo.core.logging.logger
-import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.SortOrder
-import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.update
+import io.askimo.core.util.TimeUtil
 import java.io.File
 import java.time.Instant
 
-private fun ResultRow.toWorkspace(): Workspace = Workspace(
-    id = this[WorkspaceTable.id],
-    name = this[WorkspaceTable.name],
-    path = this[WorkspaceTable.path],
-    createdAt = this[WorkspaceTable.createdAt],
-    lastUsedAt = this[WorkspaceTable.lastUsedAt],
-    pinned = this[WorkspaceTable.pinned],
+private fun Workspaces.toWorkspace(): Workspace = Workspace(
+    id = id,
+    name = name,
+    path = path,
+    createdAt = TimeUtil.parseInstant(created_at),
+    lastUsedAt = TimeUtil.parseInstant(last_used_at),
+    pinned = pinned == 1L,
 )
 
-/**
- * Repository for persisting and querying [Workspace] entries — the folders that skills
- * are run against. Lets the UI list all known workspaces and switch between them,
- * instead of remembering only a single "last used" path.
- */
 class WorkspaceRepository internal constructor(
     databaseManager: DatabaseManager = DatabaseManager.getInstance(),
-) : AbstractSQLiteRepository(databaseManager) {
+) : AbstractRepository(databaseManager) {
 
     private val log = logger<WorkspaceRepository>()
+    private val queries get() = db.workspacesQueries
 
     /** Returns all known workspaces — pinned first, then most-recently-used. */
-    fun findAll(): List<Workspace> = transaction(database) {
-        WorkspaceTable
-            .selectAll()
-            .orderBy(WorkspaceTable.pinned to SortOrder.DESC, WorkspaceTable.lastUsedAt to SortOrder.DESC)
-            .map { it.toWorkspace() }
-    }
+    fun findAll(): List<Workspace> = queries.selectAllWorkspaces().executeAsList().map { it.toWorkspace() }
 
-    fun findById(id: String): Workspace? = transaction(database) {
-        WorkspaceTable.selectAll().where { WorkspaceTable.id eq id }.map { it.toWorkspace() }.firstOrNull()
-    }
+    fun findById(id: String): Workspace? = queries.selectWorkspaceById(id).executeAsOneOrNull()?.toWorkspace()
 
     /**
      * Returns the workspace with the most recent [Workspace.lastUsedAt], ignoring [Workspace.pinned]
@@ -58,20 +40,11 @@ class WorkspaceRepository internal constructor(
      * [findAll]'s pinned-first ordering is for the picker list only; resolving "current workspace"
      * must not jump to a pinned-but-unopened workspace ahead of the one actually last used.
      */
-    fun findMostRecentlyUsed(): Workspace? = transaction(database) {
-        WorkspaceTable
-            .selectAll()
-            .orderBy(WorkspaceTable.lastUsedAt, SortOrder.DESC)
-            .limit(1)
-            .map { it.toWorkspace() }
-            .firstOrNull()
-    }
+    fun findMostRecentlyUsed(): Workspace? = queries.selectMostRecentlyUsedWorkspace().executeAsOneOrNull()?.toWorkspace()
 
     private fun canonicalPath(dir: File): String = dir.absoluteFile.normalize().path
 
-    fun findByPath(dir: File): Workspace? = transaction(database) {
-        WorkspaceTable.selectAll().where { WorkspaceTable.path eq canonicalPath(dir) }.map { it.toWorkspace() }.firstOrNull()
-    }
+    fun findByPath(dir: File): Workspace? = queries.selectWorkspaceByPath(canonicalPath(dir)).executeAsOneOrNull()?.toWorkspace()
 
     /**
      * Registers [dir] as a known workspace (creating it on first use) and bumps its
@@ -81,15 +54,9 @@ class WorkspaceRepository internal constructor(
         val path = canonicalPath(dir)
         val now = Instant.now()
 
-        val existing = transaction(database) {
-            WorkspaceTable.selectAll().where { WorkspaceTable.path eq path }.map { it.toWorkspace() }.firstOrNull()
-        }
+        val existing = queries.selectWorkspaceByPath(path).executeAsOneOrNull()?.toWorkspace()
         if (existing != null) {
-            transaction(database) {
-                WorkspaceTable.update({ WorkspaceTable.id eq existing.id }) {
-                    it[lastUsedAt] = now
-                }
-            }
+            queries.updateWorkspaceLastUsedAt(lastUsedAt = now.toString(), id = existing.id)
             return existing.copy(lastUsedAt = now)
         }
 
@@ -99,54 +66,38 @@ class WorkspaceRepository internal constructor(
             createdAt = now,
             lastUsedAt = now,
         )
-        transaction(database) {
-            WorkspaceTable.insert {
-                it[id] = workspace.id
-                it[name] = workspace.name
-                it[WorkspaceTable.path] = workspace.path
-                it[createdAt] = workspace.createdAt
-                it[lastUsedAt] = workspace.lastUsedAt
-                it[pinned] = workspace.pinned
-            }
-        }
+        queries.insertWorkspace(
+            id = workspace.id,
+            name = workspace.name,
+            path = workspace.path,
+            createdAt = workspace.createdAt.toString(),
+            lastUsedAt = workspace.lastUsedAt.toString(),
+            pinned = if (workspace.pinned) 1L else 0L,
+        )
         log.debug("Registered new workspace '{}' at '{}'", workspace.name, workspace.path)
         return workspace
     }
 
     /** Bumps [Workspace.lastUsedAt] to now, without changing anything else. */
     fun touch(id: String) {
-        transaction(database) {
-            WorkspaceTable.update({ WorkspaceTable.id eq id }) {
-                it[lastUsedAt] = Instant.now()
-            }
-        }
+        queries.updateWorkspaceLastUsedAt(lastUsedAt = Instant.now().toString(), id = id)
     }
 
     /** Renames a workspace's display name. Does not affect its filesystem path. */
     fun rename(id: String, newName: String): Boolean {
         val trimmed = newName.trim()
         if (trimmed.isBlank()) return false
-        return transaction(database) {
-            WorkspaceTable.update({ WorkspaceTable.id eq id }) {
-                it[name] = trimmed
-            }
-        } > 0
+        return queries.updateWorkspaceName(name = trimmed, id = id).value > 0
     }
 
     /** Pins/unpins a workspace so it always sorts to the top of the list. */
     fun setPinned(id: String, pinned: Boolean) {
-        transaction(database) {
-            WorkspaceTable.update({ WorkspaceTable.id eq id }) {
-                it[WorkspaceTable.pinned] = pinned
-            }
-        }
+        queries.updateWorkspacePinned(pinned = if (pinned) 1L else 0L, id = id)
     }
 
     /** Removes the workspace reference only — does NOT delete the underlying folder on disk. */
     fun delete(id: String) {
-        transaction(database) {
-            WorkspaceTable.deleteWhere { WorkspaceTable.id eq id }
-        }
+        queries.deleteWorkspaceById(id)
         log.debug("Removed workspace reference '{}'", id)
     }
 }

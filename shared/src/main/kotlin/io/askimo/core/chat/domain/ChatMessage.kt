@@ -6,9 +6,6 @@ package io.askimo.core.chat.domain
 
 import io.askimo.core.chat.dto.TurnTimelineEntry
 import io.askimo.core.context.MessageRole
-import io.askimo.core.db.sqliteInstant
-import org.jetbrains.exposed.v1.core.ReferenceOption
-import org.jetbrains.exposed.v1.core.Table
 import java.time.Instant
 
 data class ChatMessage(
@@ -31,42 +28,3 @@ data class ChatMessage(
     // ChatMessageDTO.contentBlocks for rationale.
     val contentBlocks: List<TurnTimelineEntry> = emptyList(),
 )
-
-/**
- * Exposed table definition for chat_messages.
- * Co-located with domain class for easier maintenance and foreign key references.
- */
-object ChatMessagesTable : Table("chat_messages") {
-    val id = varchar("id", 36)
-
-    // FK to chat_sessions with CASCADE delete
-    val sessionId = varchar("session_id", 36)
-
-    val role = varchar("role", 50)
-    val content = text("content")
-    val createdAt = sqliteInstant("created_at")
-    val isOutdated = integer("is_outdated").default(0)
-
-    // Retained for data compatibility; no FK enforced — edit-parent feature inactive.
-    val editParentId = varchar("edit_parent_id", 36).nullable()
-
-    val isEdited = integer("is_edited").default(0)
-    val isFailed = integer("is_failed").default(0)
-    val inputTokens = integer("input_tokens").nullable()
-    val outputTokens = integer("output_tokens").nullable()
-    val totalTokens = integer("total_tokens").nullable()
-    val durationMs = long("duration_ms").nullable()
-    val isBookmarked = integer("is_bookmarked").default(0)
-
-    /** JSON-encoded `List<TurnTimelineEntry>` (Tool + Token only) — mirrors agent_run_history.content_json. */
-    val contentJson = text("content_json").nullable()
-
-    val syncedAt = varchar("synced_at", 32).nullable()
-
-    override val primaryKey = PrimaryKey(id)
-
-    init {
-        // Cascade delete messages when their session is deleted.
-        foreignKey(sessionId to ChatSessionsTable.id, onDelete = ReferenceOption.CASCADE)
-    }
-}

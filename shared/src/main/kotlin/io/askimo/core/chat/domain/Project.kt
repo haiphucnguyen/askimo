@@ -4,8 +4,6 @@
  */
 package io.askimo.core.chat.domain
 
-import io.askimo.core.db.sqliteInstant
-import org.jetbrains.exposed.v1.core.Table
 import java.time.Instant
 
 /**
@@ -38,23 +36,3 @@ data class Project(
      */
     val defaultDirectiveId: String? = null,
 )
-
-/**
- * Exposed table definition for projects.
- * Co-located with domain class for easier maintenance and foreign key references.
- */
-object ProjectsTable : Table("projects") {
-    val id = varchar("id", 36)
-    val name = varchar("name", 255)
-    val description = text("description").nullable()
-    val knowledgeSourcesConfig = text("indexed_paths")
-    val createdAt = sqliteInstant("created_at")
-    val updatedAt = sqliteInstant("updated_at")
-    val syncedAt = varchar("synced_at", 32).nullable()
-    val isStarred = integer("is_starred").default(0)
-    val spaceId = varchar("space_id", 36).nullable()
-    val spaceName = varchar("space_name", 255).nullable()
-    val defaultDirectiveId = varchar("default_directive_id", 36).nullable()
-
-    override val primaryKey = PrimaryKey(id)
-}

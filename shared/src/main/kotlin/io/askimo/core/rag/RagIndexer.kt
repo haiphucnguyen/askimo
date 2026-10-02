@@ -38,7 +38,6 @@ import io.askimo.core.rag.container.asIndexingContainer
 import io.askimo.core.rag.indexing.IndexingCoordinator
 import io.askimo.core.rag.indexing.IndexingCoordinatorFactory
 import io.askimo.core.rag.state.IndexProgress
-import io.askimo.core.rag.state.IndexStateRepository
 import io.askimo.core.rag.state.IndexStatus
 import io.askimo.core.util.AskimoHome
 import kotlinx.coroutines.CancellationException
@@ -474,7 +473,7 @@ class RagIndexer(
         // loads these stale hashes, treats every unchanged-on-disk file as already indexed,
         // and marks the now-empty index READY without re-embedding anything.
         try {
-            IndexStateRepository(DatabaseManager.getInstance()).clearAllStatesForContainer(containerId)
+            DatabaseManager.getInstance().getIndexStateRepository().clearAllStatesForContainer(containerId)
         } catch (e: Exception) {
             log.error("Failed to clear index-file state for container $containerId", e)
         }

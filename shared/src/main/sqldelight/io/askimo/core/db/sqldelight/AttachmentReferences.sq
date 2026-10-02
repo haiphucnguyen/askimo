@@ -1,0 +1,34 @@
+CREATE TABLE IF NOT EXISTS attachment_references (
+    attachment_id TEXT NOT NULL,
+    message_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    PRIMARY KEY (attachment_id, message_id),
+    FOREIGN KEY (attachment_id) REFERENCES file_attachments(id) ON DELETE CASCADE,
+    FOREIGN KEY (message_id) REFERENCES chat_messages(id) ON DELETE CASCADE,
+    FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_attachment_refs_message_id ON attachment_references (message_id);
+CREATE INDEX IF NOT EXISTS idx_attachment_refs_attachment_id ON attachment_references (attachment_id);
+CREATE INDEX IF NOT EXISTS idx_attachment_refs_session_id ON attachment_references (session_id);
+
+insertReference:
+INSERT INTO attachment_references (attachment_id, message_id, session_id)
+VALUES (:attachmentId, :messageId, :sessionId);
+
+selectReferencesByMessageId:
+SELECT * FROM attachment_references WHERE message_id = :messageId;
+
+deleteReferencesByMessageId:
+DELETE FROM attachment_references WHERE message_id = :messageId;
+
+countReferencesByAttachmentId:
+SELECT COUNT(*) FROM attachment_references WHERE attachment_id = :attachmentId;
+
+selectAttachmentsForMessageIds:
+SELECT ar.message_id AS message_id, fa.id AS id, fa.file_name AS file_name, fa.mime_type AS mime_type,
+  fa.size AS size, fa.created_at AS created_at, fa.storage_path AS storage_path
+FROM attachment_references ar
+LEFT JOIN file_attachments fa ON ar.attachment_id = fa.id
+WHERE ar.message_id IN :messageIds;
+

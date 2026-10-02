@@ -1,0 +1,2 @@
+-- agent_run_history.is_cancelled — guarded ALTER TABLE ADD COLUMN via SqlDelightSchemaMigrations.callbacks() AfterVersion(55)
+

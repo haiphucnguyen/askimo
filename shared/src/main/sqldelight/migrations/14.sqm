@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS chat_sessions (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    directive_id TEXT,
+    folder_id TEXT,
+    is_starred INTEGER DEFAULT 0,
+    synced_at TEXT
+);
+

@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS conversation_summaries (
+    session_id TEXT PRIMARY KEY,
+    key_facts TEXT NOT NULL,
+    main_topics TEXT NOT NULL,
+    recent_context TEXT NOT NULL,
+    last_summarized_message_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (session_id) REFERENCES chat_sessions (id) ON DELETE CASCADE
+);
+

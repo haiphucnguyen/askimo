@@ -4,102 +4,66 @@
  */
 package io.askimo.core.chat.repository
 
-import io.askimo.core.chat.domain.AttachmentReferencesTable
 import io.askimo.core.chat.domain.ChatMessage
-import io.askimo.core.chat.domain.ChatMessagesTable
 import io.askimo.core.chat.domain.ChatSession
-import io.askimo.core.chat.domain.ChatSessionsTable
 import io.askimo.core.chat.domain.FileAttachment
-import io.askimo.core.chat.domain.FileAttachmentsTable
 import io.askimo.core.chat.dto.TurnTimelineEntry
 import io.askimo.core.chat.dto.truncatedForStorage
 import io.askimo.core.context.MessageRole
-import io.askimo.core.db.AbstractSQLiteRepository
+import io.askimo.core.db.AbstractRepository
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.db.PaginationDirection
+import io.askimo.core.db.SearchSortBy
+import io.askimo.core.db.sqldelight.Chat_messages
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.PushDataToServerEvent
 import io.askimo.core.logging.logger
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
+import io.askimo.core.util.TimeUtil
 import kotlinx.serialization.json.Json
-import org.jetbrains.exposed.v1.core.JoinType
-import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.SortOrder
-import org.jetbrains.exposed.v1.core.and
-import org.jetbrains.exposed.v1.core.count
-import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.core.greater
-import org.jetbrains.exposed.v1.core.greaterEq
-import org.jetbrains.exposed.v1.core.inList
-import org.jetbrains.exposed.v1.core.isNull
-import org.jetbrains.exposed.v1.core.less
-import org.jetbrains.exposed.v1.core.lessEq
-import org.jetbrains.exposed.v1.core.like
-import org.jetbrains.exposed.v1.core.lowerCase
-import org.jetbrains.exposed.v1.jdbc.andWhere
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.select
-import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.update
-import org.jetbrains.exposed.v1.jdbc.upsert
 import java.time.Instant
 import java.util.UUID
 
-enum class PaginationDirection {
-    FORWARD,
-    BACKWARD,
-}
-
-/**
- * Sort options for search results.
- */
-enum class SearchSortBy {
-    DATE_DESC, // Newest first (default)
-    DATE_ASC, // Oldest first
-    RELEVANCE, // For future use if relevance scoring is added
-}
-
-/**
- * Extension function to map an Exposed ResultRow to a ChatMessage object.
- */
 private val chatContentJson = Json { ignoreUnknownKeys = true }
-private val chatMessageRepositoryLog = logger<ChatMessageRepository>()
+private val log = logger<ChatMessageRepository>()
 
 private fun decodeChatContentBlocks(raw: String?): List<TurnTimelineEntry> {
     if (raw.isNullOrBlank()) return emptyList()
     return runCatching { chatContentJson.decodeFromString<List<TurnTimelineEntry>>(raw) }
-        .onFailure { e -> chatMessageRepositoryLog.warn("Failed to decode content_json: {}", e.message) }
+        .onFailure { e -> log.warn("Failed to decode content_json: {}", e.message) }
         .getOrDefault(emptyList())
 }
 
 private fun encodeChatContentBlocks(blocks: List<TurnTimelineEntry>): String? = if (blocks.isEmpty()) null else chatContentJson.encodeToString(blocks.truncatedForStorage())
 
-private fun ResultRow.toChatMessage(): ChatMessage = ChatMessage(
-    id = this[ChatMessagesTable.id],
-    sessionId = this[ChatMessagesTable.sessionId],
-    role = MessageRole.entries.find { it.value == this[ChatMessagesTable.role] } ?: MessageRole.USER,
-    content = this[ChatMessagesTable.content],
-    createdAt = this[ChatMessagesTable.createdAt],
-    isOutdated = this[ChatMessagesTable.isOutdated] == 1,
-    editParentId = this[ChatMessagesTable.editParentId],
-    isEdited = this[ChatMessagesTable.isEdited] == 1,
-    isFailed = this[ChatMessagesTable.isFailed] == 1,
-    inputTokens = this[ChatMessagesTable.inputTokens],
-    outputTokens = this[ChatMessagesTable.outputTokens],
-    totalTokens = this[ChatMessagesTable.totalTokens],
-    durationMs = this[ChatMessagesTable.durationMs],
-    isBookmarked = this[ChatMessagesTable.isBookmarked] == 1,
-    contentBlocks = decodeChatContentBlocks(this[ChatMessagesTable.contentJson]),
+/**
+ * Maps a generated [Chat_messages] row to the shared [ChatMessage] domain object. Attachments
+ * are not populated here — callers must merge them in via [FileAttachment]
+ * lookups (see [ChatMessageRepository.loadAttachmentsForMessageIds]).
+ */
+private fun Chat_messages.toChatMessage(): ChatMessage = ChatMessage(
+    id = id,
+    sessionId = session_id,
+    role = MessageRole.entries.find { it.value == role } ?: MessageRole.USER,
+    content = content,
+    createdAt = TimeUtil.parseInstant(created_at),
+    isOutdated = is_outdated == 1L,
+    editParentId = edit_parent_id,
+    isEdited = is_edited == 1L,
+    isFailed = is_failed == 1L,
+    inputTokens = input_tokens?.toInt(),
+    outputTokens = output_tokens?.toInt(),
+    totalTokens = total_tokens?.toInt(),
+    durationMs = duration_ms,
+    isBookmarked = is_bookmarked == 1L,
+    contentBlocks = decodeChatContentBlocks(content_json),
 )
 
 class ChatMessageRepository internal constructor(
     databaseManager: DatabaseManager = DatabaseManager.getInstance(),
     private val attachmentRepository: ChatMessageAttachmentRepository = ChatMessageAttachmentRepository(databaseManager),
-) : AbstractSQLiteRepository(databaseManager) {
+) : AbstractRepository(databaseManager) {
 
-    private val log = logger<ChatMessageRepository>()
+    private val queries get() = db.chatMessagesQueries
 
     /**
      * Inserts [message] into the local database.
@@ -114,26 +78,24 @@ class ChatMessageRepository internal constructor(
             id = message.id.ifBlank { UUID.randomUUID().toString() },
         )
 
-        transaction(database) {
-            ChatMessagesTable.insert {
-                it[id] = messageWithInjectedFields.id
-                it[ChatMessagesTable.sessionId] = messageWithInjectedFields.sessionId
-                it[ChatMessagesTable.role] = messageWithInjectedFields.role.value
-                it[ChatMessagesTable.content] = messageWithInjectedFields.content
-                it[createdAt] = messageWithInjectedFields.createdAt
-                it[ChatMessagesTable.isOutdated] = if (messageWithInjectedFields.isOutdated) 1 else 0
-                it[ChatMessagesTable.editParentId] = messageWithInjectedFields.editParentId
-                it[ChatMessagesTable.isEdited] = if (messageWithInjectedFields.isEdited) 1 else 0
-                it[ChatMessagesTable.isFailed] = if (messageWithInjectedFields.isFailed) 1 else 0
-                it[ChatMessagesTable.inputTokens] = messageWithInjectedFields.inputTokens
-                it[ChatMessagesTable.outputTokens] = messageWithInjectedFields.outputTokens
-                it[ChatMessagesTable.totalTokens] = messageWithInjectedFields.totalTokens
-                it[ChatMessagesTable.durationMs] = messageWithInjectedFields.durationMs
-                it[ChatMessagesTable.contentJson] = encodeChatContentBlocks(messageWithInjectedFields.contentBlocks)
-                // Set syncedAt during INSERT when the message is already on the server —
-                // avoids a separate markSynced() UPDATE call.
-                if (syncedAt != null) it[ChatMessagesTable.syncedAt] = syncedAt.toString()
-            }
+        db.transaction {
+            queries.insertMessage(
+                id = messageWithInjectedFields.id,
+                sessionId = messageWithInjectedFields.sessionId,
+                role = messageWithInjectedFields.role.value,
+                content = messageWithInjectedFields.content,
+                createdAt = messageWithInjectedFields.createdAt.toString(),
+                isOutdated = if (messageWithInjectedFields.isOutdated) 1L else 0L,
+                editParentId = messageWithInjectedFields.editParentId,
+                isEdited = if (messageWithInjectedFields.isEdited) 1L else 0L,
+                isFailed = if (messageWithInjectedFields.isFailed) 1L else 0L,
+                inputTokens = messageWithInjectedFields.inputTokens?.toLong(),
+                outputTokens = messageWithInjectedFields.outputTokens?.toLong(),
+                totalTokens = messageWithInjectedFields.totalTokens?.toLong(),
+                durationMs = messageWithInjectedFields.durationMs,
+                contentJson = encodeChatContentBlocks(messageWithInjectedFields.contentBlocks),
+                syncedAt = syncedAt?.toString(),
+            )
 
             // Save attachments if any (with reference counting for shared storage)
             if (messageWithInjectedFields.attachments.isNotEmpty()) {
@@ -164,24 +126,25 @@ class ChatMessageRepository internal constructor(
             message.copy(id = message.id.ifBlank { UUID.randomUUID().toString() })
         }
 
-        transaction(database) {
+        db.transaction {
             messagesWithIds.forEach { msg ->
-                ChatMessagesTable.insert {
-                    it[id] = msg.id
-                    it[ChatMessagesTable.sessionId] = msg.sessionId
-                    it[ChatMessagesTable.role] = msg.role.value
-                    it[ChatMessagesTable.content] = msg.content
-                    it[createdAt] = msg.createdAt
-                    it[ChatMessagesTable.isOutdated] = if (msg.isOutdated) 1 else 0
-                    it[ChatMessagesTable.editParentId] = msg.editParentId
-                    it[ChatMessagesTable.isEdited] = if (msg.isEdited) 1 else 0
-                    it[ChatMessagesTable.isFailed] = if (msg.isFailed) 1 else 0
-                    it[ChatMessagesTable.inputTokens] = msg.inputTokens
-                    it[ChatMessagesTable.outputTokens] = msg.outputTokens
-                    it[ChatMessagesTable.totalTokens] = msg.totalTokens
-                    it[ChatMessagesTable.durationMs] = msg.durationMs
-                    it[ChatMessagesTable.contentJson] = encodeChatContentBlocks(msg.contentBlocks)
-                }
+                queries.insertMessage(
+                    id = msg.id,
+                    sessionId = msg.sessionId,
+                    role = msg.role.value,
+                    content = msg.content,
+                    createdAt = msg.createdAt.toString(),
+                    isOutdated = if (msg.isOutdated) 1L else 0L,
+                    editParentId = msg.editParentId,
+                    isEdited = if (msg.isEdited) 1L else 0L,
+                    isFailed = if (msg.isFailed) 1L else 0L,
+                    inputTokens = msg.inputTokens?.toLong(),
+                    outputTokens = msg.outputTokens?.toLong(),
+                    totalTokens = msg.totalTokens?.toLong(),
+                    durationMs = msg.durationMs,
+                    contentJson = encodeChatContentBlocks(msg.contentBlocks),
+                    syncedAt = null,
+                )
 
                 if (msg.attachments.isNotEmpty()) {
                     attachmentRepository.addAttachments(
@@ -200,17 +163,13 @@ class ChatMessageRepository internal constructor(
         return messagesWithIds
     }
 
-    fun getMessages(sessionId: String): List<ChatMessage> = transaction(database) {
-        val messages = ChatMessagesTable
-            .selectAll()
-            .where { ChatMessagesTable.sessionId eq sessionId }
-            .orderBy(ChatMessagesTable.createdAt, SortOrder.ASC)
-            .map { it.toChatMessage() }
+    fun getMessages(sessionId: String): List<ChatMessage> {
+        val messages = queries.selectBySessionOrderedAsc(sessionId).executeAsList().map { it.toChatMessage() }
 
         val messageIds = messages.map { it.id }
         val attachmentsMap = loadAttachmentsForMessageIds(messageIds)
 
-        messages.map { message ->
+        return messages.map { message ->
             message.copy(attachments = attachmentsMap[message.id] ?: emptyList())
         }
     }
@@ -218,13 +177,7 @@ class ChatMessageRepository internal constructor(
     /**
      * Counts messages with [role] across all sessions — e.g. total user prompts ever sent,
      */
-    fun countByRole(role: MessageRole): Int = transaction(database) {
-        val count = ChatMessagesTable.id.count()
-        ChatMessagesTable
-            .select(count)
-            .where { ChatMessagesTable.role eq role.value }
-            .first()[count].toInt()
-    }
+    fun countByRole(role: MessageRole): Int = queries.countByRole(role.value).executeAsOne().toInt()
 
     /**
      * Get messages with cursor-based pagination
@@ -239,40 +192,22 @@ class ChatMessageRepository internal constructor(
         limit: Int = 20,
         cursor: Instant? = null,
         direction: PaginationDirection = PaginationDirection.FORWARD,
-    ): Pair<List<ChatMessage>, Instant?> = transaction(database) {
-        val query = ChatMessagesTable.selectAll()
-            .where { ChatMessagesTable.sessionId eq sessionId }
+    ): Pair<List<ChatMessage>, Instant?> {
+        val fetchLimit = (limit + 1).toLong()
 
-        // Apply cursor filtering and ordering based on direction
-        val orderedQuery = when {
-            cursor == null && direction == PaginationDirection.FORWARD -> {
-                // Start from the beginning (oldest messages)
-                query.orderBy(ChatMessagesTable.createdAt, SortOrder.ASC)
-            }
+        val messages = when {
+            cursor == null && direction == PaginationDirection.FORWARD ->
+                queries.selectBySessionAscFromStart(sessionId, fetchLimit).executeAsList()
 
-            cursor == null && direction == PaginationDirection.BACKWARD -> {
-                // Start from the end (newest messages)
-                query.orderBy(ChatMessagesTable.createdAt, SortOrder.DESC)
-            }
+            cursor == null && direction == PaginationDirection.BACKWARD ->
+                queries.selectBySessionDescFromEnd(sessionId, fetchLimit).executeAsList()
 
-            direction == PaginationDirection.FORWARD -> {
-                // Get messages after the cursor (newer messages)
-                query
-                    .andWhere { ChatMessagesTable.createdAt greater cursor!! }
-                    .orderBy(ChatMessagesTable.createdAt, SortOrder.ASC)
-            }
+            direction == PaginationDirection.FORWARD ->
+                queries.selectBySessionAfterCursorAsc(sessionId, cursor!!.toString(), fetchLimit).executeAsList()
 
-            else -> {
-                // Get messages before the cursor (older messages)
-                query
-                    .andWhere { ChatMessagesTable.createdAt less cursor!! }
-                    .orderBy(ChatMessagesTable.createdAt, SortOrder.DESC)
-            }
-        }
-
-        val messages = orderedQuery
-            .limit(limit + 1)
-            .map { it.toChatMessage() }
+            else ->
+                queries.selectBySessionBeforeCursorDesc(sessionId, cursor!!.toString(), fetchLimit).executeAsList()
+        }.map { it.toChatMessage() }
 
         // Check if there are more messages
         val hasMore = messages.size > limit
@@ -300,7 +235,7 @@ class ChatMessageRepository internal constructor(
             null
         }
 
-        Pair(messagesWithAttachments, nextCursor)
+        return Pair(messagesWithAttachments, nextCursor)
     }
 
     /**
@@ -321,58 +256,34 @@ class ChatMessageRepository internal constructor(
         projectId: String? = null,
         sortBy: SearchSortBy = SearchSortBy.DATE_DESC,
         limit: Int = 100,
-    ): List<ChatMessage> = transaction(database) {
+    ): List<ChatMessage> {
         // Escape special SQL LIKE characters
         val escapedQuery = query.lowercase()
             .replace("\\", "\\\\")
             .replace("%", "\\%")
             .replace("_", "\\_")
+        val pattern = "%$escapedQuery%"
 
-        var selectQuery = ChatMessagesTable
-            .selectAll()
-            .where { ChatMessagesTable.content.lowerCase() like "%$escapedQuery%" }
+        val results = when (sortBy) {
+            SearchSortBy.DATE_ASC -> queries.searchGlobalAsc(
+                pattern = pattern,
+                startTime = startTime?.toString(),
+                endTime = endTime?.toString(),
+                projectId = projectId,
+                limit = limit.toLong(),
+            )
 
-        // Apply time filters if provided
-        if (startTime != null) {
-            val startDateTime = startTime
-            selectQuery = selectQuery.andWhere { ChatMessagesTable.createdAt greaterEq startDateTime }
-        }
-        if (endTime != null) {
-            val endDateTime = endTime
-            selectQuery = selectQuery.andWhere { ChatMessagesTable.createdAt lessEq endDateTime }
-        }
-
-        // Apply project filter if provided
-        if (projectId != null) {
-            val sessionIds = ChatSessionsTable
-                .selectAll()
-                .where { ChatSessionsTable.projectId eq projectId }
-                .map { it[ChatSessionsTable.id] }
-
-            if (sessionIds.isEmpty()) {
-                return@transaction emptyList()
-            }
-
-            selectQuery = selectQuery.andWhere { ChatMessagesTable.sessionId inList sessionIds }
+            // RELEVANCE falls back to DATE_DESC for now.
+            SearchSortBy.DATE_DESC, SearchSortBy.RELEVANCE -> queries.searchGlobalDesc(
+                pattern = pattern,
+                startTime = startTime?.toString(),
+                endTime = endTime?.toString(),
+                projectId = projectId,
+                limit = limit.toLong(),
+            )
         }
 
-        // Apply sorting at database level - Exposed supports this natively!
-        selectQuery = when (sortBy) {
-            SearchSortBy.DATE_DESC -> selectQuery.orderBy(ChatMessagesTable.createdAt, SortOrder.DESC)
-
-            SearchSortBy.DATE_ASC -> selectQuery.orderBy(ChatMessagesTable.createdAt, SortOrder.ASC)
-
-            SearchSortBy.RELEVANCE -> {
-                // For now, fall back to DATE_DESC
-                // In future, could add SQL CASE WHEN for relevance scoring
-                selectQuery.orderBy(ChatMessagesTable.createdAt, SortOrder.DESC)
-            }
-        }
-
-        // Limit results and return
-        selectQuery
-            .limit(limit)
-            .map { it.toChatMessage() }
+        return results.executeAsList().map { it.toChatMessage() }
     }
 
     /**
@@ -390,23 +301,15 @@ class ChatMessageRepository internal constructor(
     ): List<ChatMessage> {
         if (searchQuery.isBlank()) return emptyList()
 
-        return transaction(database) {
-            val messages = ChatMessagesTable
-                .selectAll()
-                .where {
-                    (ChatMessagesTable.sessionId eq sessionId) and
-                        ChatMessagesTable.content.lowerCase().like("%${searchQuery.lowercase()}%")
-                }
-                .orderBy(ChatMessagesTable.createdAt, SortOrder.ASC)
-                .limit(limit)
-                .map { it.toChatMessage() }
+        val pattern = "%${searchQuery.lowercase()}%"
+        val messages = queries.searchBySessionOrdered(sessionId, pattern, limit.toLong())
+            .executeAsList().map { it.toChatMessage() }
 
-            val messageIds = messages.map { it.id }
-            val attachmentsMap = loadAttachmentsForMessageIds(messageIds)
+        val messageIds = messages.map { it.id }
+        val attachmentsMap = loadAttachmentsForMessageIds(messageIds)
 
-            messages.map { message ->
-                message.copy(attachments = attachmentsMap[message.id] ?: emptyList())
-            }
+        return messages.map { message ->
+            message.copy(attachments = attachmentsMap[message.id] ?: emptyList())
         }
     }
 
@@ -417,11 +320,7 @@ class ChatMessageRepository internal constructor(
      * @param messageId The message ID to mark as outdated
      * @return Number of messages marked (should be 1)
      */
-    fun markMessageAsOutdated(messageId: String): Int = transaction(database) {
-        ChatMessagesTable.update({ ChatMessagesTable.id eq messageId }) {
-            it[isOutdated] = 1
-        }
-    }
+    fun markMessageAsOutdated(messageId: String): Int = queries.markOutdated(messageId).value.toInt()
 
     /**
      * Mark messages as outdated starting from a specific message (exclusive).
@@ -431,21 +330,9 @@ class ChatMessageRepository internal constructor(
      * @param fromMessageId The message ID from which to start marking as outdated (this message itself is not marked)
      * @return Number of messages marked as outdated
      */
-    fun markMessagesAsOutdatedAfter(sessionId: String, fromMessageId: String): Int = transaction(database) {
-        val fromTimestamp: Instant? = ChatMessagesTable
-            .selectAll()
-            .where { ChatMessagesTable.id eq fromMessageId }
-            .singleOrNull()
-            ?.get(ChatMessagesTable.createdAt)
-
-        if (fromTimestamp == null) return@transaction 0
-
-        ChatMessagesTable.update({
-            (ChatMessagesTable.sessionId eq sessionId) and
-                (ChatMessagesTable.createdAt greaterEq fromTimestamp)
-        }) {
-            it[isOutdated] = 1
-        }
+    fun markMessagesAsOutdatedAfter(sessionId: String, fromMessageId: String): Int {
+        val fromTimestamp = queries.selectCreatedAtById(fromMessageId).executeAsOneOrNull() ?: return 0
+        return queries.markOutdatedFrom(sessionId, fromTimestamp).value.toInt()
     }
 
     /**
@@ -456,22 +343,15 @@ class ChatMessageRepository internal constructor(
      * @param limit Maximum number of messages to return (default 50)
      * @return List of recent active messages, ordered by creation time (oldest first)
      */
-    fun getRecentActiveMessages(sessionId: String, limit: Int = 50): List<ChatMessage> = transaction(database) {
-        val messages = ChatMessagesTable
-            .selectAll()
-            .where {
-                (ChatMessagesTable.sessionId eq sessionId) and
-                    (ChatMessagesTable.isOutdated eq 0)
-            }
-            .orderBy(ChatMessagesTable.createdAt, SortOrder.DESC)
-            .limit(limit)
-            .map { it.toChatMessage() }
+    fun getRecentActiveMessages(sessionId: String, limit: Int = 50): List<ChatMessage> {
+        val messages = queries.selectRecentActive(sessionId, limit.toLong())
+            .executeAsList().map { it.toChatMessage() }
             .reversed()
 
         val messageIds = messages.map { it.id }
         val attachmentsMap = loadAttachmentsForMessageIds(messageIds)
 
-        messages.map { message ->
+        return messages.map { message ->
             message.copy(attachments = attachmentsMap[message.id] ?: emptyList())
         }
     }
@@ -489,24 +369,15 @@ class ChatMessageRepository internal constructor(
      * @param newContent The new content for the message
      * @return Number of messages updated (should be 1)
      */
-    fun updateMessageContent(messageId: String, newContent: String): Int = transaction(database) {
-        ChatMessagesTable.update({ ChatMessagesTable.id eq messageId }) {
-            it[content] = newContent
-            it[isEdited] = 1
-            it[contentJson] = null
-        }
-    }
+    fun updateMessageContent(messageId: String, newContent: String): Int = queries.updateContent(newContent, messageId).value.toInt()
 
     /**
      * Delete all messages for a session.
      * Attachments are cleaned up via reference counting - physical files only deleted if ref count reaches 0.
      */
-    fun deleteMessagesBySession(sessionId: String): Int = transaction(database) {
+    fun deleteMessagesBySession(sessionId: String): Int = db.transactionWithResult {
         // Get all message IDs for this session first
-        val messageIds = ChatMessagesTable
-            .selectAll()
-            .where { ChatMessagesTable.sessionId eq sessionId }
-            .map { it[ChatMessagesTable.id] }
+        val messageIds = queries.selectIdsBySession(sessionId).executeAsList()
 
         // Clean up attachments (decrements ref count, deletes file if needed)
         // Use internal method to avoid nested transactions
@@ -515,7 +386,7 @@ class ChatMessageRepository internal constructor(
         }
 
         // Then delete messages
-        ChatMessagesTable.deleteWhere { ChatMessagesTable.sessionId eq sessionId }
+        queries.deleteBySession(sessionId).value.toInt()
     }
 
     /**
@@ -527,7 +398,7 @@ class ChatMessageRepository internal constructor(
      */
     fun bulkDelete(messageIds: List<String>): Int {
         if (messageIds.isEmpty()) return 0
-        return transaction(database) {
+        return db.transactionWithResult {
             // Clean up attachments first (decrements ref count, deletes file if needed)
             // Use internal method to avoid nested transactions
             messageIds.forEach { messageId ->
@@ -535,7 +406,7 @@ class ChatMessageRepository internal constructor(
             }
 
             // Then delete messages
-            ChatMessagesTable.deleteWhere { ChatMessagesTable.id inList messageIds }
+            queries.deleteByIds(messageIds).value.toInt()
         }
     }
 
@@ -551,26 +422,20 @@ class ChatMessageRepository internal constructor(
 
         val attachmentsMap = mutableMapOf<String, MutableList<FileAttachment>>()
 
-        (AttachmentReferencesTable leftJoin FileAttachmentsTable)
-            .selectAll()
-            .where { AttachmentReferencesTable.messageId inList messageIds }
-            .forEach { row ->
-                val messageId = row[AttachmentReferencesTable.messageId]
-
-                row.getOrNull(FileAttachmentsTable.id)?.let {
-                    // Create FileAttachment from FileAttachmentsTable row
-                    val attachment = FileAttachment(
-                        id = row[FileAttachmentsTable.id],
-                        fileName = row[FileAttachmentsTable.fileName],
-                        mimeType = row[FileAttachmentsTable.mimeType],
-                        size = row[FileAttachmentsTable.size],
-                        createdAt = row[FileAttachmentsTable.createdAt],
-                        storagePath = row[FileAttachmentsTable.storagePath],
-                        content = null,
-                    )
-                    attachmentsMap.getOrPut(messageId) { mutableListOf() }.add(attachment)
-                }
+        db.attachmentReferencesQueries.selectAttachmentsForMessageIds(messageIds).executeAsList().forEach { row ->
+            if (row.id != null) {
+                val attachment = FileAttachment(
+                    id = row.id,
+                    fileName = row.file_name!!,
+                    mimeType = row.mime_type!!,
+                    size = row.size!!,
+                    createdAt = TimeUtil.parseInstant(row.created_at!!),
+                    storagePath = row.storage_path,
+                    content = null,
+                )
+                attachmentsMap.getOrPut(row.message_id) { mutableListOf() }.add(attachment)
             }
+        }
 
         return attachmentsMap.mapValues { it.value.toList() }
     }
@@ -580,17 +445,14 @@ class ChatMessageRepository internal constructor(
      */
     fun bulkUpsert(messages: List<ChatMessage>) {
         if (messages.isEmpty()) return
-        transaction(database) {
+        db.transaction {
             // Pre-filter: only upsert messages whose session already exists locally.
             // Messages referencing an unknown session would violate the FK constraint
             // (sessionId → chat_sessions.id CASCADE). They will be retried on the
             // next sync once the session row is present.
             val requestedSessionIds = messages.map { it.sessionId }.toSet()
-            val knownSessionIds = ChatSessionsTable
-                .selectAll()
-                .where { ChatSessionsTable.id inList requestedSessionIds }
-                .map { it[ChatSessionsTable.id] }
-                .toSet()
+            val knownSessionIds = db.chatSessionsQueries.selectByIds(requestedSessionIds.toList())
+                .executeAsList().map { it.id }.toSet()
 
             val skipped = requestedSessionIds - knownSessionIds
             if (skipped.isNotEmpty()) {
@@ -605,22 +467,49 @@ class ChatMessageRepository internal constructor(
             if (safeMessages.isEmpty()) return@transaction
 
             for (message in safeMessages) {
-                ChatMessagesTable.upsert {
-                    it[id] = message.id
-                    it[sessionId] = message.sessionId
-                    it[role] = message.role.value
-                    it[content] = message.content
-                    it[createdAt] = message.createdAt
-                    it[isOutdated] = if (message.isOutdated) 1 else 0
-                    it[editParentId] = message.editParentId
-                    it[isEdited] = if (message.isEdited) 1 else 0
-                    it[isFailed] = if (message.isFailed) 1 else 0
-                    it[inputTokens] = message.inputTokens
-                    it[outputTokens] = message.outputTokens
-                    it[totalTokens] = message.totalTokens
-                    it[durationMs] = message.durationMs
-                    it[contentJson] = encodeChatContentBlocks(message.contentBlocks)
-                    it[syncedAt] = message.createdAt.toString()
+                val existing = queries.selectMessageById(message.id).executeAsOneOrNull()
+                val isOutdated = if (message.isOutdated) 1L else 0L
+                val isEdited = if (message.isEdited) 1L else 0L
+                val isFailed = if (message.isFailed) 1L else 0L
+                val contentJson = encodeChatContentBlocks(message.contentBlocks)
+                val syncedAt = message.createdAt.toString()
+
+                if (existing == null) {
+                    queries.insertMessage(
+                        id = message.id,
+                        sessionId = message.sessionId,
+                        role = message.role.value,
+                        content = message.content,
+                        createdAt = message.createdAt.toString(),
+                        isOutdated = isOutdated,
+                        editParentId = message.editParentId,
+                        isEdited = isEdited,
+                        isFailed = isFailed,
+                        inputTokens = message.inputTokens?.toLong(),
+                        outputTokens = message.outputTokens?.toLong(),
+                        totalTokens = message.totalTokens?.toLong(),
+                        durationMs = message.durationMs,
+                        contentJson = contentJson,
+                        syncedAt = syncedAt,
+                    )
+                } else {
+                    queries.updateMessageFromServer(
+                        sessionId = message.sessionId,
+                        role = message.role.value,
+                        content = message.content,
+                        createdAt = message.createdAt.toString(),
+                        isOutdated = isOutdated,
+                        editParentId = message.editParentId,
+                        isEdited = isEdited,
+                        isFailed = isFailed,
+                        inputTokens = message.inputTokens?.toLong(),
+                        outputTokens = message.outputTokens?.toLong(),
+                        totalTokens = message.totalTokens?.toLong(),
+                        durationMs = message.durationMs,
+                        contentJson = contentJson,
+                        syncedAt = syncedAt,
+                        id = message.id,
+                    )
                 }
             }
         }
@@ -630,88 +519,42 @@ class ChatMessageRepository internal constructor(
      *
      * @param messageId The message to mark as synced.
      */
-    fun markSynced(messageId: String): Boolean = transaction(database) {
-        ChatMessagesTable.update({ ChatMessagesTable.id eq messageId }) {
-            it[syncedAt] = Instant.now().toString()
-        } > 0
-    }
+    fun markSynced(messageId: String): Boolean = queries.markSyncedMessage(Instant.now().toString(), messageId).value > 0
 
     /**
      * @param limit Maximum rows to return in one batch.
      */
-    fun getUnsyncedMessages(limit: Int = 500): List<ChatMessage> = transaction(database) {
-        ChatMessagesTable
-            .selectAll()
-            .where {
-                (ChatMessagesTable.isOutdated eq 0) and
-                    (ChatMessagesTable.syncedAt.isNull())
-            }
-            .orderBy(ChatMessagesTable.createdAt, SortOrder.ASC)
-            .limit(limit)
-            .map { it.toChatMessage() }
-    }
+    fun getUnsyncedMessages(limit: Int = 500): List<ChatMessage> = queries.selectUnsynced(limit.toLong()).executeAsList().map { it.toChatMessage() }
 
     /**
      *
      * @param sessionId Session to query.
      * @param limit     Maximum rows to return in one batch.
      */
-    fun getUnsyncedMessages(sessionId: String, limit: Int = 100): List<ChatMessage> = transaction(database) {
-        ChatMessagesTable
-            .selectAll()
-            .where {
-                (ChatMessagesTable.sessionId eq sessionId) and
-                    (ChatMessagesTable.isOutdated eq 0) and
-                    (ChatMessagesTable.syncedAt.isNull())
-            }
-            .orderBy(ChatMessagesTable.createdAt, SortOrder.ASC)
-            .limit(limit)
-            .map { it.toChatMessage() }
-    }
+    fun getUnsyncedMessages(sessionId: String, limit: Int = 100): List<ChatMessage> = queries.selectUnsyncedBySession(sessionId, limit.toLong()).executeAsList().map { it.toChatMessage() }
 
     /**
      * Toggle the bookmark state of a message.
      * @return true if the message is now bookmarked, false if it is now un-bookmarked.
      */
-    fun toggleBookmark(messageId: String): Boolean = transaction(database) {
-        val current = ChatMessagesTable
-            .selectAll()
-            .where { ChatMessagesTable.id eq messageId }
-            .firstOrNull()
-            ?.get(ChatMessagesTable.isBookmarked) ?: 0
+    fun toggleBookmark(messageId: String): Boolean = db.transactionWithResult {
+        val current = queries.selectBookmarkFlag(messageId).executeAsOneOrNull()?.is_bookmarked ?: 0L
 
-        val next = if (current == 1) 0 else 1
-        ChatMessagesTable.update({ ChatMessagesTable.id eq messageId }) {
-            it[isBookmarked] = next
-        }
-        next == 1
+        val next = if (current == 1L) 0L else 1L
+        queries.updateBookmark(next, messageId)
+        next == 1L
     }
 
     /**
      * Return all bookmarked messages for a single session, ordered by creation time.
      */
-    fun getBookmarkedMessages(sessionId: String): List<ChatMessage> = transaction(database) {
-        ChatMessagesTable
-            .selectAll()
-            .where {
-                (ChatMessagesTable.sessionId eq sessionId) and
-                    (ChatMessagesTable.isBookmarked eq 1)
-            }
-            .orderBy(ChatMessagesTable.createdAt, SortOrder.ASC)
-            .map { it.toChatMessage() }
-    }
+    fun getBookmarkedMessages(sessionId: String): List<ChatMessage> = queries.selectBookmarkedBySession(sessionId).executeAsList().map { it.toChatMessage() }
 
     /**
      * Return all bookmarked messages across every session, ordered newest-first.
      * Used by the global Bookmarks view.
      */
-    fun getAllBookmarkedMessages(): List<ChatMessage> = transaction(database) {
-        ChatMessagesTable
-            .selectAll()
-            .where { ChatMessagesTable.isBookmarked eq 1 }
-            .orderBy(ChatMessagesTable.createdAt, SortOrder.DESC)
-            .map { it.toChatMessage() }
-    }
+    fun getAllBookmarkedMessages(): List<ChatMessage> = queries.selectAllBookmarked().executeAsList().map { it.toChatMessage() }
 
     /**
      * Return all bookmarked messages joined with their parent sessions in a **single** query,
@@ -721,28 +564,34 @@ class ChatMessageRepository internal constructor(
      * sessions by ID. The caller can group the flat list in-memory while retaining the
      * DB-provided ordering.
      */
-    fun getAllBookmarkedWithSessions(): List<Pair<ChatMessage, ChatSession>> = transaction(database) {
-        ChatMessagesTable
-            .join(ChatSessionsTable, JoinType.INNER, ChatMessagesTable.sessionId, ChatSessionsTable.id)
-            .selectAll()
-            .where { ChatMessagesTable.isBookmarked eq 1 }
-            .orderBy(
-                ChatSessionsTable.updatedAt to SortOrder.DESC,
-                ChatMessagesTable.createdAt to SortOrder.ASC,
-            )
-            .map { row ->
-                val message = row.toChatMessage()
-                val session = ChatSession(
-                    id = row[ChatSessionsTable.id],
-                    title = row[ChatSessionsTable.title],
-                    createdAt = row[ChatSessionsTable.createdAt],
-                    updatedAt = row[ChatSessionsTable.updatedAt],
-                    projectId = row[ChatSessionsTable.projectId],
-                    directiveId = row[ChatSessionsTable.directiveId],
-                    isStarred = row[ChatSessionsTable.isStarred] == 1,
-                )
-                message to session
-            }
+    fun getAllBookmarkedWithSessions(): List<Pair<ChatMessage, ChatSession>> = queries.selectAllBookmarkedWithSessions().executeAsList().map { row ->
+        val message = ChatMessage(
+            id = row.msg_id,
+            sessionId = row.msg_session_id,
+            role = MessageRole.entries.find { it.value == row.msg_role } ?: MessageRole.USER,
+            content = row.msg_content,
+            createdAt = TimeUtil.parseInstant(row.msg_created_at),
+            isOutdated = row.msg_is_outdated == 1L,
+            editParentId = row.msg_edit_parent_id,
+            isEdited = row.msg_is_edited == 1L,
+            isFailed = row.msg_is_failed == 1L,
+            inputTokens = row.msg_input_tokens?.toInt(),
+            outputTokens = row.msg_output_tokens?.toInt(),
+            totalTokens = row.msg_total_tokens?.toInt(),
+            durationMs = row.msg_duration_ms,
+            isBookmarked = row.msg_is_bookmarked == 1L,
+            contentBlocks = decodeChatContentBlocks(row.msg_content_json),
+        )
+        val session = ChatSession(
+            id = row.session_id,
+            title = row.session_title,
+            createdAt = TimeUtil.parseInstant(row.session_created_at),
+            updatedAt = TimeUtil.parseInstant(row.session_updated_at),
+            projectId = row.session_project_id,
+            directiveId = row.session_directive_id,
+            isStarred = row.session_is_starred == 1L,
+        )
+        message to session
     }
 
     /**
@@ -750,11 +599,6 @@ class ChatMessageRepository internal constructor(
      * bookmarked message. Uses a single query + in-memory grouping.
      * Used by the sidebar to render the 🔖 N badge efficiently.
      */
-    fun getBookmarkCountsBySession(): Map<String, Int> = transaction(database) {
-        ChatMessagesTable
-            .selectAll()
-            .where { ChatMessagesTable.isBookmarked eq 1 }
-            .groupBy { it[ChatMessagesTable.sessionId] }
-            .mapValues { it.value.size }
-    }
+    fun getBookmarkCountsBySession(): Map<String, Int> = queries.selectBookmarkCountsBySession().executeAsList()
+        .associate { it.session_id to it.cnt.toInt() }
 }

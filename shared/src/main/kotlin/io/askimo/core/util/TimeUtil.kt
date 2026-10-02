@@ -5,13 +5,54 @@
 package io.askimo.core.util
 
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
 
 object TimeUtil {
     private val instantDisplayFmt = DateTimeFormatter.ofPattern("MMM dd, HH:mm:ss")
+
+    /** Tolerates 0-9 fractional second digits, same as `ISO_LOCAL_DATE_TIME`'s default behavior. */
+    private val LEGACY_SPACE_SEPARATED_FORMATTER: DateTimeFormatter =
+        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.SSSSSSSSS][.SSSSSS][.SSS]")
+
+    /**
+     * Parses a stored `Instant` column value, tolerating every format this codebase has ever
+     * written to SQLite for an Instant column:
+     * - Canonical ISO-8601 with `Z`/explicit offset (written by [io.askimo.core.db.SQLiteInstantColumnType]
+     *   and all current SQLDelight repositories)
+     * - ISO-8601 without an offset (assumed UTC)
+     * - Legacy space-separated format with no `T`/offset (e.g. `2026-09-09 19:46:12[.SSS]`) —
+     *   written by the old Exposed `datetime()` column type, or by a SQLite column `DEFAULT
+     *   (datetime('now'))` kicking in — assumed UTC
+     *
+     */
+    fun parseInstant(raw: String): Instant = runCatching {
+        Instant.parse(raw)
+    }.getOrElse {
+        runCatching {
+            val normalized = raw.trim().replace(' ', 'T')
+            val withOffset = if (normalized.endsWith('Z') || normalized.contains('+')) normalized else "${normalized}Z"
+            Instant.parse(withOffset)
+        }.getOrElse {
+            LocalDateTime.parse(raw.trim().replace(' ', 'T')).toInstant(ZoneOffset.UTC)
+        }
+    }
+
+    /**
+     * Parses a stored `LocalDateTime` column value (used by `user_profiles`/`user_interests`/
+     * `user_preferences`), tolerating both the canonical ISO-8601 format (`LocalDateTime.toString()`)
+     * written by this repository layer and the legacy space-separated format written by the old
+     * Exposed `javatime.datetime()` column type or a SQLite column `DEFAULT (datetime('now'))`.
+     */
+    fun parseLocalDateTime(raw: String): LocalDateTime = runCatching {
+        LocalDateTime.parse(raw)
+    }.getOrElse {
+        LocalDateTime.parse(raw.trim(), LEGACY_SPACE_SEPARATED_FORMATTER)
+    }
 
     /**
      * Formats an Instant with the standard display format for the given locale,

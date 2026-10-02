@@ -1,0 +1,27 @@
+CREATE TABLE IF NOT EXISTS user_preferences (
+    id TEXT PRIMARY KEY,
+    profile_id TEXT NOT NULL,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (profile_id) REFERENCES user_profiles(id) ON DELETE CASCADE,
+    UNIQUE(profile_id, key)
+);
+
+selectByProfileId:
+SELECT * FROM user_preferences WHERE profile_id = :profileId;
+
+selectValue:
+SELECT value FROM user_preferences WHERE profile_id = :profileId AND key = :key;
+
+insertPreference:
+INSERT INTO user_preferences (id, profile_id, key, value, created_at, updated_at)
+VALUES (:id, :profileId, :key, :value, :createdAt, :updatedAt);
+
+updatePreference:
+UPDATE user_preferences SET value = :value, updated_at = :updatedAt WHERE profile_id = :profileId AND key = :key;
+
+deleteByProfileId:
+DELETE FROM user_preferences WHERE profile_id = :profileId;
+

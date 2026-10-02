@@ -1,0 +1,66 @@
+CREATE TABLE IF NOT EXISTS chat_directives (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    deleted_at TEXT,
+    synced_at TEXT,
+    scope TEXT NOT NULL DEFAULT 'PERSONAL',
+    created_by TEXT
+);
+
+upsertInsert:
+INSERT INTO chat_directives (id, name, content, scope, created_by, created_at, updated_at, deleted_at, synced_at)
+VALUES (:id, :name, :content, :scope, :createdBy, :createdAt, :updatedAt, NULL, NULL);
+
+upsertUpdate:
+UPDATE chat_directives SET name = :name, content = :content, scope = :scope, created_by = :createdBy, created_at = :createdAt WHERE id = :id;
+
+selectById:
+SELECT * FROM chat_directives WHERE id = :id;
+
+selectAllOrderedByName:
+SELECT * FROM chat_directives ORDER BY name ASC;
+
+updateDirective:
+UPDATE chat_directives SET name = :name, content = :content, updated_at = :updatedAt, synced_at = NULL WHERE id = :id;
+
+deleteById:
+DELETE FROM chat_directives WHERE id = :id;
+
+selectByIds:
+SELECT * FROM chat_directives WHERE id IN :ids ORDER BY name ASC;
+
+selectByNames:
+SELECT * FROM chat_directives WHERE name IN :names ORDER BY name ASC;
+
+findDirectiveBySessionId:
+SELECT cd.* FROM chat_directives cd
+INNER JOIN chat_sessions cs ON cd.id = cs.directive_id
+WHERE cs.id = :sessionId;
+
+selectAllOrderedByUpdatedAt:
+SELECT * FROM chat_directives ORDER BY updated_at ASC;
+
+markSynced:
+UPDATE chat_directives SET synced_at = :syncedAt WHERE id = :id;
+
+selectExistingByIds:
+SELECT id, updated_at FROM chat_directives WHERE id IN :ids;
+
+insertFromServer:
+INSERT INTO chat_directives (id, name, content, scope, created_by, created_at, updated_at, deleted_at, synced_at)
+VALUES (:id, :name, :content, :scope, :createdBy, :createdAt, :updatedAt, :deletedAt, :syncedAt);
+
+updateFromServer:
+UPDATE chat_directives SET
+    name = :name,
+    content = :content,
+    scope = :scope,
+    created_by = :createdBy,
+    updated_at = :updatedAt,
+    deleted_at = :deletedAt,
+    synced_at = :syncedAt
+WHERE id = :id;
+

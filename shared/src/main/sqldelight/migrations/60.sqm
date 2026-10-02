@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS file_attachments (
+    id TEXT PRIMARY KEY,
+    file_name TEXT NOT NULL,
+    mime_type TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    storage_path TEXT
+);
+

@@ -1,8 +1,21 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.sqldelight)
     `java-test-fixtures`
     `maven-publish`
+}
+
+sqldelight {
+    databases {
+        create("AskimoDatabase") {
+            packageName.set("io.askimo.core.db.sqldelight.generated")
+            srcDirs.setFrom("src/main/sqldelight")
+            // AfterVersion callbacks (see SqlDelightSchemaMigrations) perform work that
+            // isn't reflected in the static .sqm SQL, so skip strict post-migrate diffing.
+            verifyMigrations.set(false)
+        }
+    }
 }
 
 group = rootProject.group
@@ -38,8 +51,9 @@ dependencies {
     api(libs.bundles.jackson)
 
     api(libs.sqlite.jdbc)
-    api(libs.hikaricp)
-    api(libs.bundles.exposed)
+
+    api(libs.sqldelight.runtime)
+    api(libs.sqldelight.sqlite.driver)
 
     api(libs.bundles.koin)
 

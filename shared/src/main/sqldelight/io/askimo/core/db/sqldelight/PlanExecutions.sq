@@ -1,0 +1,64 @@
+CREATE TABLE IF NOT EXISTS plan_executions (
+    id            TEXT PRIMARY KEY,
+    plan_id       TEXT NOT NULL,
+    plan_name     TEXT NOT NULL,
+    inputs        TEXT NOT NULL DEFAULT '',
+    status        TEXT NOT NULL DEFAULT 'IDLE',
+    run_count     INTEGER NOT NULL DEFAULT 1,
+    session_id    TEXT,
+    output        TEXT,
+    step_outputs  TEXT,
+    error_message TEXT,
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL,
+    total_input_tokens INTEGER,
+    total_output_tokens INTEGER,
+    total_tokens INTEGER,
+    total_duration_ms INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_plan_executions_plan_id ON plan_executions (plan_id, created_at);
+
+insertExecution:
+INSERT INTO plan_executions (
+    id, plan_id, plan_name, inputs, status, run_count, session_id, output, step_outputs,
+    total_input_tokens, total_output_tokens, total_tokens, total_duration_ms, error_message,
+    created_at, updated_at
+)
+VALUES (
+    :id, :planId, :planName, :inputs, :status, :runCount, :sessionId, :output, :stepOutputs,
+    :totalInputTokens, :totalOutputTokens, :totalTokens, :totalDurationMs, :errorMessage,
+    :createdAt, :updatedAt
+);
+
+updateExecution:
+UPDATE plan_executions SET
+    status = :status,
+    session_id = :sessionId,
+    output = :output,
+    step_outputs = :stepOutputs,
+    total_input_tokens = :totalInputTokens,
+    total_output_tokens = :totalOutputTokens,
+    total_tokens = :totalTokens,
+    total_duration_ms = :totalDurationMs,
+    error_message = :errorMessage,
+    run_count = :runCount,
+    updated_at = :updatedAt
+WHERE id = :id;
+
+updateStatus:
+UPDATE plan_executions SET status = :status, error_message = :errorMessage, updated_at = :updatedAt
+WHERE id = :id;
+
+deleteById:
+DELETE FROM plan_executions WHERE id = :id;
+
+selectById:
+SELECT * FROM plan_executions WHERE id = :id;
+
+selectByPlanIdOrderedDesc:
+SELECT * FROM plan_executions WHERE plan_id = :planId ORDER BY created_at DESC;
+
+selectAllOrderedDesc:
+SELECT * FROM plan_executions ORDER BY created_at DESC;
+

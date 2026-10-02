@@ -4,8 +4,6 @@
  */
 package io.askimo.core.chat.domain
 
-import io.askimo.core.db.sqliteInstant
-import org.jetbrains.exposed.v1.core.Table
 import java.time.Instant
 import java.util.UUID
 
@@ -37,29 +35,3 @@ data class ChatDirective(
 
 const val DIRECTIVE_NAME_MAX_LENGTH = 128
 const val DIRECTIVE_CONTENT_MAX_LENGTH = 32768
-
-/**
- * Exposed table definition for chat_directives.
- * Co-located with domain class for easier maintenance and foreign key references.
- */
-object ChatDirectivesTable : Table("chat_directives") {
-    val id = varchar("id", 36)
-    val name = varchar("name", DIRECTIVE_NAME_MAX_LENGTH)
-
-    // Keep DB column unbounded TEXT; enforce max length at application layer.
-    val content = text("content")
-
-    /** PERSONAL (default) or TEAM — stored as plain string for SQLite compatibility. */
-    val scope = varchar("scope", 16).default(DirectiveScope.PERSONAL.name)
-
-    /** userId of creator; null for locally-seeded default directives. */
-    val createdBy = varchar("created_by", 36).nullable()
-    val createdAt = sqliteInstant("created_at")
-    val updatedAt = sqliteInstant("updated_at")
-    val deletedAt = sqliteInstant("deleted_at").nullable()
-
-    /** ISO-8601 UTC timestamp of the last successful push to the sync server. NULL = never synced. */
-    val syncedAt = varchar("synced_at", 32).nullable()
-
-    override val primaryKey = PrimaryKey(id)
-}

@@ -1,0 +1,3 @@
+-- chat_directives.synced_at — guarded ALTER TABLE ADD COLUMN via SqlDelightSchemaMigrations.callbacks() AfterVersion(37)
+-- (no-op here since base CREATE TABLE at version 34 already includes synced_at; kept 1:1 with original history)
+

@@ -6,8 +6,8 @@ package io.askimo.core.search
 
 import io.askimo.core.chat.repository.ChatMessageRepository
 import io.askimo.core.chat.repository.ChatSessionRepository
-import io.askimo.core.chat.repository.SearchSortBy
 import io.askimo.core.context.MessageRole
+import io.askimo.core.db.SearchSortBy
 import io.askimo.core.logging.logger
 import java.time.Instant
 import java.time.LocalDateTime

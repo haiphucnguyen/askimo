@@ -5,28 +5,21 @@
 package io.askimo.core.chat.repository
 
 import io.askimo.core.chat.domain.SessionMemory
-import io.askimo.core.chat.domain.SessionMemoryTable
-import io.askimo.core.db.AbstractSQLiteRepository
+import io.askimo.core.db.AbstractRepository
 import io.askimo.core.db.DatabaseManager
-import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.core.less
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.update
+import io.askimo.core.db.sqldelight.Session_memory
+import io.askimo.core.util.TimeUtil
 import java.time.Instant
 
 /**
- * Extension function to map an Exposed ResultRow to a SessionMemory object.
+ * Maps a generated [Session_memory] row to the shared [SessionMemory] domain object.
  */
-private fun ResultRow.toSessionMemory(): SessionMemory = SessionMemory(
-    sessionId = this[SessionMemoryTable.sessionId],
-    memorySummary = this[SessionMemoryTable.memorySummary],
-    memoryMessages = this[SessionMemoryTable.memoryMessages],
-    lastUpdated = this[SessionMemoryTable.lastUpdated],
-    createdAt = this[SessionMemoryTable.createdAt],
+private fun Session_memory.toSessionMemory(): SessionMemory = SessionMemory(
+    sessionId = session_id,
+    memorySummary = memory_summary,
+    memoryMessages = memory_messages,
+    lastUpdated = TimeUtil.parseInstant(last_updated),
+    createdAt = TimeUtil.parseInstant(created_at),
 )
 
 /**
@@ -35,7 +28,9 @@ private fun ResultRow.toSessionMemory(): SessionMemory = SessionMemory(
  */
 class SessionMemoryRepository internal constructor(
     databaseManager: DatabaseManager = DatabaseManager.getInstance(),
-) : AbstractSQLiteRepository(databaseManager) {
+) : AbstractRepository(databaseManager) {
+
+    private val queries get() = db.sessionMemoryQueries
 
     /**
      * Save or update session memory.
@@ -44,31 +39,29 @@ class SessionMemoryRepository internal constructor(
      * @param sessionMemory The session memory to save
      * @return The saved session memory
      */
-    fun saveMemory(sessionMemory: SessionMemory): SessionMemory = transaction(database) {
-        val existing = SessionMemoryTable
-            .selectAll()
-            .where { SessionMemoryTable.sessionId eq sessionMemory.sessionId }
-            .singleOrNull()
+    fun saveMemory(sessionMemory: SessionMemory): SessionMemory {
+        db.transaction {
+            val existing = queries.selectBySessionId(sessionMemory.sessionId).executeAsOneOrNull()
 
-        if (existing != null) {
-            // Update existing memory (override)
-            SessionMemoryTable.update({ SessionMemoryTable.sessionId eq sessionMemory.sessionId }) {
-                it[memorySummary] = sessionMemory.memorySummary
-                it[memoryMessages] = sessionMemory.memoryMessages
-                it[lastUpdated] = sessionMemory.lastUpdated
-            }
-        } else {
-            // Insert new memory
-            SessionMemoryTable.insert {
-                it[sessionId] = sessionMemory.sessionId
-                it[memorySummary] = sessionMemory.memorySummary
-                it[memoryMessages] = sessionMemory.memoryMessages
-                it[lastUpdated] = sessionMemory.lastUpdated
-                it[createdAt] = sessionMemory.createdAt
+            if (existing != null) {
+                queries.updateMemory(
+                    memorySummary = sessionMemory.memorySummary,
+                    memoryMessages = sessionMemory.memoryMessages,
+                    lastUpdated = sessionMemory.lastUpdated.toString(),
+                    sessionId = sessionMemory.sessionId,
+                )
+            } else {
+                queries.insertMemory(
+                    sessionId = sessionMemory.sessionId,
+                    memorySummary = sessionMemory.memorySummary,
+                    memoryMessages = sessionMemory.memoryMessages,
+                    lastUpdated = sessionMemory.lastUpdated.toString(),
+                    createdAt = sessionMemory.createdAt.toString(),
+                )
             }
         }
 
-        sessionMemory
+        return sessionMemory
     }
 
     /**
@@ -77,13 +70,7 @@ class SessionMemoryRepository internal constructor(
      * @param sessionId The session ID to load memory for
      * @return The session memory, or null if not found
      */
-    fun getBySessionId(sessionId: String): SessionMemory? = transaction(database) {
-        SessionMemoryTable
-            .selectAll()
-            .where { SessionMemoryTable.sessionId eq sessionId }
-            .singleOrNull()
-            ?.toSessionMemory()
-    }
+    fun getBySessionId(sessionId: String): SessionMemory? = queries.selectBySessionId(sessionId).executeAsOneOrNull()?.toSessionMemory()
 
     /**
      * Delete session memory by session ID.
@@ -91,9 +78,7 @@ class SessionMemoryRepository internal constructor(
      * @param sessionId The session ID to delete memory for
      * @return Number of records deleted (0 or 1)
      */
-    fun deleteBySessionId(sessionId: String): Int = transaction(database) {
-        SessionMemoryTable.deleteWhere { SessionMemoryTable.sessionId eq sessionId }
-    }
+    fun deleteBySessionId(sessionId: String): Int = queries.deleteBySessionId(sessionId).value.toInt()
 
     /**
      * Delete all session memories older than the specified timestamp.
@@ -102,7 +87,5 @@ class SessionMemoryRepository internal constructor(
      * @param olderThan Timestamp threshold - memories last updated before this will be deleted
      * @return Number of records deleted
      */
-    fun cleanupOldMemories(olderThan: Instant): Int = transaction(database) {
-        SessionMemoryTable.deleteWhere { SessionMemoryTable.lastUpdated less olderThan }
-    }
+    fun cleanupOldMemories(olderThan: Instant): Int = queries.deleteOlderThan(olderThan.toString()).value.toInt()
 }

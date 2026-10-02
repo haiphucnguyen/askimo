@@ -1,0 +1,69 @@
+CREATE TABLE IF NOT EXISTS agent_run_history (
+    id               TEXT PRIMARY KEY,
+    workspace_id     TEXT NOT NULL REFERENCES workspaces(id),
+    conversation_id  TEXT NOT NULL,
+    title            TEXT NOT NULL DEFAULT '',
+    user_input       TEXT NOT NULL DEFAULT '',
+    response         TEXT NOT NULL DEFAULT '',
+    error            TEXT,
+    agent_session_id TEXT,
+    activity_log     TEXT NOT NULL DEFAULT '',
+    input_tokens     INTEGER,
+    output_tokens    INTEGER,
+    total_tokens     INTEGER,
+    duration_ms      INTEGER,
+    created_at       TEXT NOT NULL,
+    content_json     TEXT,
+    agent_id         TEXT,
+    is_cancelled     INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_run_history_workspace ON agent_run_history (workspace_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_agent_run_history_conversation ON agent_run_history (conversation_id, created_at);
+
+insertHistory:
+INSERT INTO agent_run_history (
+    id, workspace_id, conversation_id, title, user_input, response, error,
+    is_cancelled, agent_id, agent_session_id, activity_log, content_json,
+    input_tokens, output_tokens, total_tokens, duration_ms, created_at
+) VALUES (
+    :id, :workspaceId, :conversationId, :title, :userInput, :response, :error,
+    :isCancelled, :agentId, :agentSessionId, :activityLog, :contentJson,
+    :inputTokens, :outputTokens, :totalTokens, :durationMs, :createdAt
+);
+
+countAll:
+SELECT COUNT(*) FROM agent_run_history;
+
+selectAll:
+SELECT * FROM agent_run_history
+ORDER BY created_at DESC
+LIMIT :limit;
+
+selectByWorkspaceId:
+SELECT * FROM agent_run_history
+WHERE workspace_id = :workspaceId
+ORDER BY created_at DESC
+LIMIT :limit;
+
+selectByConversationId:
+SELECT * FROM agent_run_history
+WHERE conversation_id = :conversationId
+ORDER BY created_at ASC;
+
+updateTitleForConversation:
+UPDATE agent_run_history
+SET title = :title
+WHERE conversation_id = :conversationId;
+
+deleteById:
+DELETE FROM agent_run_history
+WHERE id = :id;
+
+deleteByConversationId:
+DELETE FROM agent_run_history
+WHERE conversation_id = :conversationId;
+
+deleteByWorkspaceId:
+DELETE FROM agent_run_history
+WHERE workspace_id = :workspaceId;

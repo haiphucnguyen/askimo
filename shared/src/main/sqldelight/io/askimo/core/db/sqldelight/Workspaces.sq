@@ -1,0 +1,52 @@
+CREATE TABLE IF NOT EXISTS workspaces (
+    id            TEXT PRIMARY KEY,
+    name          TEXT NOT NULL,
+    path          TEXT NOT NULL,
+    created_at    TEXT NOT NULL,
+    last_used_at  TEXT NOT NULL,
+    pinned        INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_workspaces_path ON workspaces (path);
+CREATE INDEX IF NOT EXISTS idx_workspaces_last_used ON workspaces (pinned, last_used_at);
+
+insertWorkspace:
+INSERT INTO workspaces (id, name, path, created_at, last_used_at, pinned)
+VALUES (:id, :name, :path, :createdAt, :lastUsedAt, :pinned);
+
+deleteWorkspaceById:
+DELETE FROM workspaces
+WHERE id = :id;
+
+selectAllWorkspaces:
+SELECT * FROM workspaces
+ORDER BY pinned DESC, last_used_at DESC;
+
+selectWorkspaceById:
+SELECT * FROM workspaces
+WHERE id = :id;
+
+selectMostRecentlyUsedWorkspace:
+SELECT * FROM workspaces
+ORDER BY last_used_at DESC
+LIMIT 1;
+
+selectWorkspaceByPath:
+SELECT * FROM workspaces
+WHERE path = :path;
+
+updateWorkspaceLastUsedAt:
+UPDATE workspaces
+SET last_used_at = :lastUsedAt
+WHERE id = :id;
+
+updateWorkspaceName:
+UPDATE workspaces
+SET name = :name
+WHERE id = :id;
+
+updateWorkspacePinned:
+UPDATE workspaces
+SET pinned = :pinned
+WHERE id = :id;
+

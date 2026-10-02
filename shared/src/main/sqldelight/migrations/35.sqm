@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS chat_directives_name;
+

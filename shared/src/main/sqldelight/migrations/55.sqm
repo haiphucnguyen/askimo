@@ -1,0 +1,1 @@
+-- agent_run_history.agent_id — guarded ALTER TABLE ADD COLUMN via SqlDelightSchemaMigrations.callbacks() AfterVersion(54)

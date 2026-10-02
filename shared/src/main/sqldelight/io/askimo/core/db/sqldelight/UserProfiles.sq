@@ -1,0 +1,35 @@
+CREATE TABLE IF NOT EXISTS user_profiles (
+    id TEXT PRIMARY KEY,
+    name TEXT,
+    email TEXT,
+    preferred_title TEXT,
+    occupation TEXT,
+    location TEXT,
+    timezone TEXT,
+    bio TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+selectById:
+SELECT * FROM user_profiles WHERE id = :id;
+
+insertProfile:
+INSERT INTO user_profiles (id, name, email, preferred_title, occupation, location, timezone, bio, created_at, updated_at)
+VALUES (:id, :name, :email, :preferredTitle, :occupation, :location, :timezone, :bio, :createdAt, :updatedAt);
+
+updateProfile:
+UPDATE user_profiles SET
+    name = :name,
+    email = :email,
+    preferred_title = :preferredTitle,
+    occupation = :occupation,
+    location = :location,
+    timezone = :timezone,
+    bio = :bio,
+    updated_at = :updatedAt
+WHERE id = :id;
+
+deleteById:
+DELETE FROM user_profiles WHERE id = :id;
+

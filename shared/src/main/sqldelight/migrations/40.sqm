@@ -1,0 +1,2 @@
+-- chat_directives.created_by — guarded ALTER TABLE ADD COLUMN via SqlDelightSchemaMigrations.callbacks() AfterVersion(39)
+

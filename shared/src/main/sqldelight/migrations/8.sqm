@@ -1,0 +1,2 @@
+-- projects.space_name — guarded ALTER TABLE ADD COLUMN via SqlDelightSchemaMigrations.callbacks() AfterVersion(7)
+

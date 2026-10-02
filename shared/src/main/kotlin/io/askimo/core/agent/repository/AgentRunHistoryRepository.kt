@@ -4,26 +4,53 @@
  */
 package io.askimo.core.agent.repository
 
-import io.askimo.core.agent.domain.AgentRunHistoryTable
 import io.askimo.core.agent.domain.AgentRunRecord
 import io.askimo.core.chat.dto.TurnTimelineEntry
 import io.askimo.core.chat.dto.truncatedForStorage
-import io.askimo.core.db.AbstractSQLiteRepository
+import io.askimo.core.db.AbstractRepository
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.db.sqldelight.Agent_run_history
 import io.askimo.core.logging.logger
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
+import io.askimo.core.util.TimeUtil
 import kotlinx.serialization.json.Json
-import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.SortOrder
-import org.jetbrains.exposed.v1.core.count
-import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.select
-import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.update
+import org.slf4j.Logger
+
+/**
+ * Maps a generated [Agent_run_history] row to the shared [AgentRunRecord] domain object.
+ */
+private fun Agent_run_history.toAgentRunRecord(json: Json, log: Logger): AgentRunRecord = AgentRunRecord(
+    id = id,
+    workspaceId = workspace_id,
+    conversationId = conversation_id,
+    title = title,
+    userInput = user_input,
+    response = response,
+    error = error,
+    isCancelled = is_cancelled == 1L,
+    agentId = agent_id,
+    agentSessionId = agent_session_id,
+    activityLog = decodeLog(activity_log),
+    contentBlocks = decodeContentBlocks(content_json, json, log),
+    inputTokens = input_tokens?.toInt(),
+    outputTokens = output_tokens?.toInt(),
+    totalTokens = total_tokens?.toInt(),
+    durationMs = duration_ms,
+    createdAt = TimeUtil.parseInstant(created_at),
+)
+
+private fun encodeLog(entries: List<String>): String = entries.joinToString("\n") { it.replace("\n", "\\n") }
+
+private fun decodeLog(raw: String): List<String> {
+    if (raw.isBlank()) return emptyList()
+    return raw.lines().map { it.replace("\\n", "\n") }
+}
+
+private fun decodeContentBlocks(raw: String?, json: Json, log: Logger): List<TurnTimelineEntry> {
+    if (raw.isNullOrBlank()) return emptyList()
+    return runCatching { json.decodeFromString<List<TurnTimelineEntry>>(raw) }
+        .onFailure { e -> log.warn("Failed to decode content_json: {}", e.message) }
+        .getOrDefault(emptyList())
+}
 
 /**
  * Repository for persisting and querying [AgentRunRecord] entries.
@@ -33,88 +60,66 @@ import org.jetbrains.exposed.v1.jdbc.update
  */
 class AgentRunHistoryRepository internal constructor(
     databaseManager: DatabaseManager = DatabaseManager.getInstance(),
-) : AbstractSQLiteRepository(databaseManager) {
+) : AbstractRepository(databaseManager) {
 
     private val log = logger<AgentRunHistoryRepository>()
     private val json = Json { ignoreUnknownKeys = true }
+
+    private val queries get() = db.agentRunHistoryQueries
 
     /**
      * Persists a new run record. The [record.id] must already be set (UUID).
      */
     fun save(record: AgentRunRecord) {
-        transaction(database) {
-            AgentRunHistoryTable.insert {
-                it[id] = record.id
-                it[workspaceId] = record.workspaceId
-                it[conversationId] = record.conversationId
-                it[title] = record.title
-                it[userInput] = record.userInput
-                it[response] = record.response
-                it[error] = record.error
-                it[isCancelled] = record.isCancelled
-                it[agentId] = record.agentId
-                it[agentSessionId] = record.agentSessionId
-                it[activityLog] = encodeLog(record.activityLog)
-                it[contentJson] = if (record.contentBlocks.isEmpty()) {
-                    null
-                } else {
-                    json.encodeToString(record.contentBlocks.truncatedForStorage())
-                }
-                it[inputTokens] = record.inputTokens
-                it[outputTokens] = record.outputTokens
-                it[totalTokens] = record.totalTokens
-                it[durationMs] = record.durationMs
-                it[createdAt] = record.createdAt
-            }
-        }
+        queries.insertHistory(
+            id = record.id,
+            workspaceId = record.workspaceId,
+            conversationId = record.conversationId,
+            title = record.title,
+            userInput = record.userInput,
+            response = record.response,
+            error = record.error,
+            isCancelled = if (record.isCancelled) 1L else 0L,
+            agentId = record.agentId,
+            agentSessionId = record.agentSessionId,
+            activityLog = encodeLog(record.activityLog),
+            contentJson = if (record.contentBlocks.isEmpty()) {
+                null
+            } else {
+                json.encodeToString(record.contentBlocks.truncatedForStorage())
+            },
+            inputTokens = record.inputTokens?.toLong(),
+            outputTokens = record.outputTokens?.toLong(),
+            totalTokens = record.totalTokens?.toLong(),
+            durationMs = record.durationMs,
+            createdAt = record.createdAt.toString(),
+        )
         log.debug("Saved skill run record '{}' for workspace '{}'", record.id, record.workspaceId)
     }
 
     /**
      * Returns the total number of agent run records using a SQL COUNT(*) query.
      */
-    fun countAll(): Int = transaction(database) {
-        val count = AgentRunHistoryTable.id.count()
-        AgentRunHistoryTable.select(count).first()[count].toInt()
-    }
+    fun countAll(): Int = queries.countAll().executeAsOne().toInt()
 
     /**
      * Returns up to [limit] run records across all skills, newest first.
      */
-    fun findAll(limit: Int = 200): List<AgentRunRecord> = transaction(database) {
-        AgentRunHistoryTable
-            .selectAll()
-            .orderBy(AgentRunHistoryTable.createdAt, SortOrder.DESC)
-            .limit(limit)
-            .map(::toRecord)
-    }
+    fun findAll(limit: Int = 200): List<AgentRunRecord> = queries.selectAll(limit.toLong()).executeAsList().map { it.toAgentRunRecord(json, log) }
 
     /**
      * Returns up to [limit] run records for the given [workspaceId], newest first.
      */
-    fun findByWorkspaceId(workspaceId: String, limit: Int = 200): List<AgentRunRecord> = transaction(database) {
-        AgentRunHistoryTable
-            .selectAll()
-            .where { AgentRunHistoryTable.workspaceId eq workspaceId }
-            .orderBy(AgentRunHistoryTable.createdAt, SortOrder.DESC)
-            .limit(limit)
-            .map(::toRecord)
-    }
+    fun findByWorkspaceId(workspaceId: String, limit: Int = 200): List<AgentRunRecord> = queries.selectByWorkspaceId(workspaceId, limit.toLong()).executeAsList().map { it.toAgentRunRecord(json, log) }
 
     /**
      * Returns every turn belonging to [conversationId], oldest first — used to
      * reconstruct the full multi-turn thread when reopening a history entry.
      * Turns are strictly serialized when created (a new turn can't start until the
-     * previous one finishes and is saved), so ordering by [AgentRunHistoryTable.createdAt]
+     * previous one finishes and is saved), so ordering by `created_at`
      * alone is reliable here.
      */
-    fun findByConversationId(conversationId: String): List<AgentRunRecord> = transaction(database) {
-        AgentRunHistoryTable
-            .selectAll()
-            .where { AgentRunHistoryTable.conversationId eq conversationId }
-            .orderBy(AgentRunHistoryTable.createdAt, SortOrder.ASC)
-            .map(::toRecord)
-    }
+    fun findByConversationId(conversationId: String): List<AgentRunRecord> = queries.selectByConversationId(conversationId).executeAsList().map { it.toAgentRunRecord(json, log) }
 
     /**
      * Updates the [AgentRunRecord.title] on every turn belonging to [conversationId] — call
@@ -123,11 +128,7 @@ class AgentRunHistoryRepository internal constructor(
      * join/lookup needed at read time.
      */
     fun updateTitleForConversation(conversationId: String, newTitle: String) {
-        transaction(database) {
-            AgentRunHistoryTable.update({ AgentRunHistoryTable.conversationId eq conversationId }) {
-                it[title] = newTitle
-            }
-        }
+        queries.updateTitleForConversation(title = newTitle, conversationId = conversationId)
         log.debug("Updated title for conversation '{}'", conversationId)
     }
 
@@ -135,9 +136,7 @@ class AgentRunHistoryRepository internal constructor(
      * Deletes a single run record by [id].
      */
     fun deleteById(id: String) {
-        transaction(database) {
-            AgentRunHistoryTable.deleteWhere { AgentRunHistoryTable.id eq id }
-        }
+        queries.deleteById(id)
         log.debug("Deleted skill run record '{}'", id)
     }
 
@@ -147,9 +146,7 @@ class AgentRunHistoryRepository internal constructor(
      * rather than just its most recent turn.
      */
     fun deleteByConversationId(conversationId: String) {
-        transaction(database) {
-            AgentRunHistoryTable.deleteWhere { AgentRunHistoryTable.conversationId eq conversationId }
-        }
+        queries.deleteByConversationId(conversationId)
         log.debug("Deleted all run records for conversation '{}'", conversationId)
     }
 
@@ -158,45 +155,7 @@ class AgentRunHistoryRepository internal constructor(
      * [io.askimo.core.agent.domain.Workspace] is removed, to avoid orphaned run history.
      */
     fun deleteByWorkspaceId(workspaceId: String) {
-        transaction(database) {
-            AgentRunHistoryTable.deleteWhere { AgentRunHistoryTable.workspaceId eq workspaceId }
-        }
+        queries.deleteByWorkspaceId(workspaceId)
         log.debug("Deleted all run records for workspace '{}'", workspaceId)
-    }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
-
-    private fun toRecord(row: ResultRow): AgentRunRecord = AgentRunRecord(
-        id = row[AgentRunHistoryTable.id],
-        workspaceId = row[AgentRunHistoryTable.workspaceId],
-        conversationId = row[AgentRunHistoryTable.conversationId],
-        title = row[AgentRunHistoryTable.title],
-        userInput = row[AgentRunHistoryTable.userInput],
-        response = row[AgentRunHistoryTable.response],
-        error = row[AgentRunHistoryTable.error],
-        isCancelled = row[AgentRunHistoryTable.isCancelled],
-        agentId = row[AgentRunHistoryTable.agentId],
-        agentSessionId = row[AgentRunHistoryTable.agentSessionId],
-        activityLog = decodeLog(row[AgentRunHistoryTable.activityLog]),
-        contentBlocks = decodeContentBlocks(row[AgentRunHistoryTable.contentJson]),
-        inputTokens = row[AgentRunHistoryTable.inputTokens],
-        outputTokens = row[AgentRunHistoryTable.outputTokens],
-        totalTokens = row[AgentRunHistoryTable.totalTokens],
-        durationMs = row[AgentRunHistoryTable.durationMs],
-        createdAt = row[AgentRunHistoryTable.createdAt],
-    )
-
-    private fun encodeLog(entries: List<String>): String = entries.joinToString("\n") { it.replace("\n", "\\n") }
-
-    private fun decodeLog(raw: String): List<String> {
-        if (raw.isBlank()) return emptyList()
-        return raw.lines().map { it.replace("\\n", "\n") }
-    }
-
-    private fun decodeContentBlocks(raw: String?): List<TurnTimelineEntry> {
-        if (raw.isNullOrBlank()) return emptyList()
-        return runCatching { json.decodeFromString<List<TurnTimelineEntry>>(raw) }
-            .onFailure { e -> log.warn("Failed to decode content_json: {}", e.message) }
-            .getOrDefault(emptyList())
     }
 }

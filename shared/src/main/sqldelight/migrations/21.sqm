@@ -1,0 +1,3 @@
+-- chat_messages.is_edited — guarded ALTER TABLE ADD COLUMN via SqlDelightSchemaMigrations.callbacks() AfterVersion(20)
+-- (no-op here since base CREATE TABLE at version 20 already includes is_edited; kept 1:1 with original history)
+

@@ -6,59 +6,42 @@ package io.askimo.core.chat.repository
 
 import io.askimo.core.chat.TitleGenerator
 import io.askimo.core.chat.domain.ChatSession
-import io.askimo.core.chat.domain.ChatSessionsTable
-import io.askimo.core.chat.domain.ProjectsTable
 import io.askimo.core.chat.domain.SESSION_TITLE_MAX_LENGTH
-import io.askimo.core.db.AbstractSQLiteRepository
+import io.askimo.core.db.AbstractRepository
 import io.askimo.core.db.DatabaseManager
 import io.askimo.core.db.Pageable
 import io.askimo.core.db.resolvePageParams
+import io.askimo.core.db.sqldelight.Chat_sessions
 import io.askimo.core.event.EventBus
 import io.askimo.core.event.internal.PushDataToServerEvent
 import io.askimo.core.logging.logger
 import io.askimo.core.util.JsonUtils.json
-import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.SortOrder
-import org.jetbrains.exposed.v1.core.and
-import org.jetbrains.exposed.v1.core.count
-import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.core.inList
-import org.jetbrains.exposed.v1.core.isNotNull
-import org.jetbrains.exposed.v1.core.isNull
-import org.jetbrains.exposed.v1.core.like
-import org.jetbrains.exposed.v1.jdbc.deleteAll
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.select
-import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.update
+import io.askimo.core.util.TimeUtil
 import java.time.Instant
 import java.util.UUID
 
 /**
- * Extension function to map an Exposed ResultRow to a ChatSession object.
- * Eliminates duplication of mapping logic throughout the repository.
+ * Maps a generated [Chat_sessions] row to the shared [ChatSession] domain object.
  */
-private fun ResultRow.toChatSession(): ChatSession = ChatSession(
-    id = this[ChatSessionsTable.id],
-    title = this[ChatSessionsTable.title],
-    createdAt = this[ChatSessionsTable.createdAt],
-    updatedAt = this[ChatSessionsTable.updatedAt],
-    projectId = this[ChatSessionsTable.projectId],
-    directiveId = this[ChatSessionsTable.directiveId],
-    isStarred = this[ChatSessionsTable.isStarred] == 1,
-    isUserRenamed = this[ChatSessionsTable.isUserRenamed] == 1,
-    activeResourceCollectionIds = decodeResourceCollectionIds(this[ChatSessionsTable.activeResourceCollectionIds]),
+private fun Chat_sessions.toChatSession(): ChatSession = ChatSession(
+    id = id,
+    title = title,
+    createdAt = TimeUtil.parseInstant(created_at),
+    updatedAt = TimeUtil.parseInstant(updated_at),
+    projectId = project_id,
+    directiveId = directive_id,
+    isStarred = is_starred == 1L,
+    isUserRenamed = is_user_renamed == 1L,
+    activeResourceCollectionIds = decodeResourceCollectionIds(active_resource_collection_ids),
 )
 
 /**
- * Decode the JSON array stored in [ChatSessionsTable.activeResourceCollectionIds] into a
- * list of collection IDs. Falls back to an empty list for blank/malformed values so a
- * corrupt cell never breaks session loading.
+ * Decode the JSON array stored in `active_resource_collection_ids` into a list of collection
+ * IDs. Falls back to an empty list for blank/malformed values so a corrupt cell never breaks
+ * session loading.
  */
-private fun decodeResourceCollectionIds(raw: String): List<String> {
-    if (raw.isBlank()) return emptyList()
+private fun decodeResourceCollectionIds(raw: String?): List<String> {
+    if (raw.isNullOrBlank()) return emptyList()
     return try {
         json.decodeFromString<List<String>>(raw)
     } catch (_: Exception) {
@@ -66,20 +49,15 @@ private fun decodeResourceCollectionIds(raw: String): List<String> {
     }
 }
 
-/**
- * Encode a list of collection IDs to JSON for storage in
- * [ChatSessionsTable.activeResourceCollectionIds].
- */
+/** Encode a list of collection IDs to JSON for storage in `active_resource_collection_ids`. */
 private fun encodeResourceCollectionIds(ids: List<String>): String = json.encodeToString(ids)
 
-/**
- * Repository for managing chat sessions.
- * This repository focuses solely on the chat_sessions table operations.
- */
 class ChatSessionRepository internal constructor(
     databaseManager: DatabaseManager = DatabaseManager.getInstance(),
-) : AbstractSQLiteRepository(databaseManager) {
+) : AbstractRepository(databaseManager) {
+
     private val log = logger<ChatSessionRepository>()
+    private val queries get() = db.chatSessionsQueries
 
     fun createSession(session: ChatSession): ChatSession {
         val trimmedTitle = generateTitle(session.title)
@@ -88,99 +66,57 @@ class ChatSessionRepository internal constructor(
             title = trimmedTitle,
         )
 
-        transaction(database) {
-            ChatSessionsTable.insert {
-                it[id] = sessionWithInjectedFields.id
-                it[ChatSessionsTable.title] = sessionWithInjectedFields.title
-                it[createdAt] = sessionWithInjectedFields.createdAt
-                it[updatedAt] = sessionWithInjectedFields.updatedAt
-                it[ChatSessionsTable.projectId] = sessionWithInjectedFields.projectId
-                it[ChatSessionsTable.directiveId] = sessionWithInjectedFields.directiveId
-                it[ChatSessionsTable.isStarred] = if (sessionWithInjectedFields.isStarred) 1 else 0
-                it[ChatSessionsTable.activeResourceCollectionIds] = encodeResourceCollectionIds(sessionWithInjectedFields.activeResourceCollectionIds)
-            }
-        }
+        queries.insertSession(
+            id = sessionWithInjectedFields.id,
+            title = sessionWithInjectedFields.title,
+            created_at = sessionWithInjectedFields.createdAt.toString(),
+            updated_at = sessionWithInjectedFields.updatedAt.toString(),
+            directive_id = sessionWithInjectedFields.directiveId,
+            is_starred = if (sessionWithInjectedFields.isStarred) 1L else 0L,
+            project_id = sessionWithInjectedFields.projectId,
+            active_resource_collection_ids = encodeResourceCollectionIds(sessionWithInjectedFields.activeResourceCollectionIds),
+        )
 
         EventBus.post(PushDataToServerEvent(reason = "session created"))
         return sessionWithInjectedFields
     }
 
-    /**
-     * Returns the total number of sessions using a SQL COUNT(*) query.
-     */
-    fun countAll(): Int = transaction(database) {
-        val count = ChatSessionsTable.id.count()
-        ChatSessionsTable.select(count).first()[count].toInt()
-    }
+    /** Returns the total number of sessions using a SQL COUNT(*) query. */
+    fun countAll(): Int = queries.countAll().executeAsOne().toInt()
 
     /**
-     * Get sessions with a limited number.
-     * Sessions are ordered by starred status, sort order, and updated time.
-     *
-     * @param limit Maximum number of sessions to return
-     * @return List of sessions up to the specified limit
+     * Get sessions with a limited number. Sessions are ordered by starred status then
+     * updated time (both descending).
      */
-    fun getSessions(limit: Int): List<ChatSession> = transaction(database) {
-        ChatSessionsTable
-            .selectAll()
-            .orderBy(
-                Pair(ChatSessionsTable.isStarred, SortOrder.DESC),
-                Pair(ChatSessionsTable.updatedAt, SortOrder.DESC),
-            )
-            .limit(limit)
-            .map { it.toChatSession() }
-    }
+    fun getSessions(limit: Int): List<ChatSession> = queries.selectAllOrderedLimited(limit.toLong()).executeAsList().map { it.toChatSession() }
 
     /**
      * Get sessions with pagination and optional filtering.
-     * Sessions are ordered by starred status, sort order, and updated time.
+     * Sessions are ordered by starred status, then updated time.
      *
-     * @param page The page number (1-based)
-     * @param pageSize Number of sessions per page
-     * @param projectFilter Filter by project status:
-     *   - null: return all sessions (default)
-     *   - true: return only sessions WITH a project
-     *   - false: return only sessions WITHOUT a project
-     * @return Paginated session results
+     * @param projectFilter null = all sessions; true = only sessions WITH a project;
+     *   false = only sessions WITHOUT a project.
+     * @param sortOrderDesc true = newest first (default), false = oldest first.
      */
     fun getSessionsPaged(
         page: Int = 1,
         pageSize: Int = 10,
         projectFilter: Boolean? = null,
-        sortOrder: SortOrder = SortOrder.DESC,
-    ): Pageable<ChatSession> = transaction(database) {
-        // Build base query with optional filter
-        val baseQuery = ChatSessionsTable.selectAll().apply {
-            when (projectFilter) {
-                true -> where { ChatSessionsTable.projectId.isNotNull() }
-                false -> where { ChatSessionsTable.projectId.isNull() }
-                null -> {} // No filter, get all sessions
-            }
-        }
+        sortOrderDesc: Boolean = true,
+    ): Pageable<ChatSession> {
+        val filterParam = projectFilter?.let { if (it) 1L else 0L }
 
-        // Get total count
-        val totalItems = baseQuery.count().toInt()
-        val pageParams = resolvePageParams(totalItems, page, pageSize)
-            ?: return@transaction Pageable.empty(pageSize)
+        val totalItems = queries.countFiltered(filterParam).executeAsOne().toInt()
+        val pageParams = resolvePageParams(totalItems, page, pageSize) ?: return Pageable.empty(pageSize)
 
-        // Query only the records for the current page
-        val pageSessions = ChatSessionsTable.selectAll().apply {
-            when (projectFilter) {
-                true -> where { ChatSessionsTable.projectId.isNotNull() }
-                false -> where { ChatSessionsTable.projectId.isNull() }
-                null -> {} // No filter, get all sessions
-            }
-        }
-            .orderBy(
-                Pair(ChatSessionsTable.isStarred, SortOrder.DESC),
-                Pair(ChatSessionsTable.updatedAt, sortOrder),
-            )
-            .limit(pageSize)
-            .offset(pageParams.offset)
-            .map { it.toChatSession() }
+        val items = if (sortOrderDesc) {
+            queries.selectFilteredPagedDesc(filterParam, pageSize.toLong(), pageParams.offset)
+        } else {
+            queries.selectFilteredPagedAsc(filterParam, pageSize.toLong(), pageParams.offset)
+        }.executeAsList().map { it.toChatSession() }
 
-        Pageable(
-            items = pageSessions,
+        return Pageable(
+            items = items,
             currentPage = pageParams.validPage,
             totalPages = pageParams.totalPages,
             totalItems = totalItems,
@@ -188,80 +124,47 @@ class ChatSessionRepository internal constructor(
         )
     }
 
-    /**
-     * Get all sessions associated with a specific project.
-     * Sessions are ordered by updated time (most recent first).
-     *
-     * @param projectId The project ID to filter by
-     * @return List of sessions belonging to the project
-     */
-    fun getSessionsByProjectId(projectId: String): List<ChatSession> = transaction(database) {
-        ChatSessionsTable
-            .selectAll()
-            .where { ChatSessionsTable.projectId eq projectId }
-            .orderBy(ChatSessionsTable.updatedAt, SortOrder.DESC)
-            .map { it.toChatSession() }
-    }
+    /** Get all sessions associated with a specific project, ordered by updated time (newest first). */
+    fun getSessionsByProjectId(projectId: String): List<ChatSession> = queries.selectByProjectId(projectId).executeAsList().map { it.toChatSession() }
 
-    fun getSession(sessionId: String): ChatSession? = transaction(database) {
-        ChatSessionsTable
-            .selectAll()
-            .where { ChatSessionsTable.id eq sessionId }
-            .singleOrNull()
-            ?.toChatSession()
-    }
+    fun getSession(sessionId: String): ChatSession? = queries.selectById(sessionId).executeAsOneOrNull()?.toChatSession()
 
-    /**
-     * Update the updatedAt timestamp of a session.
-     * This is typically called when a message is added to the session.
-     */
-    fun touchSession(sessionId: String): Boolean = transaction(database) {
-        ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
-            it[updatedAt] = Instant.now()
-        } > 0
-    }.also { if (it) EventBus.post(PushDataToServerEvent(reason = "session touched")) }
+    /** Update the updatedAt timestamp of a session — typically called when a message is added. */
+    fun touchSession(sessionId: String): Boolean {
+        val updated = queries.touchSession(Instant.now().toString(), sessionId).value > 0
+        if (updated) EventBus.post(PushDataToServerEvent(reason = "session touched"))
+        return updated
+    }
 
     private fun generateTitle(firstMessage: String): String = TitleGenerator.fallbackTitle(firstMessage)
 
     fun generateAndUpdateTitle(sessionId: String, firstMessage: String): String {
         val title = generateTitle(firstMessage)
-        transaction(database) {
-            ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
-                it[ChatSessionsTable.title] = title
-                it[updatedAt] = Instant.now()
-            }
-        }
+        queries.updateTitle(title, Instant.now().toString(), sessionId)
         EventBus.post(PushDataToServerEvent(reason = "session title generated"))
         return title
     }
 
-    /**
-     * Update the directive for a chat session.
-     * @param sessionId The session ID
-     * @param directiveId The directive ID to set (null to clear directive)
-     * @return true if updated successfully
-     */
-    fun updateSessionDirective(sessionId: String, directiveId: String?): Boolean = transaction(database) {
-        ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
-            it[ChatSessionsTable.directiveId] = directiveId
-            it[updatedAt] = Instant.now()
-        } > 0
-    }.also { if (it) EventBus.post(PushDataToServerEvent(reason = "session directive changed")) }
+    /** Update the directive for a chat session (null clears it). */
+    fun updateSessionDirective(sessionId: String, directiveId: String?): Boolean {
+        val updated = queries.updateDirective(directiveId, Instant.now().toString(), sessionId).value > 0
+        if (updated) EventBus.post(PushDataToServerEvent(reason = "session directive changed"))
+        return updated
+    }
 
     /**
      * Update the persistent set of active Resource Collections for a chat session
      * (chip state — see [ChatSession.activeResourceCollectionIds]).
-     *
-     * @param sessionId The session id
-     * @param collectionIds The full replacement list of active collection ids
-     * @return true if updated successfully
      */
-    fun updateSessionActiveResourceCollections(sessionId: String, collectionIds: List<String>): Boolean = transaction(database) {
-        ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
-            it[activeResourceCollectionIds] = encodeResourceCollectionIds(collectionIds)
-            it[updatedAt] = Instant.now()
-        } > 0
-    }.also { if (it) EventBus.post(PushDataToServerEvent(reason = "session active resource collections changed")) }
+    fun updateSessionActiveResourceCollections(sessionId: String, collectionIds: List<String>): Boolean {
+        val updated = queries.updateActiveResourceCollectionIds(
+            encodeResourceCollectionIds(collectionIds),
+            Instant.now().toString(),
+            sessionId,
+        ).value > 0
+        if (updated) EventBus.post(PushDataToServerEvent(reason = "session active resource collections changed"))
+        return updated
+    }
 
     /**
      * Delete a chat session.
@@ -270,134 +173,71 @@ class ChatSessionRepository internal constructor(
      */
     fun deleteSession(sessionId: String): Boolean {
         log.debug("Deleting session $sessionId")
-        val deleted = transaction(database) {
-            ChatSessionsTable.deleteWhere { ChatSessionsTable.id eq sessionId } > 0
-        }
+        val deleted = queries.deleteById(sessionId).value > 0
         log.debug("Deleted session $sessionId")
         return deleted
     }
 
-    /**
-     * Delete all sessions (useful for testing).
-     * Deletes all records from the chat_sessions table.
-     * @return Number of deleted records
-     */
-    fun deleteAll(): Int = transaction(database) {
-        ChatSessionsTable.deleteAll()
+    /** Delete all sessions (useful for testing). @return Number of deleted records. */
+    fun deleteAll(): Int = queries.deleteAllSessions().value.toInt()
+
+    /** Update the starred status of a session. */
+    fun updateSessionStarred(sessionId: String, isStarred: Boolean): Boolean {
+        val updated = queries.updateStarred(if (isStarred) 1L else 0L, Instant.now().toString(), sessionId).value > 0
+        if (updated) EventBus.post(PushDataToServerEvent(reason = "session starred"))
+        return updated
     }
 
-    /**
-     * Update the starred status of a session
-     */
-    fun updateSessionStarred(sessionId: String, isStarred: Boolean): Boolean = transaction(database) {
-        ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
-            it[ChatSessionsTable.isStarred] = if (isStarred) 1 else 0
-            it[updatedAt] = Instant.now()
-        } > 0
-    }.also { if (it) EventBus.post(PushDataToServerEvent(reason = "session starred")) }
-
-    /**
-     * Update the title of a session
-     */
+    /** Update the title of a session. */
     fun updateSessionTitle(sessionId: String, title: String): Boolean {
         val trimmedTitle = title.trim().take(SESSION_TITLE_MAX_LENGTH)
-        if (trimmedTitle.isEmpty()) {
-            return false
-        }
+        if (trimmedTitle.isEmpty()) return false
 
-        return transaction(database) {
-            ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
-                it[ChatSessionsTable.title] = trimmedTitle
-                it[updatedAt] = Instant.now()
-            } > 0
-        }.also { if (it) EventBus.post(PushDataToServerEvent(reason = "session title updated")) }
+        val updated = queries.updateTitle(trimmedTitle, Instant.now().toString(), sessionId).value > 0
+        if (updated) EventBus.post(PushDataToServerEvent(reason = "session title updated"))
+        return updated
     }
 
     /**
      * Mark a session as user-renamed, suppressing future auto title-refresh from summarization.
-     *
-     * @param sessionId The ID of the session
-     * @return true if the session was updated
      */
-    fun markAsUserRenamed(sessionId: String): Boolean = transaction(database) {
-        ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
-            it[isUserRenamed] = 1
-        } > 0
-    }
+    fun markAsUserRenamed(sessionId: String): Boolean = queries.markUserRenamed(sessionId).value > 0
 
-    /**
-     * Get all starred sessions
-     */
-    fun getStarredSessions(): List<ChatSession> = transaction(database) {
-        ChatSessionsTable
-            .selectAll()
-            .where { ChatSessionsTable.isStarred eq 1 }
-            .orderBy(ChatSessionsTable.updatedAt, SortOrder.DESC)
-            .map { it.toChatSession() }
-    }
+    /** Get all starred sessions, ordered by updated time (newest first). */
+    fun getStarredSessions(): List<ChatSession> = queries.selectStarred().executeAsList().map { it.toChatSession() }
 
     /**
      * Get sessions not belonging to any project (general chat sessions) with a limit.
-     * Sessions are ordered by starred status, sort order, and updated time.
-     *
-     * @param limit Maximum number of sessions to return
-     * @return List of sessions up to the specified limit
+     * Sessions are ordered by updated time.
      */
-    fun getSessionsWithoutProject(limit: Int, sortOrder: SortOrder = SortOrder.DESC): List<ChatSession> = transaction(database) {
-        ChatSessionsTable
-            .selectAll()
-            .where { ChatSessionsTable.projectId.isNull() }
-            .orderBy(
-                Pair(ChatSessionsTable.updatedAt, sortOrder),
-            )
-            .limit(limit)
-            .map { it.toChatSession() }
-    }
+    fun getSessionsWithoutProject(limit: Int, sortOrderDesc: Boolean = true): List<ChatSession> = if (sortOrderDesc) {
+        queries.selectWithoutProjectOrderedDesc(limit.toLong())
+    } else {
+        queries.selectWithoutProjectOrderedAsc(limit.toLong())
+    }.executeAsList().map { it.toChatSession() }
 
     /**
      * Search sessions by title (case-insensitive LIKE) that have no project, with pagination.
-     *
-     * @param titleQuery Search term matched against session titles
-     * @param page The page number (1-based)
-     * @param pageSize Number of sessions per page
-     * @param sortOrder Sort direction for updatedAt
-     * @return Paginated results matching the query
      */
     fun searchSessionsWithoutProject(
         titleQuery: String,
         page: Int = 1,
         pageSize: Int = 10,
-        sortOrder: SortOrder = SortOrder.DESC,
-    ): Pageable<ChatSession> = transaction(database) {
+        sortOrderDesc: Boolean = true,
+    ): Pageable<ChatSession> {
         val pattern = "%${titleQuery.trim()}%"
 
-        val baseQuery = ChatSessionsTable
-            .selectAll()
-            .where {
-                (ChatSessionsTable.projectId.isNull()) and
-                    (ChatSessionsTable.title like pattern)
-            }
+        val totalItems = queries.searchWithoutProjectCount(pattern).executeAsOne().toInt()
+        val pageParams = resolvePageParams(totalItems, page, pageSize) ?: return Pageable.empty(pageSize)
 
-        val totalItems = baseQuery.count().toInt()
-        val pageParams = resolvePageParams(totalItems, page, pageSize)
-            ?: return@transaction Pageable.empty(pageSize)
+        val items = if (sortOrderDesc) {
+            queries.searchWithoutProjectPagedDesc(pattern, pageSize.toLong(), pageParams.offset)
+        } else {
+            queries.searchWithoutProjectPagedAsc(pattern, pageSize.toLong(), pageParams.offset)
+        }.executeAsList().map { it.toChatSession() }
 
-        val pageSessions = ChatSessionsTable
-            .selectAll()
-            .where {
-                (ChatSessionsTable.projectId.isNull()) and
-                    (ChatSessionsTable.title like pattern)
-            }
-            .orderBy(
-                Pair(ChatSessionsTable.isStarred, SortOrder.DESC),
-                Pair(ChatSessionsTable.updatedAt, sortOrder),
-            )
-            .limit(pageSize)
-            .offset(pageParams.offset)
-            .map { it.toChatSession() }
-
-        Pageable(
-            items = pageSessions,
+        return Pageable(
+            items = items,
             currentPage = pageParams.validPage,
             totalPages = pageParams.totalPages,
             totalItems = totalItems,
@@ -405,64 +245,34 @@ class ChatSessionRepository internal constructor(
         )
     }
 
-    /**
-     * Count sessions not belonging to any project.
-     *
-     * @return Total number of sessions without a project
-     */
-    fun countSessionsWithoutProject(): Int = transaction(database) {
-        ChatSessionsTable
-            .selectAll()
-            .where { ChatSessionsTable.projectId.isNull() }
-            .count()
-            .toInt()
+    /** Count sessions not belonging to any project. */
+    fun countSessionsWithoutProject(): Int = queries.countWithoutProject().executeAsOne().toInt()
+
+    /** Update the project of a session. */
+    fun updateSessionProject(sessionId: String, projectId: String?): Boolean {
+        val updated = queries.updateProject(projectId, Instant.now().toString(), sessionId).value > 0
+        if (updated) EventBus.post(PushDataToServerEvent(reason = "session project changed"))
+        return updated
     }
 
-    /**
-     * Update the project of a session.
-     */
-    fun updateSessionProject(sessionId: String, projectId: String?): Boolean = transaction(database) {
-        ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
-            it[ChatSessionsTable.projectId] = projectId
-            it[updatedAt] = Instant.now()
-        } > 0
-    }.also { if (it) EventBus.post(PushDataToServerEvent(reason = "session project changed")) }
-
-    /**
-     * Get multiple sessions by their IDs.
-     *
-     * @param sessionIds List of session IDs to retrieve
-     * @return List of sessions matching the IDs
-     */
+    /** Get multiple sessions by their IDs. */
     fun getSessionsByIds(sessionIds: List<String>): List<ChatSession> {
         if (sessionIds.isEmpty()) return emptyList()
-
-        return transaction(database) {
-            ChatSessionsTable
-                .selectAll()
-                .where { ChatSessionsTable.id inList sessionIds }
-                .map { it.toChatSession() }
-        }
+        return queries.selectByIds(sessionIds).executeAsList().map { it.toChatSession() }
     }
 
     /**
      * Upsert a batch of sessions received from the server during a pull.
-     *
-     * @param sessions Sessions received from the server pull response.
      */
     fun upsertFromServer(sessions: List<ChatSession>) {
         if (sessions.isEmpty()) return
 
-        transaction(database) {
+        db.transaction {
             val nowStr = Instant.now().toString()
             val ids = sessions.map { it.id }
 
-            val existingById = ChatSessionsTable
-                .selectAll()
-                .where { ChatSessionsTable.id inList ids }
-                .associate { row ->
-                    row[ChatSessionsTable.id] to row[ChatSessionsTable.updatedAt]
-                }
+            val existingById = queries.selectExistingByIds(ids).executeAsList()
+                .associate { it.id to TimeUtil.parseInstant(it.updated_at) }
 
             for (session in sessions) {
                 val storedUpdatedAt = existingById[session.id]
@@ -470,45 +280,41 @@ class ChatSessionRepository internal constructor(
                 try {
                     if (storedUpdatedAt == null) {
                         // Brand-new row — insert and mark as synced
-                        ChatSessionsTable.insert {
-                            it[id] = session.id
-                            it[title] = session.title.take(SESSION_TITLE_MAX_LENGTH)
-                            it[createdAt] = session.createdAt
-                            it[updatedAt] = session.updatedAt
-                            it[projectId] = session.projectId
-                            it[directiveId] = session.directiveId
-                            it[isStarred] = if (session.isStarred) 1 else 0
-                            it[activeResourceCollectionIds] = encodeResourceCollectionIds(session.activeResourceCollectionIds)
-                            it[syncedAt] = nowStr
-                        }
+                        queries.insertFromServer(
+                            id = session.id,
+                            title = session.title.take(SESSION_TITLE_MAX_LENGTH),
+                            created_at = session.createdAt.toString(),
+                            updated_at = session.updatedAt.toString(),
+                            project_id = session.projectId,
+                            directive_id = session.directiveId,
+                            is_starred = if (session.isStarred) 1L else 0L,
+                            active_resource_collection_ids = encodeResourceCollectionIds(session.activeResourceCollectionIds),
+                            synced_at = nowStr,
+                        )
                         log.debug("upsertFromServer: inserted session {}", session.id)
                     } else if (session.updatedAt.isAfter(storedUpdatedAt)) {
                         // Server version is newer — overwrite
-                        ChatSessionsTable.update({ ChatSessionsTable.id eq session.id }) {
-                            it[title] = session.title.take(SESSION_TITLE_MAX_LENGTH)
-                            it[updatedAt] = session.updatedAt
-                            it[projectId] = session.projectId
-                            it[directiveId] = session.directiveId
-                            it[isStarred] = if (session.isStarred) 1 else 0
-                            it[activeResourceCollectionIds] = encodeResourceCollectionIds(session.activeResourceCollectionIds)
-                            it[syncedAt] = nowStr
-                        }
+                        queries.updateFromServer(
+                            title = session.title.take(SESSION_TITLE_MAX_LENGTH),
+                            updatedAt = session.updatedAt.toString(),
+                            projectId = session.projectId,
+                            directiveId = session.directiveId,
+                            isStarred = if (session.isStarred) 1L else 0L,
+                            activeIds = encodeResourceCollectionIds(session.activeResourceCollectionIds),
+                            syncedAt = nowStr,
+                            id = session.id,
+                        )
                         log.debug("upsertFromServer: updated session {} (server newer)", session.id)
                     } else {
                         log.debug("upsertFromServer: skipped session {} (local is same age or newer)", session.id)
                     }
                 } catch (e: Exception) {
-                    val projectExists = session.projectId?.let { pid ->
-                        ProjectsTable.selectAll().where { ProjectsTable.id eq pid }.count() > 0
-                    }
                     log.error(
-                        "upsertFromServer: failed to upsert session id={}, title='{}', " +
-                            "projectId={} (existsLocally={}), directiveId={}, createdAt={}, updatedAt={}, " +
-                            "storedUpdatedAt={}",
+                        "upsertFromServer: failed to upsert session id={}, title='{}', projectId={}, " +
+                            "directiveId={}, createdAt={}, updatedAt={}, storedUpdatedAt={}",
                         session.id,
                         session.title,
                         session.projectId,
-                        projectExists,
                         session.directiveId,
                         session.createdAt,
                         session.updatedAt,
@@ -522,31 +328,19 @@ class ChatSessionRepository internal constructor(
     }
 
     /**
-     * Mark a session as successfully synced to the server by setting [syncedAt]
+     * Mark a session as successfully synced to the server by setting `synced_at`
      * to the current timestamp.
-     *
-     * @param sessionId The session to mark as synced.
      */
-    fun markSynced(sessionId: String): Boolean = transaction(database) {
-        ChatSessionsTable.update({ ChatSessionsTable.id eq sessionId }) {
-            it[syncedAt] = Instant.now().toString()
-        } > 0
-    }
+    fun markSynced(sessionId: String): Boolean = queries.markSynced(Instant.now().toString(), sessionId).value > 0
 
     /**
-     *
      * @param limit Maximum rows to return in one batch.
      */
-    fun getUnsyncedSessions(limit: Int = 50): List<ChatSession> = transaction(database) {
-        ChatSessionsTable
-            .selectAll()
-            .orderBy(ChatSessionsTable.updatedAt, SortOrder.ASC)
-            .mapNotNull { row ->
-                val syncedAtStr = row[ChatSessionsTable.syncedAt]
-                val updatedAt = row[ChatSessionsTable.updatedAt]
-                val syncedAt = syncedAtStr?.let { runCatching { Instant.parse(it) }.getOrNull() }
-                if (syncedAt == null || updatedAt.isAfter(syncedAt)) row.toChatSession() else null
-            }
-            .take(limit)
-    }
+    fun getUnsyncedSessions(limit: Int = 50): List<ChatSession> = queries.selectAllOrderedByUpdatedAtAsc().executeAsList()
+        .mapNotNull { row ->
+            val updatedAt = TimeUtil.parseInstant(row.updated_at)
+            val syncedAt = row.synced_at?.let { runCatching { TimeUtil.parseInstant(it) }.getOrNull() }
+            if (syncedAt == null || updatedAt.isAfter(syncedAt)) row.toChatSession() else null
+        }
+        .take(limit)
 }

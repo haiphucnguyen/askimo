@@ -1,0 +1,3 @@
+CREATE INDEX IF NOT EXISTS idx_messages_session_created ON chat_messages (session_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_session_outdated_created ON chat_messages (session_id, is_outdated, created_at);
+

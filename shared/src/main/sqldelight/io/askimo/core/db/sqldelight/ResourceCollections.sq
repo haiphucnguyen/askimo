@@ -1,0 +1,125 @@
+CREATE TABLE IF NOT EXISTS resource_collections (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    knowledge_sources_config TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    is_system_collection INTEGER NOT NULL DEFAULT 0,
+    synced_at TEXT,
+    index_status TEXT NOT NULL DEFAULT 'NOT_STARTED',
+    last_indexed_at TEXT,
+    index_error TEXT
+);
+
+insertCollection:
+INSERT INTO resource_collections (
+    id, name, description, knowledge_sources_config, created_at, updated_at,
+    is_system_collection, index_status, last_indexed_at, index_error
+)
+VALUES (
+    :id, :name, :description, :knowledgeSourcesConfig, :createdAt, :updatedAt,
+    :isSystemCollection, :indexStatus, :lastIndexedAt, :indexError
+);
+
+selectById:
+SELECT * FROM resource_collections WHERE id = :id;
+
+selectByIds:
+SELECT * FROM resource_collections WHERE id IN :ids;
+
+selectAllOrderedByUpdatedAtDesc:
+SELECT * FROM resource_collections ORDER BY updated_at DESC;
+
+countAll:
+SELECT COUNT(*) FROM resource_collections;
+
+pagedCreatedAsc:
+SELECT * FROM resource_collections ORDER BY created_at ASC LIMIT :limit OFFSET :offset;
+
+pagedCreatedDesc:
+SELECT * FROM resource_collections ORDER BY created_at DESC LIMIT :limit OFFSET :offset;
+
+pagedModifiedAsc:
+SELECT * FROM resource_collections ORDER BY updated_at ASC LIMIT :limit OFFSET :offset;
+
+pagedModifiedDesc:
+SELECT * FROM resource_collections ORDER BY updated_at DESC LIMIT :limit OFFSET :offset;
+
+countSearch:
+SELECT COUNT(*) FROM resource_collections WHERE name LIKE :pattern;
+
+searchPagedCreatedAsc:
+SELECT * FROM resource_collections WHERE name LIKE :pattern ORDER BY created_at ASC LIMIT :limit OFFSET :offset;
+
+searchPagedCreatedDesc:
+SELECT * FROM resource_collections WHERE name LIKE :pattern ORDER BY created_at DESC LIMIT :limit OFFSET :offset;
+
+searchPagedModifiedAsc:
+SELECT * FROM resource_collections WHERE name LIKE :pattern ORDER BY updated_at ASC LIMIT :limit OFFSET :offset;
+
+searchPagedModifiedDesc:
+SELECT * FROM resource_collections WHERE name LIKE :pattern ORDER BY updated_at DESC LIMIT :limit OFFSET :offset;
+
+selectKnowledgeSourcesConfigById:
+SELECT knowledge_sources_config FROM resource_collections WHERE id = :id;
+
+updateCollection:
+UPDATE resource_collections SET name = :name, description = :description, knowledge_sources_config = :knowledgeSourcesConfig, updated_at = :updatedAt
+WHERE id = :id;
+
+updateCollectionResetIndex:
+UPDATE resource_collections SET
+    name = :name,
+    description = :description,
+    knowledge_sources_config = :knowledgeSourcesConfig,
+    updated_at = :updatedAt,
+    index_status = :indexStatus,
+    last_indexed_at = NULL,
+    index_error = NULL
+WHERE id = :id;
+
+updateIndexStatusReady:
+UPDATE resource_collections SET index_status = :indexStatus, last_indexed_at = :lastIndexedAt, index_error = NULL
+WHERE id = :id;
+
+updateIndexStatusFailed:
+UPDATE resource_collections SET index_status = :indexStatus, index_error = :indexError
+WHERE id = :id;
+
+updateIndexStatusOther:
+UPDATE resource_collections SET index_status = :indexStatus, index_error = NULL
+WHERE id = :id;
+
+selectIdsByIndexStatuses:
+SELECT id FROM resource_collections WHERE index_status IN :statuses;
+
+updateIndexStatusForStatuses:
+UPDATE resource_collections SET index_status = :newStatus, index_error = :indexError WHERE index_status IN :oldStatuses;
+
+deleteCollection:
+DELETE FROM resource_collections WHERE id = :id;
+
+selectAllOrderedByUpdatedAtAsc:
+SELECT * FROM resource_collections ORDER BY updated_at ASC;
+
+markSynced:
+UPDATE resource_collections SET synced_at = :syncedAt WHERE id = :id;
+
+selectExistingByIds:
+SELECT id, updated_at FROM resource_collections WHERE id IN :ids;
+
+insertFromServer:
+INSERT INTO resource_collections (id, name, description, knowledge_sources_config, created_at, updated_at, is_system_collection, synced_at)
+VALUES (:id, :name, :description, :knowledgeSourcesConfig, :createdAt, :updatedAt, :isSystemCollection, :syncedAt);
+
+updateFromServer:
+UPDATE resource_collections SET
+    name = :name,
+    description = :description,
+    knowledge_sources_config = :knowledgeSourcesConfig,
+    updated_at = :updatedAt,
+    synced_at = :syncedAt,
+    is_system_collection = :isSystemCollection
+WHERE id = :id;
+

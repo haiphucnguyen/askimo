@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS user_memory (
+    id TEXT PRIMARY KEY DEFAULT 'default',
+    memory_json TEXT NOT NULL,
+    last_updated TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+selectById:
+SELECT * FROM user_memory WHERE id = :id;
+
+insertMemory:
+INSERT INTO user_memory (id, memory_json, last_updated, created_at)
+VALUES (:id, :memoryJson, :lastUpdated, :createdAt);
+
+updateMemory:
+UPDATE user_memory SET memory_json = :memoryJson, last_updated = :lastUpdated WHERE id = :id;
+
+deleteById:
+DELETE FROM user_memory WHERE id = :id;
+

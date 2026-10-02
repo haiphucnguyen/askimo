@@ -5,37 +5,30 @@
 package io.askimo.core.chat.repository
 
 import io.askimo.core.chat.domain.ModelClassification
-import io.askimo.core.chat.domain.ModelClassificationsTable
-import io.askimo.core.db.AbstractSQLiteRepository
+import io.askimo.core.db.AbstractRepository
 import io.askimo.core.db.DatabaseManager
-import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.SortOrder
-import org.jetbrains.exposed.v1.core.and
-import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.upsert
+import io.askimo.core.db.sqldelight.Model_classifications
+import io.askimo.core.util.TimeUtil
 import java.time.Instant
 import java.util.UUID
 
 /**
- * Extension function to map an Exposed ResultRow to a ModelClassification object.
+ * Maps a generated [Model_classifications] row to the shared [ModelClassification] domain object.
  */
-private fun ResultRow.toModelClassification(): ModelClassification = ModelClassification(
-    id = this[ModelClassificationsTable.id],
-    provider = this[ModelClassificationsTable.provider],
-    modelName = this[ModelClassificationsTable.modelName],
-    supportsText = this[ModelClassificationsTable.supportsText] == 1,
-    supportsImage = this[ModelClassificationsTable.supportsImage] == 1,
-    supportsAudio = this[ModelClassificationsTable.supportsAudio] == 1,
-    supportsVideo = this[ModelClassificationsTable.supportsVideo] == 1,
-    supportsTools = this[ModelClassificationsTable.supportsTools] == 1,
-    supportsSampling = this[ModelClassificationsTable.supportsSampling] == 1,
-    supportsStreaming = this[ModelClassificationsTable.supportsStreaming] == 1,
-    description = this[ModelClassificationsTable.description],
-    createdAt = this[ModelClassificationsTable.createdAt],
-    updatedAt = this[ModelClassificationsTable.updatedAt],
+private fun Model_classifications.toModelClassification(): ModelClassification = ModelClassification(
+    id = id,
+    provider = provider,
+    modelName = model_name,
+    supportsText = supports_text == 1L,
+    supportsImage = supports_image == 1L,
+    supportsAudio = supports_audio == 1L,
+    supportsVideo = supports_video == 1L,
+    supportsTools = supports_tools == 1L,
+    supportsSampling = supports_sampling == 1L,
+    supportsStreaming = supports_streaming == 1L,
+    description = description,
+    createdAt = TimeUtil.parseInstant(created_at),
+    updatedAt = TimeUtil.parseInstant(updated_at),
 )
 
 /**
@@ -45,7 +38,9 @@ private fun ResultRow.toModelClassification(): ModelClassification = ModelClassi
  */
 class ModelClassificationRepository internal constructor(
     databaseManager: DatabaseManager = DatabaseManager.getInstance(),
-) : AbstractSQLiteRepository(databaseManager) {
+) : AbstractRepository(databaseManager) {
+
+    private val queries get() = db.modelClassificationsQueries
 
     /**
      * Save a new model classification or update existing one.
@@ -60,21 +55,39 @@ class ModelClassificationRepository internal constructor(
             updatedAt = Instant.now(),
         )
 
-        transaction(database) {
-            ModelClassificationsTable.upsert {
-                it[id] = classificationWithId.id
-                it[provider] = classificationWithId.provider
-                it[modelName] = classificationWithId.modelName
-                it[supportsText] = if (classificationWithId.supportsText) 1 else 0
-                it[supportsImage] = if (classificationWithId.supportsImage) 1 else 0
-                it[supportsAudio] = if (classificationWithId.supportsAudio) 1 else 0
-                it[supportsVideo] = if (classificationWithId.supportsVideo) 1 else 0
-                it[supportsTools] = if (classificationWithId.supportsTools) 1 else 0
-                it[supportsSampling] = if (classificationWithId.supportsSampling) 1 else 0
-                it[supportsStreaming] = if (classificationWithId.supportsStreaming) 1 else 0
-                it[description] = classificationWithId.description
-                it[createdAt] = classificationWithId.createdAt
-                it[updatedAt] = classificationWithId.updatedAt
+        db.transaction {
+            val existing = queries.selectById(classificationWithId.id).executeAsOneOrNull()
+            if (existing == null) {
+                queries.insertClassification(
+                    id = classificationWithId.id,
+                    provider = classificationWithId.provider,
+                    modelName = classificationWithId.modelName,
+                    supportsText = if (classificationWithId.supportsText) 1L else 0L,
+                    supportsImage = if (classificationWithId.supportsImage) 1L else 0L,
+                    supportsAudio = if (classificationWithId.supportsAudio) 1L else 0L,
+                    supportsVideo = if (classificationWithId.supportsVideo) 1L else 0L,
+                    supportsTools = if (classificationWithId.supportsTools) 1L else 0L,
+                    supportsSampling = if (classificationWithId.supportsSampling) 1L else 0L,
+                    supportsStreaming = if (classificationWithId.supportsStreaming) 1L else 0L,
+                    description = classificationWithId.description,
+                    createdAt = classificationWithId.createdAt.toString(),
+                    updatedAt = classificationWithId.updatedAt.toString(),
+                )
+            } else {
+                queries.updateClassification(
+                    provider = classificationWithId.provider,
+                    modelName = classificationWithId.modelName,
+                    supportsText = if (classificationWithId.supportsText) 1L else 0L,
+                    supportsImage = if (classificationWithId.supportsImage) 1L else 0L,
+                    supportsAudio = if (classificationWithId.supportsAudio) 1L else 0L,
+                    supportsVideo = if (classificationWithId.supportsVideo) 1L else 0L,
+                    supportsTools = if (classificationWithId.supportsTools) 1L else 0L,
+                    supportsSampling = if (classificationWithId.supportsSampling) 1L else 0L,
+                    supportsStreaming = if (classificationWithId.supportsStreaming) 1L else 0L,
+                    description = classificationWithId.description,
+                    updatedAt = classificationWithId.updatedAt.toString(),
+                    id = classificationWithId.id,
+                )
             }
         }
 
@@ -88,16 +101,7 @@ class ModelClassificationRepository internal constructor(
      * @param modelName The model name (e.g., "gpt-4", "llama2")
      * @return The classification if found, null otherwise
      */
-    fun getByProviderAndModel(provider: String, modelName: String): ModelClassification? = transaction(database) {
-        ModelClassificationsTable
-            .selectAll()
-            .where {
-                (ModelClassificationsTable.provider eq provider) and
-                    (ModelClassificationsTable.modelName eq modelName)
-            }
-            .singleOrNull()
-            ?.toModelClassification()
-    }
+    fun getByProviderAndModel(provider: String, modelName: String): ModelClassification? = queries.selectByProviderAndModel(provider, modelName).executeAsOneOrNull()?.toModelClassification()
 
     /**
      * List all model classifications for a specific provider.
@@ -105,54 +109,28 @@ class ModelClassificationRepository internal constructor(
      * @param provider The AI provider
      * @return List of classifications, ordered by model name
      */
-    fun listByProvider(provider: String): List<ModelClassification> = transaction(database) {
-        ModelClassificationsTable
-            .selectAll()
-            .where { ModelClassificationsTable.provider eq provider }
-            .orderBy(ModelClassificationsTable.modelName to SortOrder.ASC)
-            .map { it.toModelClassification() }
-    }
+    fun listByProvider(provider: String): List<ModelClassification> = queries.selectByProvider(provider).executeAsList().map { it.toModelClassification() }
 
     /**
      * List all model classifications that support images.
      *
      * @return List of classifications, ordered by provider and model name
      */
-    fun listImageModels(): List<ModelClassification> = transaction(database) {
-        ModelClassificationsTable
-            .selectAll()
-            .where { ModelClassificationsTable.supportsImage eq 1 }
-            .orderBy(ModelClassificationsTable.provider to SortOrder.ASC)
-            .orderBy(ModelClassificationsTable.modelName to SortOrder.ASC)
-            .map { it.toModelClassification() }
-    }
+    fun listImageModels(): List<ModelClassification> = queries.selectImageModels().executeAsList().map { it.toModelClassification() }
 
     /**
      * List all model classifications that support tools/function calling.
      *
      * @return List of classifications, ordered by provider and model name
      */
-    fun listToolCapableModels(): List<ModelClassification> = transaction(database) {
-        ModelClassificationsTable
-            .selectAll()
-            .where { ModelClassificationsTable.supportsTools eq 1 }
-            .orderBy(ModelClassificationsTable.provider to SortOrder.ASC)
-            .orderBy(ModelClassificationsTable.modelName to SortOrder.ASC)
-            .map { it.toModelClassification() }
-    }
+    fun listToolCapableModels(): List<ModelClassification> = queries.selectToolCapableModels().executeAsList().map { it.toModelClassification() }
 
     /**
      * List all model classifications.
      *
      * @return List of all classifications, ordered by provider and model name
      */
-    fun listAll(): List<ModelClassification> = transaction(database) {
-        ModelClassificationsTable
-            .selectAll()
-            .orderBy(ModelClassificationsTable.provider to SortOrder.ASC)
-            .orderBy(ModelClassificationsTable.modelName to SortOrder.ASC)
-            .map { it.toModelClassification() }
-    }
+    fun listAll(): List<ModelClassification> = queries.selectAllOrdered().executeAsList().map { it.toModelClassification() }
 
     /**
      * Update capabilities for an existing classification.
@@ -180,12 +158,7 @@ class ModelClassificationRepository internal constructor(
      * @param modelName The model name
      * @return true if deleted, false if classification doesn't exist
      */
-    fun delete(provider: String, modelName: String): Boolean = transaction(database) {
-        ModelClassificationsTable.deleteWhere {
-            (ModelClassificationsTable.provider eq provider) and
-                (ModelClassificationsTable.modelName eq modelName)
-        } > 0
-    }
+    fun delete(provider: String, modelName: String): Boolean = queries.deleteByProviderAndModel(provider, modelName).value > 0
 
     /**
      * Check if a model supports images.

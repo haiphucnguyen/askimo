@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS chat_directives (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    deleted_at TEXT,
+    synced_at TEXT
+);
+

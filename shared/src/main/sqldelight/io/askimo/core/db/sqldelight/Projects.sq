@@ -1,0 +1,82 @@
+CREATE TABLE IF NOT EXISTS projects (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    indexed_paths TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    synced_at TEXT,
+    is_starred INTEGER DEFAULT 0,
+    space_id TEXT,
+    space_name TEXT,
+    default_directive_id TEXT
+);
+
+insertProject:
+INSERT INTO projects (id, name, description, indexed_paths, created_at, updated_at, default_directive_id)
+VALUES (:id, :name, :description, :indexedPaths, :createdAt, :updatedAt, :defaultDirectiveId);
+
+countAll:
+SELECT COUNT(*) FROM projects;
+
+selectAllOrdered:
+SELECT * FROM projects ORDER BY is_starred DESC, updated_at DESC;
+
+selectById:
+SELECT * FROM projects WHERE id = :id;
+
+selectByNameOrderedDesc:
+SELECT * FROM projects WHERE name = :name ORDER BY created_at DESC LIMIT 1;
+
+findProjectBySessionId:
+SELECT p.* FROM projects p
+INNER JOIN chat_sessions cs ON p.id = cs.project_id
+WHERE cs.id = :sessionId;
+
+updateProject:
+UPDATE projects SET name = :name, description = :description, indexed_paths = :indexedPaths, updated_at = :updatedAt
+WHERE id = :id;
+
+setDefaultDirective:
+UPDATE projects SET default_directive_id = :defaultDirectiveId, updated_at = :updatedAt WHERE id = :id;
+
+selectPagedDesc:
+SELECT * FROM projects ORDER BY updated_at DESC LIMIT :limit OFFSET :offset;
+
+countSearch:
+SELECT COUNT(*) FROM projects WHERE name LIKE :pattern;
+
+selectSearchPagedDesc:
+SELECT * FROM projects WHERE name LIKE :pattern ORDER BY is_starred DESC, updated_at DESC LIMIT :limit OFFSET :offset;
+
+starProject:
+UPDATE projects SET is_starred = :isStarred WHERE id = :id;
+
+deleteProject:
+DELETE FROM projects WHERE id = :id;
+
+selectAllOrderedByUpdatedAtAsc:
+SELECT * FROM projects ORDER BY updated_at ASC;
+
+markSynced:
+UPDATE projects SET synced_at = :syncedAt WHERE id = :id;
+
+selectExistingByIds:
+SELECT id, updated_at FROM projects WHERE id IN :ids;
+
+insertFromServer:
+INSERT INTO projects (id, name, description, indexed_paths, created_at, updated_at, synced_at, space_id, space_name, default_directive_id)
+VALUES (:id, :name, :description, :indexedPaths, :createdAt, :updatedAt, :syncedAt, :spaceId, :spaceName, :defaultDirectiveId);
+
+updateFromServer:
+UPDATE projects SET
+    name = :name,
+    description = :description,
+    indexed_paths = :indexedPaths,
+    updated_at = :updatedAt,
+    synced_at = :syncedAt,
+    space_id = :spaceId,
+    space_name = :spaceName,
+    default_directive_id = :defaultDirectiveId
+WHERE id = :id;
+

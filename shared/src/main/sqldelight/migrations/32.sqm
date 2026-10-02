@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS chat_message_attachments (
+    id TEXT PRIMARY KEY,
+    message_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    mime_type TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (message_id) REFERENCES chat_messages (id) ON DELETE CASCADE,
+    FOREIGN KEY (session_id) REFERENCES chat_sessions (id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_attachments_message_id ON chat_message_attachments (message_id);
+CREATE INDEX IF NOT EXISTS idx_attachments_session_id ON chat_message_attachments (session_id);
+

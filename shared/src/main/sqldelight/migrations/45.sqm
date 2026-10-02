@@ -1,0 +1,3 @@
+-- index_file_state (base + legacy schema drop/recreate + indexes) — fully handled by
+-- SqlDelightSchemaMigrations.callbacks() AfterVersion(44) -> migrateIndexFileStateTable(driver)
+

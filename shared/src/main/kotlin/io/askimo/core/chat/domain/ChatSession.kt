@@ -4,9 +4,6 @@
  */
 package io.askimo.core.chat.domain
 
-import io.askimo.core.db.sqliteInstant
-import org.jetbrains.exposed.v1.core.ReferenceOption
-import org.jetbrains.exposed.v1.core.Table
 import java.time.Instant
 
 data class ChatSession(
@@ -25,34 +22,3 @@ data class ChatSession(
 )
 
 const val SESSION_TITLE_MAX_LENGTH = 256
-
-/**
- * Exposed table definition for chat_sessions.
- * Co-located with domain class for easier maintenance and foreign key references.
- */
-object ChatSessionsTable : Table("chat_sessions") {
-    val id = varchar("id", 36)
-    val title = varchar("title", SESSION_TITLE_MAX_LENGTH)
-    val createdAt = sqliteInstant("created_at")
-    val updatedAt = sqliteInstant("updated_at")
-
-    val projectId = varchar("project_id", 36).nullable()
-
-    val directiveId = varchar("directive_id", 36).nullable()
-    val isStarred = integer("is_starred").default(0)
-
-    /** 1 = user manually renamed; auto title-refresh is suppressed. */
-    val isUserRenamed = integer("is_user_renamed").default(0)
-
-    val syncedAt = varchar("synced_at", 32).nullable()
-
-    /** JSON array of resource collection IDs (e.g., ["col-1", "col-2"]).
-     * Tracks persistent user selections (chip state) for this session. */
-    val activeResourceCollectionIds = varchar("active_resource_collection_ids", 2000).default("[]")
-
-    override val primaryKey = PrimaryKey(id)
-
-    init {
-        foreignKey(projectId to ProjectsTable.id, onDelete = ReferenceOption.CASCADE)
-    }
-}

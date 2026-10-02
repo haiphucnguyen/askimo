@@ -4,16 +4,8 @@
  */
 package io.askimo.core.chat.repository
 
-import io.askimo.core.chat.domain.ResourceSegmentsTable
+import io.askimo.core.db.AbstractRepository
 import io.askimo.core.db.DatabaseManager
-import org.jetbrains.exposed.v1.core.and
-import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.core.like
-import org.jetbrains.exposed.v1.jdbc.Database
-import org.jetbrains.exposed.v1.jdbc.batchInsert
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import java.nio.file.Path
 import java.time.Instant
 
@@ -25,13 +17,12 @@ import java.time.Instant
  * - File paths (for local files) - converted from Path.toString()
  * - URLs (for web pages)
  * - Document IDs (for SEC filings, etc.)
- *
- * Follows the DatabaseManager pattern - table creation is handled by DatabaseManager.
  */
-class ResourceSegmentRepository(
-    private val databaseManager: DatabaseManager,
-) {
-    private val database: Database by lazy { Database.connect(databaseManager.dataSource) }
+class ResourceSegmentRepository internal constructor(
+    databaseManager: DatabaseManager = DatabaseManager.getInstance(),
+) : AbstractRepository(databaseManager) {
+
+    private val queries get() = db.fileSegmentsQueries
 
     /**
      * Save multiple segment mappings in a batch.
@@ -47,16 +38,17 @@ class ResourceSegmentRepository(
         if (segmentIds.isEmpty()) return
 
         val normalizedId = resourceId.replace('\\', '/')
-        transaction(database) {
-            ResourceSegmentsTable.batchInsert(
-                data = segmentIds,
-                ignore = true,
-            ) { (segmentId, chunkIndex) ->
-                this[ResourceSegmentsTable.containerId] = containerId
-                this[ResourceSegmentsTable.resourceId] = normalizedId
-                this[ResourceSegmentsTable.segmentId] = segmentId
-                this[ResourceSegmentsTable.chunkIndex] = chunkIndex
-                this[ResourceSegmentsTable.createdAt] = Instant.now()
+        val nowStr = Instant.now().toString()
+
+        db.transaction {
+            segmentIds.forEach { (segmentId, chunkIndex) ->
+                queries.insertSegment(
+                    containerId = containerId,
+                    filePath = normalizedId,
+                    segmentId = segmentId,
+                    chunkIndex = chunkIndex.toLong(),
+                    createdAt = nowStr,
+                )
             }
         }
     }
@@ -81,16 +73,9 @@ class ResourceSegmentRepository(
     fun getSegmentIdsForResource(
         containerId: String,
         resourceId: String,
-    ): List<String> = transaction(database) {
+    ): List<String> {
         val normalizedId = resourceId.replace('\\', '/')
-        ResourceSegmentsTable
-            .selectAll()
-            .where {
-                (ResourceSegmentsTable.containerId eq containerId) and
-                    (ResourceSegmentsTable.resourceId eq normalizedId)
-            }
-            .orderBy(ResourceSegmentsTable.chunkIndex)
-            .map { it[ResourceSegmentsTable.segmentId] }
+        return queries.selectSegmentIdsForResource(containerId, normalizedId).executeAsList()
     }
 
     /**
@@ -109,12 +94,9 @@ class ResourceSegmentRepository(
     fun removeSegmentMappingsForResource(
         containerId: String,
         resourceId: String,
-    ): Int = transaction(database) {
+    ): Int {
         val normalizedId = resourceId.replace('\\', '/')
-        ResourceSegmentsTable.deleteWhere {
-            (ResourceSegmentsTable.containerId eq containerId) and
-                (ResourceSegmentsTable.resourceId eq normalizedId)
-        }
+        return queries.deleteByContainerAndResource(containerId, normalizedId).value.toInt()
     }
 
     /**
@@ -130,11 +112,7 @@ class ResourceSegmentRepository(
      * Remove ALL segment mappings for an entire container (project or resource collection).
      * Used when the index is fully cleared (e.g. re-index or embedding model change).
      */
-    fun removeAllSegmentMappingsForProject(containerId: String): Int = transaction(database) {
-        ResourceSegmentsTable.deleteWhere {
-            ResourceSegmentsTable.containerId eq containerId
-        }
-    }
+    fun removeAllSegmentMappingsForProject(containerId: String): Int = queries.deleteAllByContainer(containerId).value.toInt()
 
     /**
      * Get all segment IDs whose resource path starts with [dirPrefix].
@@ -144,15 +122,7 @@ class ResourceSegmentRepository(
     fun getSegmentIdsForDirectory(containerId: String, dirPrefix: String): List<String> {
         val normalized = dirPrefix.replace('\\', '/')
         val prefix = if (normalized.endsWith("/")) normalized else "$normalized/"
-        return transaction(database) {
-            ResourceSegmentsTable
-                .selectAll()
-                .where {
-                    (ResourceSegmentsTable.containerId eq containerId) and
-                        (ResourceSegmentsTable.resourceId like "$prefix%")
-                }
-                .map { it[ResourceSegmentsTable.segmentId] }
-        }
+        return queries.selectSegmentIdsForDirectory(containerId, "$prefix%").executeAsList()
     }
 
     /**
@@ -163,12 +133,7 @@ class ResourceSegmentRepository(
     fun removeSegmentMappingsForDirectory(containerId: String, dirPrefix: String): Int {
         val normalized = dirPrefix.replace('\\', '/')
         val prefix = if (normalized.endsWith("/")) normalized else "$normalized/"
-        return transaction(database) {
-            ResourceSegmentsTable.deleteWhere {
-                (ResourceSegmentsTable.containerId eq containerId) and
-                    (ResourceSegmentsTable.resourceId like "$prefix%")
-            }
-        }
+        return queries.deleteByDirectory(containerId, "$prefix%").value.toInt()
     }
 }
 

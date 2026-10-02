@@ -1,0 +1,41 @@
+CREATE TABLE IF NOT EXISTS llm_usage_records (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp     TEXT    NOT NULL,
+    provider      TEXT    NOT NULL,
+    model         TEXT    NOT NULL,
+    instance_id   TEXT,
+    prompt_tokens INTEGER NOT NULL DEFAULT 0,
+    output_tokens INTEGER NOT NULL DEFAULT 0,
+    total_tokens  INTEGER NOT NULL DEFAULT 0,
+    duration_ms   INTEGER NOT NULL DEFAULT 0,
+    is_error      INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_llm_usage_records_timestamp ON llm_usage_records (timestamp);
+
+insertLlmUsageRecord:
+INSERT INTO llm_usage_records (
+    timestamp, provider, model, instance_id,
+    prompt_tokens, output_tokens, total_tokens, duration_ms, is_error
+)
+VALUES (:timestamp, :provider, :model, :instanceId, :promptTokens, :outputTokens, :totalTokens, :durationMs, :isError);
+
+countLlmUsageByPeriod:
+SELECT COUNT(*)
+FROM llm_usage_records
+WHERE timestamp >= :from AND timestamp < :to;
+
+queryLlmUsageGroupedByInstance:
+SELECT
+    COALESCE(instance_id, provider) AS instance_key,
+    provider,
+    model,
+    COUNT(*) AS calls,
+    COALESCE(SUM(total_tokens), 0) AS tokens,
+    COALESCE(AVG(duration_ms), 0) AS avg_duration_ms,
+    SUM(CASE WHEN is_error = 1 THEN 1 ELSE 0 END) AS errors
+FROM llm_usage_records
+WHERE timestamp >= :from AND timestamp < :to
+GROUP BY COALESCE(instance_id, provider), model
+ORDER BY tokens DESC;
+

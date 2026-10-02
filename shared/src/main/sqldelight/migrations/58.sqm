@@ -1,0 +1,14 @@
+-- resource_collections re-creation for pre-versioned databases (see original SchemaMigrations
+-- comment history). The CREATE TABLE below is a no-op once version 10 already ran; the 3
+-- extra columns are added defensively via SqlDelightSchemaMigrations.callbacks() AfterVersion(57).
+CREATE TABLE IF NOT EXISTS resource_collections (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    knowledge_sources_config TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    is_system_collection INTEGER NOT NULL DEFAULT 0,
+    synced_at TEXT
+);
+

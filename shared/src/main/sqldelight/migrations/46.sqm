@@ -1,0 +1,17 @@
+CREATE TABLE IF NOT EXISTS plan_executions (
+    id            TEXT PRIMARY KEY,
+    plan_id       TEXT NOT NULL,
+    plan_name     TEXT NOT NULL,
+    inputs        TEXT NOT NULL DEFAULT '',
+    status        TEXT NOT NULL DEFAULT 'IDLE',
+    run_count     INTEGER NOT NULL DEFAULT 1,
+    session_id    TEXT,
+    output        TEXT,
+    step_outputs  TEXT,
+    error_message TEXT,
+    created_at    TEXT NOT NULL,
+    updated_at    TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_plan_executions_plan_id ON plan_executions (plan_id, created_at);
+

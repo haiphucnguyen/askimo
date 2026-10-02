@@ -1,0 +1,14 @@
+CREATE TABLE IF NOT EXISTS attachment_references (
+    attachment_id TEXT NOT NULL,
+    message_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    PRIMARY KEY (attachment_id, message_id),
+    FOREIGN KEY (attachment_id) REFERENCES file_attachments(id) ON DELETE CASCADE,
+    FOREIGN KEY (message_id) REFERENCES chat_messages(id) ON DELETE CASCADE,
+    FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_attachment_refs_message_id ON attachment_references (message_id);
+CREATE INDEX IF NOT EXISTS idx_attachment_refs_attachment_id ON attachment_references (attachment_id);
+CREATE INDEX IF NOT EXISTS idx_attachment_refs_session_id ON attachment_references (session_id);
+

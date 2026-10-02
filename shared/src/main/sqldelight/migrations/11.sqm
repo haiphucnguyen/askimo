@@ -1,0 +1,2 @@
+-- resource_collections.index_status — guarded ALTER TABLE ADD COLUMN via SqlDelightSchemaMigrations.callbacks() AfterVersion(10)
+

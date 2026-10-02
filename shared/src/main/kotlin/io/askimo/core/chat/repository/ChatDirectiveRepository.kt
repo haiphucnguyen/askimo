@@ -9,26 +9,15 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import io.askimo.core.chat.domain.ChatDirective
-import io.askimo.core.chat.domain.ChatDirectivesTable
-import io.askimo.core.chat.domain.ChatSessionsTable
 import io.askimo.core.chat.domain.DIRECTIVE_CONTENT_MAX_LENGTH
 import io.askimo.core.chat.domain.DIRECTIVE_NAME_MAX_LENGTH
 import io.askimo.core.chat.domain.DirectiveScope
-import io.askimo.core.db.AbstractSQLiteRepository
+import io.askimo.core.db.AbstractRepository
 import io.askimo.core.db.DatabaseManager
+import io.askimo.core.db.sqldelight.Chat_directives
 import io.askimo.core.logging.logger
+import io.askimo.core.util.TimeUtil
 import io.askimo.core.util.walkResourceDirectory
-import org.jetbrains.exposed.v1.core.JoinType
-import org.jetbrains.exposed.v1.core.ResultRow
-import org.jetbrains.exposed.v1.core.SortOrder
-import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.core.inList
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.update
-import org.jetbrains.exposed.v1.jdbc.upsert
 import java.nio.file.Files
 import java.time.Instant
 import java.util.UUID
@@ -41,19 +30,17 @@ private val directiveYamlMapper: ObjectMapper = ObjectMapper(YAMLFactory())
     .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 
 /**
- * Extension function to map an Exposed ResultRow to a ChatDirective object.
- * Eliminates duplication of mapping logic throughout the repository.
+ * Maps a generated [Chat_directives] row to the shared [ChatDirective] domain object.
  */
-private fun ResultRow.toChatDirective(): ChatDirective = ChatDirective(
-    id = this[ChatDirectivesTable.id],
-    name = this[ChatDirectivesTable.name],
-    content = this[ChatDirectivesTable.content],
-    scope = runCatching { DirectiveScope.valueOf(this[ChatDirectivesTable.scope]) }
-        .getOrDefault(DirectiveScope.PERSONAL),
-    createdBy = this[ChatDirectivesTable.createdBy],
-    createdAt = this[ChatDirectivesTable.createdAt],
-    updatedAt = this[ChatDirectivesTable.updatedAt],
-    deletedAt = this[ChatDirectivesTable.deletedAt],
+private fun Chat_directives.toChatDirective(): ChatDirective = ChatDirective(
+    id = id,
+    name = name,
+    content = content,
+    scope = runCatching { DirectiveScope.valueOf(scope) }.getOrDefault(DirectiveScope.PERSONAL),
+    createdBy = created_by,
+    createdAt = TimeUtil.parseInstant(created_at),
+    updatedAt = TimeUtil.parseInstant(updated_at),
+    deletedAt = deleted_at?.let { TimeUtil.parseInstant(it) },
 )
 
 private fun validateDirectiveLengths(directive: ChatDirective) {
@@ -65,14 +52,12 @@ private fun validateDirectiveLengths(directive: ChatDirective) {
     }
 }
 
-/**
- * Repository for managing chat directives stored in SQLite database.
- */
 class ChatDirectiveRepository internal constructor(
     databaseManager: DatabaseManager = DatabaseManager.getInstance(),
-) : AbstractSQLiteRepository(databaseManager) {
+) : AbstractRepository(databaseManager) {
 
     val log = logger<ChatDirectiveRepository>()
+    private val queries get() = db.chatDirectivesQueries
 
     /**
      * Save a new directive or update existing one.
@@ -81,97 +66,74 @@ class ChatDirectiveRepository internal constructor(
     fun save(directive: ChatDirective): ChatDirective {
         validateDirectiveLengths(directive)
 
-        transaction(database) {
-            ChatDirectivesTable.upsert {
-                it[id] = directive.id
-                it[name] = directive.name
-                it[content] = directive.content
-                it[scope] = directive.scope.name
-                it[createdBy] = directive.createdBy
-                it[createdAt] = directive.createdAt
+        db.transaction {
+            val existing = queries.selectById(directive.id).executeAsOneOrNull()
+            if (existing == null) {
+                queries.upsertInsert(
+                    id = directive.id,
+                    name = directive.name,
+                    content = directive.content,
+                    scope = directive.scope.name,
+                    createdBy = directive.createdBy,
+                    createdAt = directive.createdAt.toString(),
+                    updatedAt = directive.updatedAt.toString(),
+                )
+            } else {
+                queries.upsertUpdate(
+                    name = directive.name,
+                    content = directive.content,
+                    scope = directive.scope.name,
+                    createdBy = directive.createdBy,
+                    createdAt = directive.createdAt.toString(),
+                    id = directive.id,
+                )
             }
         }
 
         return directive
     }
 
-    /**
-     * Get a directive by id.
-     */
-    fun get(id: String): ChatDirective? = transaction(database) {
-        ChatDirectivesTable
-            .selectAll()
-            .where { ChatDirectivesTable.id eq id }
-            .singleOrNull()
-            ?.toChatDirective()
-    }
+    /** Get a directive by id. */
+    fun get(id: String): ChatDirective? = queries.selectById(id).executeAsOneOrNull()?.toChatDirective()
 
-    /**
-     * List all directives, ordered by name.
-     */
-    fun list(): List<ChatDirective> = transaction(database) {
-        ChatDirectivesTable
-            .selectAll()
-            .orderBy(ChatDirectivesTable.name to SortOrder.ASC)
-            .map { it.toChatDirective() }
-    }
+    /** List all directives, ordered by name. */
+    fun list(): List<ChatDirective> = queries.selectAllOrderedByName().executeAsList().map { it.toChatDirective() }
 
     /**
      * Update an existing directive.
-     *
      * @return true if updated, false if directive doesn't exist
      */
     fun update(directive: ChatDirective): Boolean {
         validateDirectiveLengths(directive)
 
-        return transaction(database) {
-            ChatDirectivesTable.update({ ChatDirectivesTable.id eq directive.id }) {
-                it[name] = directive.name
-                it[content] = directive.content
-                it[updatedAt] = Instant.now()
-                it[syncedAt] = null // mark dirty so the next push cycle picks up this change
-            } > 0
-        }
+        return queries.updateDirective(
+            name = directive.name,
+            content = directive.content,
+            updatedAt = Instant.now().toString(),
+            id = directive.id,
+        ).value > 0
     }
 
     /**
      * Delete a directive by id.
      * @return true if deleted, false if directive doesn't exist
      */
-    fun delete(id: String): Boolean = transaction(database) {
-        ChatDirectivesTable.deleteWhere { ChatDirectivesTable.id eq id } > 0
+    fun delete(id: String): Boolean = queries.deleteById(id).value > 0
+
+    /** Check if a directive exists by id. */
+    fun exists(id: String): Boolean = queries.selectById(id).executeAsOneOrNull() != null
+
+    /** Get multiple directives by ids. */
+    fun getByIds(ids: List<String>): List<ChatDirective> {
+        if (ids.isEmpty()) return emptyList()
+        return queries.selectByIds(ids).executeAsList().map { it.toChatDirective() }
     }
 
-    /**
-     * Check if a directive exists by id.
-     */
-    fun exists(id: String): Boolean = transaction(database) {
-        ChatDirectivesTable
-            .selectAll()
-            .where { ChatDirectivesTable.id eq id }
-            .empty()
-            .not()
+    /** Get multiple directives by names. */
+    fun getByNames(names: List<String>): List<ChatDirective> {
+        if (names.isEmpty()) return emptyList()
+        return queries.selectByNames(names).executeAsList().map { it.toChatDirective() }
     }
-
-    /**
-     * Get multiple directives by ids.
-     */
-    fun getByIds(ids: List<String>): List<ChatDirective> = getByColumn(
-        table = ChatDirectivesTable,
-        column = ChatDirectivesTable.id,
-        values = ids,
-        orderBy = ChatDirectivesTable.name to SortOrder.ASC,
-    ) { it.toChatDirective() }
-
-    /**
-     * Get multiple directives by names.
-     */
-    fun getByNames(names: List<String>): List<ChatDirective> = getByColumn(
-        table = ChatDirectivesTable,
-        column = ChatDirectivesTable.name,
-        values = names,
-        orderBy = ChatDirectivesTable.name to SortOrder.ASC,
-    ) { it.toChatDirective() }
 
     /**
      * Find a directive by session ID.
@@ -179,14 +141,7 @@ class ChatDirectiveRepository internal constructor(
      * @param sessionId The session ID to look up
      * @return The directive associated with the session, or null if not found or session has no directive
      */
-    fun findDirectiveBySessionId(sessionId: String): ChatDirective? = transaction(database) {
-        ChatDirectivesTable
-            .join(ChatSessionsTable, JoinType.INNER, ChatDirectivesTable.id, ChatSessionsTable.directiveId)
-            .selectAll()
-            .where { ChatSessionsTable.id eq sessionId }
-            .singleOrNull()
-            ?.toChatDirective()
-    }
+    fun findDirectiveBySessionId(sessionId: String): ChatDirective? = queries.findDirectiveBySessionId(sessionId).executeAsOneOrNull()?.toChatDirective()
 
     /**
      * Returns all PERSONAL directives whose [syncedAt] is NULL or older than [updatedAt],
@@ -195,28 +150,16 @@ class ChatDirectiveRepository internal constructor(
      * TEAM directives are excluded — they are read-only on the client and must never
      * be pushed back to the server.
      */
-    fun getUnsyncedDirectives(limit: Int = 50): List<ChatDirective> = transaction(database) {
-        ChatDirectivesTable
-            .selectAll()
-            .orderBy(ChatDirectivesTable.updatedAt, SortOrder.ASC)
-            .mapNotNull { row ->
-                // Never push TEAM directives — they are read-only on the client
-                if (row[ChatDirectivesTable.scope] == DirectiveScope.TEAM.name) return@mapNotNull null
-                val syncedAt = row[ChatDirectivesTable.syncedAt]
-                val updatedAt = row[ChatDirectivesTable.updatedAt].toString()
-                if (syncedAt == null || updatedAt > syncedAt) row.toChatDirective() else null
-            }
-            .take(limit)
-    }
+    fun getUnsyncedDirectives(limit: Int = 50): List<ChatDirective> = queries.selectAllOrderedByUpdatedAt().executeAsList()
+        .mapNotNull { row ->
+            // Never push TEAM directives — they are read-only on the client
+            if (row.scope == DirectiveScope.TEAM.name) return@mapNotNull null
+            if (row.synced_at == null || row.updated_at > row.synced_at) row.toChatDirective() else null
+        }
+        .take(limit)
 
-    /**
-     * Stamps [syncedAt] with the current timestamp to record a successful push.
-     */
-    fun markSynced(directiveId: String): Boolean = transaction(database) {
-        ChatDirectivesTable.update({ ChatDirectivesTable.id eq directiveId }) {
-            it[syncedAt] = Instant.now().toString()
-        } > 0
-    }
+    /** Stamps [syncedAt] with the current timestamp to record a successful push. */
+    fun markSynced(directiveId: String): Boolean = queries.markSynced(Instant.now().toString(), directiveId).value > 0
 
     /**
      * Merges directives received from the server into the local database.
@@ -226,43 +169,40 @@ class ChatDirectiveRepository internal constructor(
     fun upsertFromServer(directives: List<ChatDirective>) {
         if (directives.isEmpty()) return
 
-        transaction(database) {
+        db.transaction {
             val nowStr = Instant.now().toString()
             val ids = directives.map { it.id }
 
-            val existingById = ChatDirectivesTable
-                .selectAll()
-                .where { ChatDirectivesTable.id inList ids }
-                .associate { row ->
-                    row[ChatDirectivesTable.id] to row[ChatDirectivesTable.updatedAt]
-                }
+            val existingById = queries.selectExistingByIds(ids).executeAsList()
+                .associate { it.id to TimeUtil.parseInstant(it.updated_at) }
 
             for (directive in directives) {
                 validateDirectiveLengths(directive)
                 val storedUpdatedAt = existingById[directive.id]
 
                 if (storedUpdatedAt == null) {
-                    ChatDirectivesTable.insert {
-                        it[id] = directive.id
-                        it[name] = directive.name
-                        it[content] = directive.content
-                        it[scope] = directive.scope.name
-                        it[createdBy] = directive.createdBy
-                        it[createdAt] = directive.createdAt
-                        it[updatedAt] = directive.updatedAt
-                        it[deletedAt] = directive.deletedAt
-                        it[syncedAt] = nowStr
-                    }
+                    queries.insertFromServer(
+                        id = directive.id,
+                        name = directive.name,
+                        content = directive.content,
+                        scope = directive.scope.name,
+                        createdBy = directive.createdBy,
+                        createdAt = directive.createdAt.toString(),
+                        updatedAt = directive.updatedAt.toString(),
+                        deletedAt = directive.deletedAt?.toString(),
+                        syncedAt = nowStr,
+                    )
                 } else if (directive.updatedAt.isAfter(storedUpdatedAt)) {
-                    ChatDirectivesTable.update({ ChatDirectivesTable.id eq directive.id }) {
-                        it[name] = directive.name
-                        it[content] = directive.content
-                        it[scope] = directive.scope.name
-                        it[createdBy] = directive.createdBy
-                        it[updatedAt] = directive.updatedAt
-                        it[deletedAt] = directive.deletedAt
-                        it[syncedAt] = nowStr
-                    }
+                    queries.updateFromServer(
+                        name = directive.name,
+                        content = directive.content,
+                        scope = directive.scope.name,
+                        createdBy = directive.createdBy,
+                        updatedAt = directive.updatedAt.toString(),
+                        deletedAt = directive.deletedAt?.toString(),
+                        syncedAt = nowStr,
+                        id = directive.id,
+                    )
                 }
             }
         }
@@ -272,9 +212,7 @@ class ChatDirectiveRepository internal constructor(
      * Permanently removes a directive from the local database.
      * Called when the server signals that a directive has been soft-deleted.
      */
-    fun hardDelete(directiveId: String): Boolean = transaction(database) {
-        ChatDirectivesTable.deleteWhere { ChatDirectivesTable.id eq directiveId } > 0
-    }
+    fun hardDelete(directiveId: String): Boolean = queries.deleteById(directiveId).value > 0
 
     /**
      * Seeds built-in default directives from `/directives/` classpath resources

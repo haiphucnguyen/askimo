@@ -4,8 +4,6 @@
  */
 package io.askimo.core.chat.domain
 
-import io.askimo.core.db.sqliteInstant
-import org.jetbrains.exposed.v1.core.Table
 import java.time.Instant
 
 /**
@@ -30,17 +28,4 @@ data class UserMemory(
     companion object {
         const val DEFAULT_ID = "default"
     }
-}
-
-/**
- * Exposed table definition for user_memory.
- * Single-row table — one record per local installation.
- */
-object UserMemoryTable : Table("user_memory") {
-    val id = varchar("id", 36).default(UserMemory.DEFAULT_ID)
-    val memoryJson = text("memory_json")
-    val lastUpdated = sqliteInstant("last_updated")
-    val createdAt = sqliteInstant("created_at")
-
-    override val primaryKey = PrimaryKey(id)
 }
