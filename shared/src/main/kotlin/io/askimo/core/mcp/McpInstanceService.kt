@@ -12,28 +12,27 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import dev.langchain4j.agent.tool.ToolSpecification
 import dev.langchain4j.mcp.client.DefaultMcpClient
+import io.askimo.core.event.EventBus
+import io.askimo.core.event.internal.McpInstancesChangedEvent
+import io.askimo.core.event.system.ShellErrorEvent
+import io.askimo.core.i18n.LocalizationManager
 import io.askimo.core.intent.ToolApprovalPolicy
 import io.askimo.core.intent.ToolCategory
 import io.askimo.core.intent.ToolConfig
 import io.askimo.core.intent.ToolSource
-import io.askimo.core.intent.ToolVectorIndex
 import io.askimo.core.intent.defaultApprovalPolicy
 import io.askimo.core.logging.logger
 import io.askimo.core.mcp.config.McpInstancesConfig
 import io.askimo.core.mcp.config.McpServersConfig
 import io.askimo.core.util.AskimoHome
-import io.github.reactivecircus.cache4k.Cache
-import io.github.reactivecircus.cache4k.CacheEvent
 import java.nio.file.Files
 import java.time.LocalDateTime
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
-import kotlin.time.Duration.Companion.minutes
 
 private val log = logger<McpInstanceService>()
-
-const val GLOBAL_MCP_SCOPE_ID: String = "__global__"
 
 private data class ToolConfigData(
     val toolName: String,
@@ -113,31 +112,27 @@ class McpInstanceService(
     @Volatile
     private var ephemeralInstances: List<McpInstance> = emptyList()
 
-    private val globalToolsCache: Cache<String, List<ToolConfig>> = Cache.Builder<String, List<ToolConfig>>()
-        .maximumCacheSize(200)
-        .expireAfterWrite(30.minutes)
-        .eventListener { event ->
-            val tools = when (event) {
-                is CacheEvent.Removed -> event.value
-                is CacheEvent.Expired -> event.value
-                is CacheEvent.Evicted -> event.value
-                else -> null
-            }
-            if (tools != null) {
-                log.debug("Evicting global tools cache (event: {}, {} tools)", event::class.simpleName, tools.size)
-            }
-        }
-        .build()
+    /**
+     * Caches the result of [getGlobalTools] — the full tool-context list sent to the model.
+     */
+    @Volatile
+    private var globalToolsCache: List<ToolConfig>? = null
 
-    private val toolVectorIndexCache: Cache<String, ToolVectorIndex> = Cache.Builder<String, ToolVectorIndex>()
-        .maximumCacheSize(10)
-        .expireAfterWrite(30.minutes)
-        .build()
+    /**
+     * Caches the result of [listActiveMcpServers] — the server/tool list shown in the chat
+     * input "tools" popup. Built once and reused across every chat session's UI, instead of
+     * each session's ChatInputField refetching tools from every MCP server on mount.
+     */
+    @Volatile
+    private var activeServersCache: List<McpServerInfo>? = null
 
-    private val mcpClientsByToolCache: Cache<String, DefaultMcpClient> = Cache.Builder<String, DefaultMcpClient>()
-        .maximumCacheSize(200)
-        .expireAfterWrite(30.minutes)
-        .build()
+    /**
+     * Maps tool name → the MCP client that serves it. A plain map suffices since the total
+     * number of MCP tools is always small. Its lifetime must stay aligned with
+     * [globalToolsCache] / [activeServersCache]: all three are only ever cleared together via
+     * [invalidateCache], so a tool's client never disappears while it's still advertised.
+     */
+    private val mcpClientsByToolCache: MutableMap<String, DefaultMcpClient> = ConcurrentHashMap()
 
     // ── Instance management ──────────────────────────────────────────────────
 
@@ -275,7 +270,7 @@ class McpInstanceService(
         val toolSpecs = mcpClient.listTools()
 
         toolSpecs.forEach { toolSpec ->
-            mcpClientsByToolCache.put(toolSpec.name(), mcpClient)
+            mcpClientsByToolCache[toolSpec.name()] = mcpClient
         }
 
         log.debug("Fetched ${toolSpecs.size} tools from global instance '${instance.name}'")
@@ -332,8 +327,7 @@ class McpInstanceService(
     }
 
     suspend fun getGlobalTools(): Result<List<ToolConfig>> = runCatching {
-        val cached = globalToolsCache.get(GLOBAL_MCP_SCOPE_ID)
-        if (cached != null) {
+        globalToolsCache?.let { cached ->
             log.debug("Returning cached global tools ({} tools)", cached.size)
             return@runCatching cached
         }
@@ -368,10 +362,50 @@ class McpInstanceService(
             log.debug("Persisted {} newly auto-inferred global tool configs", newlyInferredConfigs.size)
         }
 
-        globalToolsCache.put(GLOBAL_MCP_SCOPE_ID, allTools)
+        globalToolsCache = allTools
         log.debug("Cached {} global tools", allTools.size)
 
         allTools
+    }
+
+    /**
+     * Returns the list of enabled global MCP servers with their active tools, for display in
+     * the chat input "tools" popup. Cached (see [activeServersCache]) so repeated calls across
+     * chat sessions are instant; the cache is only rebuilt after [invalidateCache] runs (i.e.
+     * when instances or tool configs actually change).
+     */
+    suspend fun listActiveMcpServers(): Result<List<McpServerInfo>> = runCatching {
+        activeServersCache?.let { cached ->
+            log.debug("Returning cached active MCP servers ({} servers)", cached.size)
+            return@runCatching cached
+        }
+
+        log.debug("Cache miss for active MCP servers, fetching from MCP servers")
+
+        val userConfigs = loadToolConfigs()
+        val servers = getEnabledInstances().map { instance ->
+            val tools = fetchToolsFromInstance(instance, userConfigs, filterDisabled = true)
+                .getOrElse { e ->
+                    log.error("Error loading tools for global server ${instance.name}", e)
+                    EventBus.emit(
+                        ShellErrorEvent(
+                            title = "MCP Tool Error",
+                            errorMessage = LocalizationManager.getString(
+                                "error.app.message",
+                                e.message ?: instance.name,
+                            ),
+                            cause = e,
+                        ),
+                    )
+                    emptyList()
+                }
+            McpServerInfo(name = instance.name, id = instance.id, isGlobal = true, tools = tools)
+        }
+
+        activeServersCache = servers
+        log.debug("Cached {} active MCP servers", servers.size)
+
+        servers
     }
 
     suspend fun listTools(instanceId: String): Result<List<ToolConfig>> {
@@ -468,12 +502,13 @@ class McpInstanceService(
         invalidateCache()
     }
 
-    fun getMcpClientForTool(toolName: String): DefaultMcpClient? = mcpClientsByToolCache.get(toolName)
+    fun getMcpClientForTool(toolName: String): DefaultMcpClient? = mcpClientsByToolCache[toolName]
 
     fun invalidateCache() {
-        globalToolsCache.invalidate(GLOBAL_MCP_SCOPE_ID)
-        toolVectorIndexCache.invalidate(GLOBAL_MCP_SCOPE_ID)
-        mcpClientsByToolCache.invalidateAll()
-        log.debug("Invalidated global MCP tools, vector index, and client caches")
+        globalToolsCache = null
+        activeServersCache = null
+        mcpClientsByToolCache.clear()
+        log.debug("Invalidated global MCP tools, vector index, active servers, and client caches")
+        EventBus.post(McpInstancesChangedEvent())
     }
 }
