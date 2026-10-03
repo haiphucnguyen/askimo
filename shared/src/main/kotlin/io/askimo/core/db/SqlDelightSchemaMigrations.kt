@@ -89,6 +89,11 @@ object SqlDelightSchemaMigrations {
             addColumnIfMissing(d, "resource_collections", "index_error", "TEXT")
         },
         AfterVersion(58) { d -> addColumnIfMissing(d, "chat_message_attachments", "storage_path", "VARCHAR(1024)") },
+
+        AfterVersion(61) { d ->
+            dropColumnIfExists(d, "projects", "space_id")
+            dropColumnIfExists(d, "projects", "space_name")
+        },
     )
 
     /**
@@ -103,7 +108,7 @@ object SqlDelightSchemaMigrations {
 
     private fun dropColumnIfExists(driver: SqlDriver, table: String, column: String) {
         if (column !in tableColumns(driver, table)) return
-        runCatching { driver.execute(null, "ALTER TABLE $table DROP COLUMN $column", 0) }
+        driver.execute(null, "ALTER TABLE $table DROP COLUMN $column", 0)
     }
 
     private fun tableColumns(driver: SqlDriver, table: String): Set<String> {
