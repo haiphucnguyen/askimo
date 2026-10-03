@@ -240,7 +240,6 @@ data class ProxyConfig(
 
 data class ChatConfig(
     val maxTokens: Int = 8000,
-    val summarizationTimeoutSeconds: Long = 300,
     val defaultResponseAILocale: String? = null,
 )
 
@@ -381,17 +380,10 @@ data class RagConfig(
 )
 
 /**
- * Global AI model timeouts shared across all providers.
- *
- * - [utilityModelTimeoutSeconds]: Applied to the secondary/utility model used for short-lived
- *   structured tasks (title generation, RAG query compression, summarization). Keep tight.
- * - [defaultModelTimeoutSeconds]: Applied to the primary/streaming model. Set generously to
- *   accommodate slow local models and cloud reasoning models with extended thinking.
+ * Minimum allowed value (in seconds) for [ModelsConfig.requestTimeoutInSeconds].
+ * Prevents users from configuring a timeout so low that every AI request fails immediately.
  */
-data class ModelTimeoutsConfig(
-    val utilityModelTimeoutSeconds: Long = 600,
-    val defaultModelTimeoutSeconds: Long = 600,
-)
+const val MIN_MODEL_TIMEOUT_SECONDS: Long = 5
 
 /**
  * Global model execution settings.
@@ -407,7 +399,13 @@ data class ModelTimeoutsConfig(
  */
 data class ModelsConfig(
     val maxToolCallingRoundTrips: Int = 50,
-    val timeouts: ModelTimeoutsConfig = ModelTimeoutsConfig(),
+    /**
+     * Single, unified request timeout (in seconds) applied to both the secondary/utility model
+     * (title generation, RAG query compression, summarization) and the primary/streaming model.
+     * Set generously to accommodate slow local models and cloud reasoning models with extended
+     * thinking. Clamped to a minimum of [MIN_MODEL_TIMEOUT_SECONDS].
+     */
+    val requestTimeoutInSeconds: Long = 600,
 )
 
 /**
@@ -829,7 +827,6 @@ object AppConfig {
 
         chat:
           max_tokens: 8000
-          summarization_timeout_seconds: 60
           default_response_ai_locale:
 
         memory:
@@ -851,9 +848,7 @@ object AppConfig {
 
         models:
           max_tool_calling_round_trips: 10
-          timeouts:
-            utility_model_timeout_seconds: 45
-            default_model_timeout_seconds: 300
+          request_timeout_in_seconds: 600
 
         proxy:
           type: NONE
@@ -1140,6 +1135,19 @@ object AppConfig {
     }
 
     /**
+     * Sets [ModelsConfig.requestTimeoutInSeconds] — the unified request timeout control
+     * surfaced in Settings > Advanced, applied to both the utility model (title generation,
+     * RAG query compression, summarization) and the default/primary model.
+     *
+     * [seconds] is clamped to a minimum of [MIN_MODEL_TIMEOUT_SECONDS] to prevent
+     * misconfiguration that would make every AI request fail immediately.
+     */
+    fun setGlobalModelTimeoutSeconds(seconds: Long) {
+        val clamped = seconds.coerceAtLeast(MIN_MODEL_TIMEOUT_SECONDS)
+        updateField("models.requestTimeoutInSeconds", clamped)
+    }
+
+    /**
      * After YAML deserialization, checks whether [MemoryConfig] fields are consistent with
      * the selected [MemoryMode]. If a non-BALANCED mode is selected but all numeric fields
      * still hold the BALANCED defaults (e.g. the YAML had `null` values that Jackson defaulted),
@@ -1251,6 +1259,15 @@ object AppConfig {
                 maxToolCallingRoundTrips = (value as? Int) ?: value.toString().toIntOrNull() ?: config.maxToolCallingRoundTrips,
             )
         }
+
+
+        if (field == "requestTimeoutInSeconds") {
+            val stringValue = value as? String ?: value.toString()
+            return config.copy(
+                requestTimeoutInSeconds = stringValue.toLongOrNull()
+                    ?.coerceAtLeast(MIN_MODEL_TIMEOUT_SECONDS)
+                    ?: config.requestTimeoutInSeconds,
+            )
 
         val parts = field.split(".")
         if (parts.size != 2) {
